@@ -1,0 +1,5 @@
+name = "cargo-platform-complete"
+compatibility_date = "2026-01-05"
+
+[site]
+bucket = "./dist"
