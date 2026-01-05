@@ -1,5 +1,13 @@
-name = "cargo-platform-complete"
+name = "yukborweb"
 compatibility_date = "2026-01-05"
+pages_build_output_dir = "dist"
 
-[assets]
-directory = "./dist"
+[[rules]]
+type = "Text"
+globs = ["**/*"]
+fallthrough = true
+
+[[rules]]
+type = "Text"
+globs = ["/"]
+fallthrough = false
