@@ -1,0 +1,208 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getMyOrders, deleteOrder } from '../services/api';
+import PremiumModal from '../components/PremiumModal';
+
+export default function MyOrdersPage() {
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [selectedPhone, setSelectedPhone] = useState(null);
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const loadOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getMyOrders();
+      if (response.code === 200) {
+        setOrders(response.result || []);
+      } else {
+        setError(response.message || 'Buyurtmalar yuklanmadi');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (orderId) => {
+    if (!window.confirm('Haqiqatan ham o\'chirmoqchimisiz?')) return;
+
+    try {
+      const response = await deleteOrder(orderId);
+      if (response.code === 200) {
+        loadOrders();
+      }
+    } catch (err) {
+      console.error('Failed to delete order:', err);
+      alert('O\'chirishda xatolik yuz berdi');
+    }
+  };
+
+  const handleShowPhone = (phone) => {
+    if (phone && phone.trim()) {
+      setSelectedPhone(phone);
+    } else {
+      setSelectedPhone(null);
+    }
+    setShowPremiumModal(true);
+  };
+
+  const handleFindTransport = (order) => {
+    // Order ma'lumotlarini transport qidiruv parametrlariga map qilish
+    const filters = {
+      // From location
+      fromCountry: order.fromLocation?.countryId,
+      fromRegion: order.fromLocation?.regionId,
+      fromCity: order.fromLocation?.cityId,
+      // Vehicle type - order'dagi transport turini qidirishda ishlatamiz
+      vehicleType: order.vehicleType
+      // maxWeight ishlatmaymiz - foydalanuvchi o'zi kiritadi
+    };
+
+    console.log('Order data for transport search:', {
+      orderId: order.id,
+      fromCity: order.fromCity,
+      toCity: order.toCity,
+      weightKg: order.weightKg,
+      vehicleType: order.vehicleType,
+      filters: filters,
+      originalOrder: order
+    });
+
+    navigate('/transports', {
+      state: {
+        orderId: order.id,
+        fromOrder: true,
+        orderInfo: {
+          cargoName: order.cargoName,
+          fromCity: order.fromCity,
+          toCity: order.toCity,
+          weightKg: order.weightKg,
+          vehicleType: order.vehicleType
+        },
+        filters: filters
+      }
+    });
+  };
+
+  if (loading) return <div className="container"><div className="loading">Yuklanmoqda...</div></div>;
+  if (error) return <div className="container"><div className="error-message">{error}</div></div>;
+
+  return (
+    <div className="container">
+      <h1 className="page-title">Buyurtmalarim</h1>
+
+      {orders.length === 0 ? (
+        <div className="empty-state">Hozircha buyurtmalaringiz yo'q</div>
+      ) : (
+        <div className="grid">
+          {orders.map(order => (
+            <div key={order.id} className="card">
+              <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 className="card-title" style={{ margin: 0 }}>
+                  {order.cargoName || `${order.fromCity || ''} → ${order.toCity || ''}`}
+                </h3>
+                {order.status && (
+                  <span className={`badge ${
+                    order.status === 'active' || order.status === 'new' ? 'badge-success' : 
+                    order.status === 'completed' ? 'badge-warning' : 
+                    'badge-danger'
+                  }`}>
+                    {order.status}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.8' }}>
+                {order.fromCity && (
+                  <p style={{ margin: '8px 0' }}>
+                    📍 Qayerdan: {order.fromCity}
+                  </p>
+                )}
+                
+                {order.toCity && (
+                  <p style={{ margin: '8px 0' }}>
+                    📍 Qayerga: {order.toCity}
+                  </p>
+                )}
+                
+                {order.weightKg && (
+                  <p style={{ margin: '8px 0' }}>
+                    ⚖️ Og'irligi: {order.weightKg} t
+                  </p>
+                )}
+                
+                {order.vehicleType && (
+                  <p style={{ margin: '8px 0' }}>🚚 Transport turi: {order.vehicleType}</p>
+                )}
+                
+                {order.description && order.description !== 'null' && order.description.trim() && (
+                  <p style={{ 
+                    margin: '12px 0', 
+                    fontStyle: 'italic', 
+                    padding: '10px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '4px' 
+                  }}>
+                    {order.description}
+                  </p>
+                )}
+
+                {order.createdTime && (
+                  <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#999' }}>
+                    Yaratilgan: {new Date(order.createdTime).toLocaleDateString('uz-UZ')}
+                  </p>
+                )}
+              </div>
+
+              <div style={{ marginTop: '15px', display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                <button
+                  className="btn btn-success"
+                  onClick={() => handleFindTransport(order)}
+                  style={{ width: '100%' }}
+                >
+                  🚚 Mashina topish
+                </button>
+                
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleShowPhone(order.additionalPhone)}
+                    style={{ flex: 1 }}
+                  >
+                    Telefon raqam
+                  </button>
+                  <button
+                    className="btn btn-danger"
+                    onClick={() => handleDelete(order.id)}
+                    style={{ flex: 1 }}
+                  >
+                    O'chirish
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showPremiumModal && (
+        <PremiumModal
+          phoneNumber={selectedPhone}
+          onClose={() => {
+            setShowPremiumModal(false);
+            setSelectedPhone(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}

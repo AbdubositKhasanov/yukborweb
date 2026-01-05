@@ -1,0 +1,98 @@
+import React, { useState } from 'react';
+import PhoneAccessModal from './PhoneAccessModal';
+import { handlePhoneAccess } from '../services/phoneAccess';
+import { requestCargoPhone } from '../services/api';
+
+export default function CargoCard({ cargo }) {
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState(null);
+  const [modalMessage, setModalMessage] = useState('');
+  const [phone, setPhone] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleRequestPhone = async () => {
+    setLoading(true);
+    try {
+      const result = await handlePhoneAccess(requestCargoPhone, cargo.id);
+      
+      setModalType(result.type);
+      setModalMessage(result.message || '');
+      setPhone(result.phone || null);
+      setShowModal(true);
+    } catch (error) {
+      setModalType('error');
+      setModalMessage('Xatolik yuz berdi');
+      setShowModal(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="card">
+        <div style={{ marginBottom: '15px' }}>
+          <h3 className="card-title">
+            {cargo.cargoName || `${cargo.fromCity || ''} → ${cargo.toCity || ''}`}
+          </h3>
+        </div>
+        
+        <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.8' }}>
+          <p style={{ margin: '8px 0' }}>
+            📍 Qayerdan: {cargo.fromCity || 'Ko\'rsatilmagan'}
+          </p>
+          <p style={{ margin: '8px 0' }}>
+            📍 Qayerga: {cargo.toCity || 'Ko\'rsatilmagan'}
+          </p>
+          
+          {cargo.weightKg && (
+            <p style={{ margin: '8px 0' }}>⚖️ Og'irligi: {cargo.weightKg} t</p>
+          )}
+          
+          {cargo.vehicleType && (
+            <p style={{ margin: '8px 0' }}>🚚 Transport turi: {cargo.vehicleType}</p>
+          )}
+          
+          {cargo.description && (
+            <p style={{ 
+              margin: '12px 0', 
+              fontStyle: 'italic', 
+              padding: '10px', 
+              backgroundColor: '#f8f9fa', 
+              borderRadius: '4px' 
+            }}>
+              {cargo.description}
+            </p>
+          )}
+
+          {cargo.createdTime && (
+            <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#999' }}>
+              Yaratilgan: {new Date(cargo.createdTime).toLocaleDateString('uz-UZ')}
+            </p>
+          )}
+        </div>
+
+        <div style={{ marginTop: '15px' }}>
+          <button
+            className="btn btn-primary"
+            onClick={handleRequestPhone}
+            disabled={loading}
+            style={{ width: '100%' }}
+          >
+            {loading ? 'Yuklanmoqda...' : 'Telefon raqamni ko\'rish'}
+          </button>
+        </div>
+      </div>
+
+      {showModal && (
+        <PhoneAccessModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          type={modalType}
+          message={modalMessage}
+          phone={phone}
+        />
+      )}
+    </>
+  );
+}
