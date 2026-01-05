@@ -1,27 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// export default defineConfig({
-//   plugins: [react()],
-//   build: {
-//     rollupOptions: {
-//       output: {
-//         manualChunks: undefined,
-//       }
-//     }
-//   },
-//   // SPA fallback uchun
-//   preview: {
-//     port: 3000,
-//     strictPort: true,
-//   },
-//   server: {
-//     port: 3000,
-//     strictPort: true,
-//     historyApiFallback: true, // Bu localhost uchun
-//   }
-// })
-
 export default defineConfig({
   plugins: [react()],
   server: {
