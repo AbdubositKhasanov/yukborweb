@@ -13,7 +13,6 @@ import MyTransportsPage from './pages/MyTransportsPage';
 import MyHarbingersPage from './pages/MyHarbingersPage';
 import DriverStatusPage from './pages/DriverStatusPage';
 import ProfilePage from './pages/ProfilePage';
-import { BrowserRouter } from 'react-router-dom'
 
 function App() {
   const [authToken, setAuthToken] = useState(null);
