@@ -6,24 +6,24 @@ import LocationSelector from '../components/LocationSelector';
 
 export default function CreateOrderPage() {
   const navigate = useNavigate();
-  
+
   // Form state
   const [cargoName, setCargoName] = useState('');
   const [additionalPhone, setAdditionalPhone] = useState('');
   const [description, setDescription] = useState('');
   const [weight, setWeight] = useState('');
   const [vehicleTypeId, setVehicleTypeId] = useState('');
-  
+
   // From location
   const [fromCountry, setFromCountry] = useState('');
   const [fromRegion, setFromRegion] = useState('');
   const [fromCity, setFromCity] = useState('');
-  
+
   // To location
   const [toCountry, setToCountry] = useState('');
   const [toRegion, setToRegion] = useState('');
   const [toCity, setToCity] = useState('');
-  
+
   // UI state
   const [loading, setLoading] = useState(false);
   const [staticData, setStaticData] = useState(null);
@@ -79,7 +79,7 @@ export default function CreateOrderPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate form
     if (!validateForm()) {
       showError('Iltimos, barcha majburiy maydonlarni to\'ldiring');
@@ -111,7 +111,7 @@ export default function CreateOrderPage() {
 
       if (response.code === 200) {
         showSuccess('Buyurtma muvaffaqiyatli yaratildi!');
-        
+
         // Navigate to My Orders page
         setTimeout(() => {
           navigate('/my-orders');
@@ -141,9 +141,9 @@ export default function CreateOrderPage() {
 
   return (
     <div className="container">
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '20px'
       }}>
@@ -245,7 +245,7 @@ export default function CreateOrderPage() {
             {errors.weight && (
               <span className="form-error">{errors.weight}</span>
             )}
-            )}
+
           </div>
 
           {/* Transport turi */}
@@ -308,17 +308,17 @@ export default function CreateOrderPage() {
       </div>
 
       {/* Info Card */}
-      <div className="card" style={{ 
-        maxWidth: '800px', 
+      <div className="card" style={{
+        maxWidth: '800px',
         margin: '20px auto 0',
         backgroundColor: '#f8f9fa'
       }}>
         <h4 style={{ marginBottom: '15px', color: 'var(--brand-color)' }}>
           💡 Ma'lumot
         </h4>
-        <ul style={{ 
-          color: '#666', 
-          lineHeight: '1.8', 
+        <ul style={{
+          color: '#666',
+          lineHeight: '1.8',
           fontSize: '14px',
           paddingLeft: '20px'
         }}>
