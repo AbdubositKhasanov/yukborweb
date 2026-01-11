@@ -90,7 +90,7 @@ export default function LocationSelector({
           value={cityValue || ''}
           onChange={(e) => onCityChange(e.target.value)}
           disabled={!regionValue}
-          required={required}
+          required={false}
         >
           <option value="">Shaharni tanlang</option>
           {filteredCities.map(city => (

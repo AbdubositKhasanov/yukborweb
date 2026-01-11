@@ -57,11 +57,11 @@ export default function CreateOrderPage() {
       newErrors.cargoName = 'Yuk nomini kiriting';
     }
 
-    if (!fromCountry || !fromRegion || !fromCity) {
+    if (!fromCountry || !fromRegion) {
       newErrors.fromLocation = 'Qayerdan joylashuvini to\'liq tanlang';
     }
 
-    if (!toCountry || !toRegion || !toCity) {
+    if (!toCountry || !toRegion) {
       newErrors.toLocation = 'Qayerga joylashuvini to\'liq tanlang';
     }
 
