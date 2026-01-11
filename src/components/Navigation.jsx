@@ -1,84 +1,126 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { getUserMe } from '../services/api';
+
+// Tab configuration by role
+const TAB_CONFIG = {
+  driver: [
+    { path: '/', label: 'Yuklar', auth: false },
+    { path: '/driver-status', label: 'Haydovchi holati', auth: true },
+    { path: '/my-transports', label: 'Transportlarim', auth: true },
+    { path: '/create-harbinger', label: 'Harbinger yaratish', auth: true },
+    { path: '/profile', label: 'Profil', auth: true },
+  ],
+  logist: [
+    { path: '/', label: 'Yuklar', auth: false },
+    { path: '/transports', label: 'Transportlar', auth: false },
+    { path: '/my-orders', label: 'Buyurtmalarim', auth: true },
+    { path: '/my-transports', label: 'Transportlarim', auth: true },
+    { path: '/create-harbinger', label: 'Harbinger yaratish', auth: true },
+    { path: '/profile', label: 'Profil', auth: true },
+  ],
+  shipper: [
+    { path: '/', label: 'Yuklar', auth: false },
+    { path: '/transports', label: 'Transportlar', auth: false },
+    { path: '/my-orders', label: 'Buyurtmalarim', auth: true },
+    { path: '/profile', label: 'Profil', auth: true },
+  ],
+};
+
+// Default tabs for unauthenticated users
+const DEFAULT_TABS = [
+  { path: '/', label: 'Yuklar', auth: false },
+  { path: '/transports', label: 'Transportlar', auth: false },
+];
 
 export default function Navigation({ isAuthenticated, onLogout }) {
   const location = useLocation();
+  const [userRole, setUserRole] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (isAuthenticated) {
+        try {
+          const response = await getUserMe();
+          if (response.code === 200 && response.result) {
+            setUserRole(response.result.type);
+          }
+        } catch (error) {
+          console.error('Failed to fetch user role:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+
+    fetchUserRole();
+  }, [isAuthenticated]);
+
+  // Get tabs based on role
+  const getTabs = () => {
+    if (!isAuthenticated) {
+      return DEFAULT_TABS;
+    }
+
+    // Use role-specific tabs or fallback to logist tabs
+    return TAB_CONFIG[userRole] || TAB_CONFIG.logist;
+  };
+
+  const tabs = getTabs();
 
   return (
     <nav className="navbar">
-      <div className="navbar-brand">Yuk Platformasi</div>
+      <div className="navbar-content" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '0 var(--space-lg)',
+        gap: 'var(--space-lg)'
+      }}>
+        <div className="navbar-brand">
+          <img 
+            src="/yukbor-logo.jpg" 
+            alt="YukBor" 
+            className="navbar-logo"
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: 'var(--radius-md)',
+              objectFit: 'cover'
+            }}
+          />
+          <span style={{ 
+            fontSize: 'var(--font-size-2xl)', 
+            fontWeight: '800',
+            background: 'linear-gradient(135deg, #ffffff 0%, var(--brand-accent) 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            YukBor
+          </span>
+        </div>
       
       <div className="navbar-menu">
-        <Link to="/">
-          <button 
-            className={`nav-button ${location.pathname === '/' ? 'active' : ''}`}
-          >
-            Yuklar
-          </button>
-        </Link>
-
-        <Link to="/transports">
-          <button 
-            className={`nav-button ${location.pathname === '/transports' ? 'active' : ''}`}
-          >
-            Transportlar
-          </button>
-        </Link>
+        {tabs.map((tab) => (
+          <Link key={tab.path} to={tab.path}>
+            <button 
+              className={`nav-button ${location.pathname === tab.path ? 'active' : ''}`}
+            >
+              {tab.label}
+            </button>
+          </Link>
+        ))}
 
         {isAuthenticated && (
-          <>
-            <Link to="/driver-status">
-              <button 
-                className={`nav-button ${location.pathname === '/driver-status' ? 'active' : ''}`}
-              >
-                Haydovchi holati
-              </button>
-            </Link>
-
-            <Link to="/create-transport">
-              <button 
-                className={`nav-button ${location.pathname === '/create-transport' ? 'active' : ''}`}
-              >
-                Transport yaratish
-              </button>
-            </Link>
-
-            <Link to="/create-harbinger">
-              <button 
-                className={`nav-button ${location.pathname === '/create-harbinger' ? 'active' : ''}`}
-              >
-                Harbinger yaratish
-              </button>
-            </Link>
-
-            <Link to="/my-orders">
-              <button 
-                className={`nav-button ${location.pathname === '/my-orders' ? 'active' : ''}`}
-              >
-                Buyurtmalarim
-              </button>
-            </Link>
-
-            <Link to="/my-transports">
-              <button 
-                className={`nav-button ${location.pathname === '/my-transports' ? 'active' : ''}`}
-              >
-                Transportlarim
-              </button>
-            </Link>
-
-            <Link to="/profile">
-              <button 
-                className={`nav-button ${location.pathname === '/profile' ? 'active' : ''}`}
-              >
-                Profil
-              </button>
-            </Link>
-
-            <button className="nav-button danger" onClick={onLogout}>
-              Chiqish
-            </button>
-          </>
+          <button className="nav-button danger" onClick={onLogout}>
+            Chiqish
+          </button>
         )}
 
         {!isAuthenticated && (
@@ -88,6 +130,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
             </button>
           </Link>
         )}
+      </div>
       </div>
     </nav>
   );

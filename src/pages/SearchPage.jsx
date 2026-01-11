@@ -282,7 +282,8 @@ export default function SearchPage() {
               onClick={() => setPage(p => p - 1)}
               disabled={page === 0}
             >
-              Oldingi
+              <span>←</span>
+              <span>Oldingi</span>
             </button>
             <span className="pagination-info">Sahifa {page + 1}</span>
             <button
@@ -290,7 +291,8 @@ export default function SearchPage() {
               onClick={() => setPage(p => p + 1)}
               disabled={cargos.length === 0}
             >
-              Keyingi
+              <span>Keyingi</span>
+              <span>→</span>
             </button>
           </div>
         </>

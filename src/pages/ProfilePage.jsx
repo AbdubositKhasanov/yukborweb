@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { updateUser, getInfo, getUserMe } from '../services/api';
+import { formatBalance, getBalanceColor } from '../utils/formatBalance';
+import { getTelegramSupportUrl } from '../config/config';
 
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
@@ -89,7 +91,13 @@ export default function ProfilePage() {
     <div className="container">
       <h1 className="page-title">Profil</h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', maxWidth: '1000px', margin: '0 auto' }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+        gap: '20px', 
+        maxWidth: '1000px', 
+        margin: '0 auto' 
+      }}>
         {/* User Info Card */}
         <div className="card">
           <h3 className="card-title">Mening ma'lumotlarim</h3>
@@ -109,6 +117,105 @@ export default function ProfilePage() {
                 <span>Ism:</span>
                 <strong style={{ color: 'var(--brand-color)' }}>{userData.name || 'Ko\'rsatilmagan'}</strong>
               </p>
+              
+              {/* YANGI: Balans bloki - har doim ko'rsatiladi */}
+              <div style={{
+                margin: '10px 0',
+                padding: '20px',
+                backgroundColor: (userData.balance ?? 0) > 0 ? '#d4edda' : '#fff3cd',
+                borderRadius: '12px',
+                border: `2px solid ${(userData.balance ?? 0) > 0 ? '#c3e6cb' : '#ffeaa7'}`,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+              }}>
+                {/* Balans ma'lumoti */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '15px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ 
+                      fontSize: '28px',
+                      filter: 'grayscale(0%)'
+                    }}>
+                      {(userData.balance ?? 0) > 0 ? '💰' : '💳'}
+                    </span>
+                    <span style={{ 
+                      fontWeight: '600', 
+                      fontSize: '16px',
+                      color: '#333'
+                    }}>
+                      Balans
+                    </span>
+                  </div>
+                  <strong style={{ 
+                    color: getBalanceColor(userData.balance ?? 0),
+                    fontSize: '22px',
+                    fontWeight: 'bold'
+                  }}>
+                    {formatBalance(userData.balance)}
+                  </strong>
+                </div>
+                
+                {/* Balansni to'ldirish tugmasi */}
+                <a
+                  href={getTelegramSupportUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '12px 20px',
+                    backgroundColor: 'var(--brand-color)',
+                    color: 'white',
+                    textDecoration: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '600',
+                    fontSize: '15px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 2px 4px rgba(8, 20, 44, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#0a1a38';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(8, 20, 44, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--brand-color)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(8, 20, 44, 0.2)';
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0) scale(0.98)';
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px) scale(1)';
+                  }}
+                >
+                  <svg 
+                    width="20" 
+                    height="20" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  <span>Balansni to'ldirish</span>
+                  <span style={{ fontSize: '18px' }}>💳</span>
+                </a>
+              </div>
+              
               {userData.driverLastLocName && (
                 <p style={{ display: 'flex', justifyContent: 'space-between', margin: '10px 0', padding: '10px', backgroundColor: '#d4edda', borderRadius: '4px' }}>
                   <span>🚚 Haydovchi joylashuvi:</span>

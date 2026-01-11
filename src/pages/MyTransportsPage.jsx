@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getMyTransports, deleteTransport } from '../services/api';
 
 export default function MyTransportsPage() {
+  const navigate = useNavigate();
   const [transports, setTransports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,10 +48,52 @@ export default function MyTransportsPage() {
 
   return (
     <div className="container">
-      <h1 className="page-title">Transportlarim</h1>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: '20px',
+        flexWrap: 'wrap',
+        gap: '10px'
+      }}>
+        <h1 className="page-title" style={{ margin: 0 }}>Transportlarim</h1>
+        <button
+          className="btn btn-primary"
+          onClick={() => navigate('/create-transport')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 20px',
+            fontSize: '15px',
+            fontWeight: '600'
+          }}
+        >
+          <span style={{ fontSize: '18px' }}>+</span>
+          <span>Transport yaratish</span>
+        </button>
+      </div>
 
       {transports.length === 0 ? (
-        <div className="empty-state">Hozircha transportlaringiz yo'q</div>
+        <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>🚚</div>
+          <h3 style={{ marginBottom: '10px', color: '#666' }}>
+            Hozircha transportlaringiz yo'q
+          </h3>
+          <p style={{ color: '#999', marginBottom: '30px' }}>
+            Birinchi transportingizni yarating va yuklar qidiring
+          </p>
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/create-transport')}
+            style={{
+              padding: '12px 30px',
+              fontSize: '16px'
+            }}
+          >
+            + Transport yaratish
+          </button>
+        </div>
       ) : (
         <div className="grid">
           {transports.map(transport => (

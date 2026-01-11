@@ -278,7 +278,8 @@ export default function BrowseTransportsPage() {
               onClick={() => setPage(p => p - 1)}
               disabled={page === 0}
             >
-              Oldingi
+              <span>←</span>
+              <span>Oldingi</span>
             </button>
             <span className="pagination-info">Sahifa {page + 1}</span>
             <button
@@ -286,7 +287,8 @@ export default function BrowseTransportsPage() {
               onClick={() => setPage(p => p + 1)}
               disabled={transports.length === 0}
             >
-              Keyingi
+              <span>Keyingi</span>
+              <span>→</span>
             </button>
           </div>
         </>

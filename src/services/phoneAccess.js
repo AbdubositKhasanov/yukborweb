@@ -1,38 +1,36 @@
-export const handlePhoneAccess = async (apiFunction, id) => {
+import { showError } from '../utils/toast';
+
+/**
+ * Generic phone access handler
+ * @param {Function} apiFunc - API function to call (requestCargoPhone or getTransportDetails)
+ * @param {number} id - Cargo or Transport ID
+ * @returns {Promise<{success: boolean, phone?: string, isPremium: boolean}>}
+ */
+export const handlePhoneAccess = async (apiFunc, id) => {
   try {
-    const response = await apiFunction(id);
+    const response = await apiFunc(id);
     
     if (response.code === 200) {
-      const phone = response.result?.phone || response.result?.additionalPhone;
-      
-      if (!phone || phone.trim() === '') {
-        return {
-          type: 'premium_required',
-          message: 'Telefon raqamni ko\'rish uchun Premium xizmatni faollashtiring'
-        };
-      }
+      const phone = response.result?.additionalPhone || response.result?.phone;
       
       return {
-        type: 'success',
-        phone: phone
+        success: true,
+        phone: phone || null,
+        isPremium: !!phone,
       };
-    }
-    
-    return {
-      type: 'error',
-      message: response.message || 'Xatolik yuz berdi'
-    };
-  } catch (err) {
-    if (err.response?.status === 401) {
+    } else {
+      showError(response.message || 'Telefon raqamni olishda xatolik');
       return {
-        type: 'unauthorized',
-        message: 'Telefon raqamni ko\'rish uchun tizimga kiring'
+        success: false,
+        isPremium: false,
       };
     }
-    
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || 'Xatolik yuz berdi';
+    showError(errorMessage);
     return {
-      type: 'error',
-      message: err.response?.data?.message || 'Xatolik yuz berdi'
+      success: false,
+      isPremium: false,
     };
   }
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTransport, getLocationsAndVehicles } from '../services/api';
+import { showSuccess, showError } from '../utils/toast';
 
 export default function CreateTransportPage() {
   const navigate = useNavigate();
@@ -53,14 +54,20 @@ export default function CreateTransportPage() {
       const response = await createTransport(transportData);
       if (response.code === 200) {
         setSuccess(true);
+        showSuccess('Transport muvaffaqiyatli yaratildi!');
+        
+        // Navigate to My Transports page
         setTimeout(() => {
           navigate('/my-transports');
-        }, 1500);
+        }, 1000);
       } else {
         setError(response.message || 'Transport yaratishda xatolik');
+        showError(response.message || 'Transport yaratishda xatolik');
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
+      const errorMessage = err.response?.data?.message || err.message || 'Xatolik yuz berdi';
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -76,7 +83,22 @@ export default function CreateTransportPage() {
 
   return (
     <div className="container">
-      <h1 className="page-title">Transport yaratish</h1>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: '20px'
+      }}>
+        <h1 className="page-title" style={{ margin: 0 }}>Transport yaratish</h1>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => navigate('/my-transports')}
+          style={{ minWidth: '100px' }}
+        >
+          ← Ortga
+        </button>
+      </div>
 
       <div className="card" style={{ maxWidth: '700px', margin: '0 auto' }}>
         <form onSubmit={handleSubmit}>
@@ -181,7 +203,7 @@ export default function CreateTransportPage() {
             />
           </div>
 
-          {error && <div className="error-message">{error}</div>}
+          {error && <div className="form-error" style={{marginTop: '-10px', marginBottom: '15px'}}>{error}</div>}
           {success && <div className="success-message">Transport muvaffaqiyatli yaratildi!</div>}
 
           <div className="btn-group">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getDriverTransportForm, updateTransportForm } from '../services/api';
+import { showSuccess, showError as showToastError } from '../utils/toast';
 
 export default function EditTransportModal({ isOpen, onClose, onSuccess, staticData }) {
   const [loading, setLoading] = useState(false);
@@ -13,6 +14,17 @@ export default function EditTransportModal({ isOpen, onClose, onSuccess, staticD
   const [maxWeight, setMaxWeight] = useState('');
   const [vehicleTypeId, setVehicleTypeId] = useState('');
   const [additionalPhone, setAdditionalPhone] = useState('');
+
+  // Helper to get location name
+  const getLocationName = () => {
+    const city = staticData?.cities.find(c => c.cityId === parseInt(fromCity));
+    const region = staticData?.regions.find(r => r.regionId === parseInt(fromRegion));
+    const country = staticData?.countries.find(c => c.countryId === parseInt(fromCountry));
+    
+    return [city?.name, region?.name, country?.name]
+      .filter(Boolean)
+      .join(', ');
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -60,6 +72,7 @@ export default function EditTransportModal({ isOpen, onClose, onSuccess, staticD
     
     if (!transportForm || !transportForm.id) {
       setError('Transport ID topilmadi');
+      showToastError('Transport ID topilmadi');
       return;
     }
 
@@ -78,15 +91,30 @@ export default function EditTransportModal({ isOpen, onClose, onSuccess, staticD
         vehicleTypeId: vehicleTypeId ? parseInt(vehicleTypeId) : null,
       };
 
+      console.log('Updating transport form:', { id: transportForm.id, formData });
+      
       const response = await updateTransportForm(transportForm.id, formData);
+      
+      console.log('Update response:', response);
+      
       if (response.code === 200) {
-        onSuccess?.();
-        onClose();
+        // Get updated location name to display
+        const updatedLocationName = getLocationName();
+        
+        // Call success callback (this will close modal and refresh data)
+        if (onSuccess) {
+          onSuccess(updatedLocationName);
+        }
       } else {
-        setError(response.message || 'Ma\'lumotlarni yangilashda xatolik');
+        const errorMsg = response.message || 'Ma\'lumotlarni yangilashda xatolik';
+        setError(errorMsg);
+        showToastError(errorMsg);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Xatolik yuz berdi');
+      console.error('Transport form update error:', err);
+      const errorMsg = err.response?.data?.message || err.message || 'Xatolik yuz berdi';
+      setError(errorMsg);
+      showToastError(errorMsg);
     } finally {
       setSaving(false);
     }

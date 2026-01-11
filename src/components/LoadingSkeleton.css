@@ -1,0 +1,120 @@
+/* Loading Skeleton Animations */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #f8f8f8 20%,
+    #f0f0f0 40%,
+    #f0f0f0 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Dark mode skeleton (optional) */
+@media (prefers-color-scheme: dark) {
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      #2a2a2a 0%,
+      #333333 20%,
+      #2a2a2a 40%,
+      #2a2a2a 100%
+    );
+    background-size: 200% 100%;
+  }
+}
+
+/* Card Skeleton */
+.card-skeleton {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* List Skeleton */
+.list-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.list-item-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Table Skeleton */
+.table-skeleton {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.table-row-skeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.table-row-skeleton:first-child {
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.table-row-skeleton:last-child {
+  border-bottom: none;
+}
+
+/* Form Skeleton */
+.form-skeleton {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Page Skeleton */
+.page-skeleton {
+  padding: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .grid-skeleton {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .table-row-skeleton {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .page-skeleton {
+    padding: 20px;
+  }
+}
+
+/* Animation pause on hover (optional) */
+.skeleton:hover {
+  animation-play-state: paused;
+}

@@ -1,383 +1,305 @@
-# 🚀 Yuk Platformasi - Complete Frontend
+# 🚀 YukBor Platform v2.0 - Production Ready
 
-Complete production-ready frontend with ALL backend features, Telegram login, premium phone access, and full Uzbek language support.
+O'zbekiston uchun zamonaviy yuk va transport platformasi. React + Vite + PWA.
 
-## ✅ COMPLETE FEATURE LIST
+## ✨ Features
 
-### 🔐 Authentication
-- ✅ Telegram bot login redirect (`tg://resolve?domain=...`)
-- ✅ Token persistence in localStorage
-- ✅ Protected routes
-- ✅ Auto-redirect to login for unauthenticated users
+### 🔐 Security
+- ✅ Token encryption (production)
+- ✅ Input sanitization (XSS protection)
+- ✅ CSRF protection ready
+- ✅ Secure API calls with interceptors
 
-### 🔍 Core Features
-- ✅ **Main Search** - Comprehensive cargo search with filters
-  - Location filters (Country → Region → City)
-  - Vehicle type filter
-  - Weight range filter
-  - Pagination
-- ✅ **Create Transport** - Add transport listing
-- ✅ **Create Harbinger** - Create cargo alert/notification
-- ✅ **My Orders** - View and manage orders
-- ✅ **My Transports** - View and manage transports
-- ✅ **My Harbingers** - View and manage harbingers
+### ⚡ Performance
+- ✅ Code splitting & lazy loading
+- ✅ PWA support (offline mode)
+- ✅ API caching
+- ✅ Optimized bundle size
+- ✅ Loading skeletons
 
-### 📱 Premium Phone Access (CRITICAL FEATURE)
-- ✅ Phone numbers hidden by default
-- ✅ "Telefon raqamni ko'rish" button
-- ✅ Backend API call to check premium status
-- ✅ If premium: Show phone number
-- ✅ If no premium: Show modal with "Premium sotib olish" CTA
-- ✅ Proper loading and error states
+### 🎨 UX/UI
+- ✅ Toast notifications
+- ✅ Error boundaries
+- ✅ Form validation (react-hook-form + zod)
+- ✅ Responsive design
+- ✅ Loading states
 
-### 🌐 Language
-- ✅ **ALL UI text in Uzbek**
-- ✅ Buttons, labels, placeholders, messages
-- ✅ Error messages in Uzbek
-- ✅ No English or Russian text
-
-### 🎨 Design
-- ✅ Brand color: **#08142c**
-- ✅ Clean, minimal, professional
-- ✅ Mobile-responsive
-- ✅ Intuitive navigation
-- ✅ Proper spacing and typography
-
-## 📁 Project Structure
-
-```
-cargo-platform-complete/
-├── package.json                          # Dependencies
-├── vite.config.js                        # Vite config with proxy
-├── .env                                  # Environment variables
-├── index.html                            # Entry HTML
-├── .gitignore                            # Git ignore
-└── src/
-    ├── main.jsx                          # Entry point
-    ├── App.jsx                           # Main app with routing
-    ├── config/
-    │   └── config.js                     # Configuration (Telegram bot, etc.)
-    ├── services/
-    │   └── api.js                        # Complete API client (ALL endpoints)
-    ├── styles/
-    │   └── main.css                      # Global styles with brand color
-    ├── components/
-    │   ├── Navigation.jsx                # Main navigation
-    │   ├── CargoCard.jsx                 # Cargo card with phone access
-    │   ├── PremiumModal.jsx              # Premium phone access modal
-    │   ├── LocationSelector.jsx          # Cascading location selector
-    │   └── ProtectedRoute.jsx            # Route protection
-    └── pages/
-        ├── LoginPage.jsx                 # Telegram login
-        ├── SearchPage.jsx                # Main search page
-        ├── CreateTransportPage.jsx       # Create transport
-        ├── CreateHarbingerPage.jsx       # Create harbinger
-        ├── MyOrdersPage.jsx              # User's orders
-        ├── MyTransportsPage.jsx          # User's transports
-        └── MyHarbingersPage.jsx          # User's harbingers
-```
+### 🧰 Developer Experience
+- ✅ ESLint + Prettier
+- ✅ Custom React hooks
+- ✅ Clean code structure
+- ✅ Environment variables
+- ✅ Git ignore configured
 
 ## 🚀 Quick Start
 
-### 1. Prerequisites
-- Node.js 16+ installed
-- Backend running on `http://167.172.68.133:8080`
-
-### 2. Configuration
-
-Edit `.env` file:
-```bash
-VITE_API_URL=http://167.172.68.133:8080
-VITE_TELEGRAM_BOT_USERNAME=your_bot_username  # IMPORTANT: Set your bot username
-```
-
-### 3. Install Dependencies
-```bash
+### 1. Install Dependencies
+\`\`\`bash
 npm install
-```
+\`\`\`
 
-### 4. Run Development Server
-```bash
+### 2. Configure Environment
+\`\`\`bash
+# Copy .env.example to .env and update values
+cp .env.example .env
+\`\`\`
+
+Edit `.env`:
+\`\`\`env
+VITE_API_URL=http://167.172.68.133:8080
+VITE_TELEGRAM_BOT_USERNAME=your_bot_username
+VITE_ENCRYPTION_KEY=your-secret-key-here
+\`\`\`
+
+### 3. Run Development Server
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 Opens at: **http://localhost:3000**
 
-### 5. Build for Production
-```bash
+### 4. Build for Production
+\`\`\`bash
 npm run build
 npm run preview
-```
+\`\`\`
+
+## 📁 Project Structure
+
+\`\`\`
+yukbor-platform-v2/
+├── public/              # Static assets
+├── src/
+│   ├── components/      # Reusable components
+│   │   ├── ErrorBoundary.jsx
+│   │   ├── LoadingSkeleton.jsx
+│   │   ├── Navigation.jsx
+│   │   └── ...
+│   ├── pages/          # Route pages
+│   │   ├── SearchPage.jsx
+│   │   ├── CreateTransportPage.jsx
+│   │   └── ...
+│   ├── services/       # API services
+│   │   └── api.js      # Improved API with caching
+│   ├── hooks/          # Custom React hooks
+│   │   └── index.js
+│   ├── utils/          # Utility functions
+│   │   ├── toast.js
+│   │   └── sanitize.js
+│   ├── context/        # React Context
+│   │   └── StaticDataContext.jsx
+│   ├── config/         # App configuration
+│   │   └── config.js
+│   ├── styles/         # Global styles
+│   │   └── main.css
+│   ├── App.jsx         # Main app component
+│   └── main.jsx        # Entry point
+├── .eslintrc.cjs       # ESLint config
+├── .prettierrc         # Prettier config
+├── .gitignore          # Git ignore
+├── vite.config.js      # Vite config with PWA
+└── package.json        # Dependencies
+\`\`\`
+
+## 🛠️ Available Scripts
+
+\`\`\`bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
+npm run lint:fix     # Fix ESLint errors
+npm run format       # Format code with Prettier
+npm run format:check # Check code formatting
+\`\`\`
 
 ## 🔌 API Integration
 
-### All Backend Endpoints Covered
+### Backend Configuration
+API base URL is configured in `.env`:
+\`\`\`env
+VITE_API_URL=http://167.172.68.133:8080
+\`\`\`
 
-**Authentication:**
-- POST `/login/mobile`
+### Available Endpoints
+All endpoints from the original project are supported:
+- Authentication: `/login/mobile`, `/user/me`
+- Search: `/cargos`, `/transports`
+- Orders: `/my/orders`, `/create/order`, etc.
+- Transports: `/my/transports`, `/create/transport`, etc.
+- Harbingers: `/my/harbingers`, `/create/harbinger`, etc.
 
-**Search:**
-- GET `/cargos` (with all filters)
-- GET `/locationsAndVehicles`
-- GET `/info`
+## 🎯 Custom Hooks
 
-**Cargo Details:**
-- GET `/cargo/{id}` (with premium phone access)
+\`\`\`javascript
+import { useDebounce, useApi, useForm } from './hooks';
 
-**Orders:**
-- GET `/my/orders`
-- GET `/my/order/{id}`
-- POST `/create/order`
-- PUT `/update/order/{id}`
-- DELETE `/order/{id}`
+// Debounce search input
+const debouncedValue = useDebounce(searchTerm, 500);
 
-**Transports:**
-- GET `/my/transports`
-- GET `/my/transport/{id}`
-- POST `/create/transport`
-- PUT `/update/transport/{id}`
-- DELETE `/transport/{id}`
+// API calls with loading/error states
+const { data, loading, error, execute } = useApi(searchCargos);
 
-**Harbingers:**
-- GET `/my/harbingers`
-- GET `/my/harbinger/{id}`
-- POST `/create/harbinger`
-- PUT `/update/harbinger/{id}`
-- DELETE `/harbinger/{id}`
+// Form handling
+const { values, errors, handleChange, handleSubmit } = useForm(initialValues);
+\`\`\`
 
-**Forms (Templates):**
-- GET `/forms/orders`
-- GET `/forms/transports`
-- GET `/forms/harbingers`
+## 📱 PWA Support
 
-**User:**
-- POST `/user/update`
+The app supports Progressive Web App features:
+- ✅ Offline mode
+- ✅ Install to home screen
+- ✅ Service worker caching
+- ✅ App manifest
 
-## 🔐 Authentication Flow
+## 🔐 Security Features
 
-### Telegram Login
-1. User clicks "Telegram orqali kirish"
-2. App redirects to: `tg://resolve?domain=${botUserName}&start=login`
-3. User authenticates in Telegram
-4. Bot sends token back (via postMessage or callback URL)
-5. Token stored in localStorage
-6. User redirected to main page
+### Token Encryption
+\`\`\`javascript
+// Tokens are automatically encrypted in production
+import { setAuthToken } from './services/api';
+setAuthToken(token); // Encrypted automatically
+\`\`\`
 
-### Token Management
-- Token stored in: `localStorage.getItem('authToken')`
-- Sent in header: `Authorization: <token>`
-- Auto-injected in all API calls via axios interceptor
+### Input Sanitization
+\`\`\`javascript
+import { sanitizeInput } from './utils/sanitize';
+const clean = sanitizeInput(userInput); // XSS protection
+\`\`\`
 
-## 📱 Premium Phone Access Logic
+## 🎨 UI Components
 
-### Implementation Details
+### Toast Notifications
+\`\`\`javascript
+import { showSuccess, showError, showPromise } from './utils/toast';
 
-```javascript
-// 1. User clicks "Telefon raqamni ko'rish"
-handleShowPhone = async () => {
-  // 2. Call backend API
-  const response = await requestCargoPhone(cargoId);
-  
-  // 3. Backend decides based on premium status
-  if (response.result.additionalPhone) {
-    // User has premium - show phone
-    setPhoneNumber(response.result.additionalPhone);
-  } else {
-    // User doesn't have premium - show upgrade modal
-    setPhoneNumber(null);
+showSuccess('Transport yaratildi!');
+showError('Xatolik yuz berdi');
+
+// Promise-based
+showPromise(
+  createTransport(data),
+  {
+    loading: 'Yaratilmoqda...',
+    success: 'Muvaffaqiyatli!',
+    error: 'Xatolik yuz berdi'
   }
-  
-  // 4. Open modal
-  setShowModal(true);
-};
-```
+);
+\`\`\`
 
-### Modal Behavior
-- **If premium:** Shows phone number prominently
-- **If no premium:** Shows message "Premium tarif kerak" with CTA button
+### Loading Skeletons
+\`\`\`javascript
+import { CardSkeleton, GridSkeleton } from './components/LoadingSkeleton';
 
-## 🎨 Design System
+if (loading) {
+  return <GridSkeleton count={6} columns={3} />;
+}
+\`\`\`
 
-### Colors
-```css
---brand-color: #08142c;        /* Primary brand color */
---brand-light: #1a2642;        /* Hover states */
---success-color: #28a745;      /* Success actions */
---danger-color: #dc3545;       /* Delete/danger */
---warning-color: #ffc107;      /* Warnings */
-```
+## 🚀 Deployment
 
-### Typography
-- Font: System fonts (Apple, Segoe UI, Roboto)
-- Titles: Bold, brand color
-- Body: 14px, #666
-- Labels: 500 weight
+### Build
+\`\`\`bash
+npm run build
+\`\`\`
 
-### Components
-- Cards: White bg, shadow, rounded corners
-- Buttons: 12px padding, rounded, hover effects
-- Inputs: Border, focus state, consistent sizing
-- Modals: Overlay, centered, shadow
+Output will be in `dist/` directory.
 
-## 🌐 Uzbek Language Examples
+### Environment Variables
+Create `.env.production`:
+\`\`\`env
+VITE_API_URL=https://api.yukbor.uz
+VITE_TELEGRAM_BOT_USERNAME=yukbor_prod_bot
+VITE_APP_ENV=production
+VITE_ENCRYPTION_KEY=super-secret-production-key
+\`\`\`
 
-```
-Qidirish              - Search
-Transport yaratish    - Create Transport
-Harbinger yaratish    - Create Harbinger
-Telefon raqamni ko'rish - Show Phone Number
-Premium tarif kerak   - Premium Required
-Premium sotib olish   - Buy Premium
-Saqlanmoqda...       - Saving...
-Yuklanmoqda...       - Loading...
-Muvaffaqiyatli!      - Success!
-Xatolik yuz berdi    - Error Occurred
-```
+### Server Configuration (Nginx)
+\`\`\`nginx
+server {
+    listen 80;
+    server_name yukbor.uz;
+    root /var/www/yukbor/dist;
+    index index.html;
+    
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    
+    location /api {
+        proxy_pass http://backend:8080;
+    }
+}
+\`\`\`
 
-## 📱 Responsive Design
+## 📊 Code Quality
 
-- **Desktop:** Full navigation, multi-column grids
-- **Tablet:** Adjusted grids, readable text
-- **Mobile:** Single column, hamburger menu, touch-friendly
+### ESLint
+\`\`\`bash
+npm run lint
+npm run lint:fix
+\`\`\`
 
-## 🧪 Testing Checklist
-
-### Authentication
-- [ ] Telegram redirect works
-- [ ] Token saved in localStorage
-- [ ] Protected routes redirect to login
-- [ ] Logout clears token
-
-### Search
-- [ ] All filters work
-- [ ] Pagination works
-- [ ] Results display correctly
-- [ ] Empty state shows
-
-### Phone Access
-- [ ] Button shows "Telefon raqamni ko'rish"
-- [ ] API called on click
-- [ ] Premium users see phone
-- [ ] Non-premium see upgrade modal
-- [ ] Modal has "Premium sotib olish" button
-
-### CRUD Operations
-- [ ] Create transport works
-- [ ] Create harbinger works
-- [ ] View orders/transports/harbingers
-- [ ] Delete with confirmation
-- [ ] Success messages in Uzbek
-
-### Language
-- [ ] All UI text in Uzbek
-- [ ] No English/Russian text
-- [ ] Error messages in Uzbek
+### Prettier
+\`\`\`bash
+npm run format
+npm run format:check
+\`\`\`
 
 ## 🐛 Troubleshooting
 
 ### Port Already in Use
-```bash
+\`\`\`bash
+# Kill process on port 3000
 lsof -ti:3000 | xargs kill -9
-```
+\`\`\`
 
-### Backend Not Responding
-1. Check backend is running: `curl http://167.172.68.133:8080/ping`
-2. Check CORS settings
-3. Verify API_URL in `.env`
+### Dependencies Issues
+\`\`\`bash
+# Clean install
+rm -rf node_modules package-lock.json
+npm install
+\`\`\`
 
-### Telegram Login Not Working
-1. Verify `VITE_TELEGRAM_BOT_USERNAME` in `.env`
-2. Check bot username is correct
-3. Test redirect URL manually
+### Build Errors
+\`\`\`bash
+# Clear cache
+npm run build -- --force
+\`\`\`
 
-### Phone Access Not Working
-1. Check backend returns phone for premium users
-2. Verify API endpoint: `/cargo/{id}`
-3. Check browser console for errors
+## 📚 Documentation
 
-## 📦 Dependencies
+- [React Documentation](https://react.dev)
+- [Vite Documentation](https://vitejs.dev)
+- [React Router](https://reactrouter.com)
+- [React Hook Form](https://react-hook-form.com)
 
-```json
-{
-  "react": "^18.2.0",              // UI library
-  "react-dom": "^18.2.0",          // React DOM
-  "react-router-dom": "^6.20.0",   // Routing
-  "axios": "^1.6.0"                // HTTP client
-}
-```
+## ⚡ Performance Tips
 
-All packages are **real, stable, and publicly available**.
+1. **Lazy Loading**: All pages are lazy-loaded
+2. **Code Splitting**: Vendor chunks are split
+3. **API Caching**: Responses are cached for 5 minutes
+4. **Image Optimization**: Use WebP format
+5. **PWA**: Service worker caches assets
 
-## 🔄 Build & Deploy
+## 🎯 Next Steps
 
-### Development
-```bash
-npm run dev
-```
+1. ✅ Set up CI/CD pipeline
+2. ✅ Add unit tests
+3. ✅ Configure monitoring (Sentry)
+4. ✅ Add analytics (Google Analytics)
+5. ✅ Set up staging environment
 
-### Production Build
-```bash
-npm run build
-# Output: dist/
-```
+## 📝 License
 
-### Preview Production
-```bash
-npm run preview
-```
+Proprietary - YukBor Platform
 
-### Deploy
-1. Build: `npm run build`
-2. Upload `dist/` to server
-3. Configure web server to serve `index.html` for all routes
-4. Update `.env` with production API URL
+## 🤝 Contributing
 
-## ✅ Verification Complete
-
-Before releasing, verified:
-- ✅ All backend APIs implemented
-- ✅ Telegram redirect format correct
-- ✅ Premium phone access logic works
-- ✅ All UI text in Uzbek
-- ✅ Brand color #08142c used throughout
-- ✅ No runtime errors
-- ✅ Mobile responsive
-- ✅ Clean code structure
-- ✅ Proper error handling
-- ✅ Loading states everywhere
-
-## 🎯 Architecture
-
-### Clean Separation
-- **API Layer:** `services/api.js` - All backend calls
-- **Config:** `config/config.js` - Configuration
-- **Components:** Reusable UI components
-- **Pages:** Route pages
-- **Styles:** Global CSS with variables
-
-### State Management
-- Local component state with `useState`
-- localStorage for auth token
-- No external state library needed
-
-### Routing
-- React Router DOM v6
-- Protected routes
-- Auto-redirect for unauthenticated users
-
-## 🚀 Ready for Production
-
-This frontend is:
-- ✅ Complete
-- ✅ Tested
-- ✅ Production-ready
-- ✅ Fully documented
-- ✅ Uzbek language
-- ✅ All features implemented
-- ✅ No placeholders or TODOs
-
-**Works immediately after `npm install && npm run dev`!**
+Contact the development team for contribution guidelines.
 
 ---
 
 **Built with ❤️ for Uzbekistan**
+
+Version: 2.0.0 (Production Ready)

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { updateDriverStatus, getUserMe, getLocationsAndVehicles } from '../services/api';
 import EditTransportModal from '../components/EditTransportModal';
+import { showSuccess } from '../utils/toast';
+import { CardSkeleton } from '../components/LoadingSkeleton';
 
 export default function DriverStatusPage() {
   const [isActive, setIsActive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
   const [hasTransport, setHasTransport] = useState(false);
   const [driverLocation, setDriverLocation] = useState(null);
   const [staticData, setStaticData] = useState(null);
@@ -63,8 +64,7 @@ export default function DriverStatusPage() {
       const response = await updateDriverStatus(newStatus);
       if (response.code === 200) {
         setIsActive(newStatus);
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
+        showSuccess(newStatus ? 'Holat faollashtirildi!' : 'Holat to\'xtatildi!');
       } else {
         setError(response.message || 'Holatni yangilashda xatolik');
       }
@@ -75,19 +75,50 @@ export default function DriverStatusPage() {
     }
   };
 
-  const handleEditSuccess = async () => {
-    setSuccess(true);
-    const userResponse = await getUserMe();
-    if (userResponse.code === 200 && userResponse.result) {
-      setDriverLocation(userResponse.result.driverLastLocName);
+  const handleEditSuccess = async (updatedLocation) => {
+    try {
+      // Toast notification
+      showSuccess('Ma\'lumotlar muvaffaqiyatli yangilandi!');
+      
+      // Optimistically update location if provided
+      if (updatedLocation) {
+        setDriverLocation(updatedLocation);
+      }
+      
+      // Close modal immediately
+      setShowEditModal(false);
+      
+      // Fetch fresh data from backend without showing full loading state
+      const userResponse = await getUserMe();
+      
+      if (userResponse.code === 200 && userResponse.result) {
+        const user = userResponse.result;
+        
+        // Update driver location
+        if (user.driverLastLocName) {
+          setHasTransport(true);
+          setDriverLocation(user.driverLastLocName);
+        }
+        
+        // Update driver status
+        if (user.driverCurrentStatus !== undefined) {
+          setIsActive(user.driverCurrentStatus);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh driver data:', error);
+      // Still show success since the update was successful
+      // Error is only in refresh, not in the update itself
     }
-    setTimeout(() => setSuccess(false), 3000);
   };
 
-  if (loading && !staticData) {
+  if (loading) {
     return (
       <div className="container">
-        <div className="loading">Yuklanmoqda...</div>
+        <h1 className="page-title">Haydovchi holati</h1>
+        <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+          <CardSkeleton />
+        </div>
       </div>
     );
   }
@@ -166,7 +197,6 @@ export default function DriverStatusPage() {
           )}
 
           {error && <div className="error-message" style={{ marginBottom: '20px' }}>{error}</div>}
-          {success && <div className="success-message" style={{ marginBottom: '20px' }}>Muvaffaqiyatli yangilandi!</div>}
 
           <div style={{ 
             display: 'flex', 
