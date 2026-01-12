@@ -35,32 +35,34 @@ const decryptData = (encryptedData) => {
  * Get auth token securely
  */
 const getAuthToken = () => {
-  try {
-    const encryptedToken = localStorage.getItem('authToken');
-    if (!encryptedToken) return null;
-    
-    // In production, use encrypted tokens
-    if (import.meta.env.PROD) {
-      return decryptData(encryptedToken);
-    }
-    return encryptedToken;
-  } catch (error) {
-    console.error('Error getting auth token:', error);
-    return null;
-  }
+  return localStorage.getItem('authToken');
+  // try {
+  //   const encryptedToken = localStorage.getItem('authToken');
+  //   if (!encryptedToken) return null;
+  //
+  //   // In production, use encrypted tokens
+  //   if (import.meta.env.PROD) {
+  //     return decryptData(encryptedToken);
+  //   }
+  //   return encryptedToken;
+  // } catch (error) {
+  //   console.error('Error getting auth token:', error);
+  //   return null;
+  // }
 };
 
 /**
  * Set auth token securely
  */
 export const setAuthToken = (token) => {
-  try {
-    // In production, encrypt the token
-    const tokenToStore = import.meta.env.PROD ? encryptData(token) : token;
-    localStorage.setItem('authToken', tokenToStore);
-  } catch (error) {
-    console.error('Error setting auth token:', error);
-  }
+  localStorage.setItem('authToken', token);
+  // try {
+  //   // In production, encrypt the token
+  //   const tokenToStore = import.meta.env.PROD ? encryptData(token) : token;
+  //   localStorage.setItem('authToken', tokenToStore);
+  // } catch (error) {
+  //   console.error('Error setting auth token:', error);
+  // }
 };
 
 /**
