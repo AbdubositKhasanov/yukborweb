@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyOrders, deleteOrder } from '../services/api';
-import PremiumModal from '../components/PremiumModal';
+import PhoneShowModal from '../components/PhoneShowModal.jsx';
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
@@ -237,7 +237,7 @@ export default function MyOrdersPage() {
       )}
 
       {showPremiumModal && (
-        <PremiumModal
+        <PhoneShowModal
           phoneNumber={selectedPhone}
           onClose={() => {
             setShowPremiumModal(false);

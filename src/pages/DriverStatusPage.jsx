@@ -58,7 +58,6 @@ export default function DriverStatusPage() {
 
     setUpdating(true);
     setError(null);
-    setSuccess(false);
 
     try {
       const response = await updateDriverStatus(newStatus);
