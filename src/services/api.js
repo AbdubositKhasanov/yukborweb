@@ -469,6 +469,14 @@ export const offerForDriver = async (driverId, orderId) => {
 };
 
 // ============================================
+// MY INVITED DRIVERS (for logist role)
+// ============================================
+
+export const getMyInvitedUsers = async () => {
+  return cachedGet('/my/invited/users', {}, { skipCache: true });
+};
+
+// ============================================
 // USER PROFILE
 // ============================================
 

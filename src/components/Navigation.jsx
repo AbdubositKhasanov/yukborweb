@@ -8,15 +8,16 @@ const TAB_CONFIG = {
     { path: '/', label: 'Yuklar', auth: false },
     { path: '/driver-status', label: 'Haydovchi holati', auth: true },
     { path: '/my-transports', label: 'Transportlarim', auth: true },
-    { path: '/create-harbinger', label: 'Harbinger yaratish', auth: true },
+    { path: '/my-harbingers', label: 'Xabarchilarim', auth: true },
     { path: '/profile', label: 'Profil', auth: true },
   ],
   logist: [
     { path: '/', label: 'Yuklar', auth: false },
     { path: '/transports', label: 'Transportlar', auth: false },
     { path: '/my-orders', label: 'Buyurtmalarim', auth: true },
+    { path: '/my-drivers', label: 'Haydovchilarim', auth: true },
     { path: '/my-transports', label: 'Transportlarim', auth: true },
-    { path: '/create-harbinger', label: 'Harbinger yaratish', auth: true },
+    { path: '/my-harbingers', label: 'Xabarchilarim', auth: true },
     { path: '/profile', label: 'Profil', auth: true },
   ],
   shipper: [
@@ -36,6 +37,7 @@ const DEFAULT_TABS = [
 export default function Navigation({ isAuthenticated, onLogout }) {
   const location = useLocation();
   const [userRole, setUserRole] = useState(null);
+  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
           const response = await getUserMe();
           if (response.code === 200 && response.result) {
             setUserRole(response.result.type);
+            setIsInternalDispatcher(response.result.isInternalDispatcher === true);
           }
         } catch (error) {
           console.error('Failed to fetch user role:', error);
@@ -66,7 +69,14 @@ export default function Navigation({ isAuthenticated, onLogout }) {
     }
 
     // Use role-specific tabs or fallback to logist tabs
-    return TAB_CONFIG[userRole] || TAB_CONFIG.logist;
+    let tabs = TAB_CONFIG[userRole] || TAB_CONFIG.logist;
+    
+    // Filter "Harbinger yaratish" for drivers if not internal dispatcher
+    if (userRole === 'driver' && !isInternalDispatcher) {
+      tabs = tabs.filter(tab => tab.path !== '/create-harbinger');
+    }
+    
+    return tabs;
   };
 
   const tabs = getTabs();

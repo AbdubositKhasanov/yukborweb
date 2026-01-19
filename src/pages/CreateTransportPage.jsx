@@ -17,6 +17,7 @@ export default function CreateTransportPage() {
   const [vehicleTypeId, setVehicleTypeId] = useState('');
   const [additionalPhone, setAdditionalPhone] = useState('');
   const [otherDesc, setOtherDesc] = useState('');
+  const [stateNumber, setStateNumber] = useState('');
 
   useEffect(() => {
     loadStaticData();
@@ -35,6 +36,13 @@ export default function CreateTransportPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate required field
+    if (!stateNumber || !stateNumber.trim()) {
+      setError('Davlat raqami majburiy maydon');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
 
@@ -49,6 +57,7 @@ export default function CreateTransportPage() {
         vehicleTypeId: vehicleTypeId ? parseInt(vehicleTypeId) : null,
         additionalPhone: additionalPhone || null,
         otherDesc: otherDesc || null,
+        stateNumber: stateNumber.trim(),
       };
 
       const response = await createTransport(transportData);
@@ -180,6 +189,23 @@ export default function CreateTransportPage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">
+              Davlat raqami <span style={{ color: 'red' }}>*</span>
+            </label>
+            <input
+              type="text"
+              className="form-input"
+              value={stateNumber}
+              onChange={(e) => setStateNumber(e.target.value)}
+              placeholder="01A123BC"
+              required
+            />
+            <span className="form-helper" style={{ fontSize: '12px', color: '#666' }}>
+              Masalan: 01A123BC, 90X456YZ
+            </span>
           </div>
 
           <div className="form-group">

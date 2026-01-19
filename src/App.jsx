@@ -17,6 +17,7 @@ const CreateOrderPage = lazy(() => import('./pages/CreateOrderPage'));
 const MyOrdersPage = lazy(() => import('./pages/MyOrdersPage'));
 const MyTransportsPage = lazy(() => import('./pages/MyTransportsPage'));
 const MyHarbingersPage = lazy(() => import('./pages/MyHarbingersPage'));
+const MyDriversPage = lazy(() => import('./pages/MyDriversPage'));
 const DriverStatusPage = lazy(() => import('./pages/DriverStatusPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
@@ -108,6 +109,14 @@ function AppContent() {
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
                 <MyOrdersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-drivers"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <MyDriversPage />
               </ProtectedRoute>
             }
           />

@@ -125,6 +125,12 @@ export default function MyTransportsPage() {
                   <p style={{ margin: '8px 0' }}>⚖️ Max og'irligi: {transport.maxWeight} t</p>
                 )}
 
+                {transport.stateNumber && transport.stateNumber.trim() ? (
+                  <p style={{ margin: '8px 0' }}>
+                    🚗 Davlat raqami: <strong>{transport.stateNumber}</strong>
+                  </p>
+                ) : null}
+
                 {transport.additionalPhone && (
                   <p style={{ margin: '8px 0' }}>📞 Telefon: {transport.additionalPhone}</p>
                 )}

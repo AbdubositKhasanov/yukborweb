@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { getMyHarbingers, deleteHarbinger } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 export default function MyHarbingersPage() {
+  const navigate = useNavigate();
   const [harbingers, setHarbingers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,7 +20,7 @@ export default function MyHarbingersPage() {
       if (response.code === 200) {
         setHarbingers(response.result);
       } else {
-        setError(response.message || 'Harbingerlar yuklanmadi');
+        setError(response.message || 'Xabarchilar yuklanmadi');
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
@@ -46,24 +48,75 @@ export default function MyHarbingersPage() {
 
   return (
     <div className="container">
-      <h1 className="page-title">Harbingerlarim</h1>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          gap: '10px',
+        }}
+      >
+        <h1 className="page-title" style={{ margin: 0 }}>
+          Xabarchilarim
+        </h1>
+        <button
+          className="btn btn-primary"
+          onClick={() => navigate('/create-harbinger')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 20px',
+            fontSize: '15px',
+            fontWeight: '600',
+          }}
+        >
+          <span style={{ fontSize: '18px' }}>+</span>
+          <span>Xabarchi yaratish</span>
+        </button>
+      </div>
 
       {harbingers.length === 0 ? (
-        <div className="empty-state">Hozircha harbingerlaringiz yo'q</div>
+        <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>🚚</div>
+          <h3 style={{ marginBottom: '10px', color: '#666' }}>Hozircha xabarchilaringiz yo'q</h3>
+          <p style={{ color: '#999', marginBottom: '30px' }}>
+            Birinchi xabarchiingizni yarating va yangi yuklar xabarini oling
+          </p>
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/create-harbinger')}
+            style={{
+              padding: '12px 30px',
+              fontSize: '16px',
+            }}
+          >
+            + Xabarchi yaratish
+          </button>
+        </div>
       ) : (
         <div className="grid">
-          {harbingers.map(harbinger => (
+          {harbingers.map((harbinger) => (
             <div key={harbinger.id} className="card">
-              <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                style={{
+                  marginBottom: '15px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <h3 className="card-title" style={{ margin: 0 }}>
-                  {`${harbinger.loc1 || ''} → ${harbinger.loc2 || ''}`}
+                  {harbinger.loc1 || 'Transport'}
                 </h3>
                 {harbinger.status && (
-                  <span className={`badge ${
-                    harbinger.status === 'new' ? 'badge-success' : 
-                    harbinger.status === 'completed' ? 'badge-warning' : 
-                    'badge-danger'
-                  }`}>
+                  <span
+                    className={`badge ${
+                      harbinger.status === 'active' ? 'badge-success' : 'badge-danger'
+                    }`}
+                  >
                     {harbinger.status}
                   </span>
                 )}
@@ -72,35 +125,30 @@ export default function MyHarbingersPage() {
               <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.8' }}>
                 {harbinger.loc1 && (
                   <p style={{ margin: '8px 0' }}>
-                    📍 Qayerdan: {harbinger.fullLoc1 || harbinger.loc1}
+                    📍 Joylashuv: {harbinger.fullLoc1 || harbinger.loc1}
                   </p>
                 )}
-                
-                {harbinger.loc2 && (
-                  <p style={{ margin: '8px 0' }}>
-                    📍 Qayerga: {harbinger.fullLoc2 || harbinger.loc2}
-                  </p>
-                )}
-                
+
                 {(harbinger.minWeight || harbinger.maxWeight) && (
                   <p style={{ margin: '8px 0' }}>
-                    ⚖️ Og'irligi: 
-                    {harbinger.minWeight && ` ${harbinger.minWeight.value} ${harbinger.minWeight.unit || 't'}`}
+                    ⚖️ Og'irligi:
+                    {harbinger.minWeight &&
+                      ` ${harbinger.minWeight.value} ${harbinger.minWeight.unit || 't'}`}
                     {harbinger.minWeight && harbinger.maxWeight && ' - '}
-                    {harbinger.maxWeight && ` ${harbinger.maxWeight.value} ${harbinger.maxWeight.unit || 't'}`}
+                    {harbinger.maxWeight &&
+                      ` ${harbinger.maxWeight.value} ${harbinger.maxWeight.unit || 't'}`}
                   </p>
                 )}
 
                 {harbinger.weightOfCargo && (
                   <p style={{ margin: '8px 0' }}>
-                    ⚖️ Yuk og'irligi: {harbinger.weightOfCargo.value} {harbinger.weightOfCargo.unit || 't'}
+                    ⚖️ Yuk og'irligi: {harbinger.weightOfCargo.value}{' '}
+                    {harbinger.weightOfCargo.unit || 't'}
                   </p>
                 )}
 
                 {harbinger.offersCount !== undefined && harbinger.offersCount > 0 && (
-                  <p style={{ margin: '8px 0' }}>
-                    📊 Takliflar: {harbinger.offersCount}
-                  </p>
+                  <p style={{ margin: '8px 0' }}>📊 Takliflar: {harbinger.offersCount}</p>
                 )}
 
                 {harbinger.createdTime && (

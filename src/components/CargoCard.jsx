@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import PhoneAccessModal from './PhoneAccessModal';
 import { handlePhoneAccess } from '../services/phoneAccess';
-import { requestCargoPhone } from '../services/api';
+import { requestCargoPhone, offerForDriver } from '../services/api';
+import ClubMembershipModal from './ClubMembershipModal';
 
-export default function CargoCard({ cargo }) {
+export default function CargoCard({ cargo, showOfferButton = false, driverId = null, isInternalDispatcher = false }) {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState(null);
   const [modalMessage, setModalMessage] = useState('');
   const [phone, setPhone] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [offering, setOffering] = useState(false);
+  const [offerSuccess, setOfferSuccess] = useState(false);
+  const [offerError, setOfferError] = useState(null);
+  const [showClubModal, setShowClubModal] = useState(false);
 
   const handleRequestPhone = async () => {
     setLoading(true);
@@ -35,6 +40,40 @@ export default function CargoCard({ cargo }) {
       setShowModal(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOffer = async () => {
+    // Check if user has internal dispatcher access
+    if (!isInternalDispatcher) {
+      setShowClubModal(true);
+      return;
+    }
+
+    if (!driverId || !cargo.id) {
+      alert('Taklif yuborishda xatolik: Ma\'lumotlar yetarli emas');
+      return;
+    }
+
+    if (!window.confirm('Ushbu yukni haydovchiga taklif qilmoqchimisiz?')) {
+      return;
+    }
+
+    setOffering(true);
+    setOfferError(null);
+
+    try {
+      const response = await offerForDriver(driverId, cargo.id);
+      if (response.code === 200) {
+        setOfferSuccess(true);
+        setTimeout(() => setOfferSuccess(false), 3000);
+      } else {
+        setOfferError(response.message || 'Taklif yuborishda xatolik');
+      }
+    } catch (error) {
+      setOfferError(error.response?.data?.message || 'Xatolik yuz berdi');
+    } finally {
+      setOffering(false);
     }
   };
 
@@ -82,7 +121,44 @@ export default function CargoCard({ cargo }) {
           )}
         </div>
 
-        <div style={{ marginTop: '15px' }}>
+        {offerSuccess && (
+          <div style={{ 
+            margin: '15px 0', 
+            padding: '10px', 
+            backgroundColor: '#d4edda', 
+            borderRadius: '4px', 
+            color: '#155724',
+            fontSize: '14px'
+          }}>
+            ✓ Taklif muvaffaqiyatli yuborildi!
+          </div>
+        )}
+
+        {offerError && (
+          <div style={{ 
+            margin: '15px 0', 
+            padding: '10px', 
+            backgroundColor: '#f8d7da', 
+            borderRadius: '4px', 
+            color: '#721c24',
+            fontSize: '14px'
+          }}>
+            {offerError}
+          </div>
+        )}
+
+        <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {showOfferButton && (
+            <button
+              className="btn btn-success"
+              onClick={handleOffer}
+              disabled={offering || offerSuccess}
+              style={{ width: '100%' }}
+            >
+              {offering ? 'Yuborilmoqda...' : offerSuccess ? '✓ Yuborildi' : '📨 Taklif qilish'}
+            </button>
+          )}
+          
           <button
             className="btn btn-primary"
             onClick={handleRequestPhone}
@@ -103,6 +179,11 @@ export default function CargoCard({ cargo }) {
           phone={phone}
         />
       )}
+
+      <ClubMembershipModal 
+        isOpen={showClubModal}
+        onClose={() => setShowClubModal(false)}
+      />
     </>
   );
 }

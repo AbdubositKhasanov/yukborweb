@@ -13,6 +13,7 @@ export default function CreateOrderPage() {
   const [description, setDescription] = useState('');
   const [weight, setWeight] = useState('');
   const [vehicleTypeId, setVehicleTypeId] = useState('');
+  const [priceUzs, setPriceUzs] = useState('');
 
   // From location
   const [fromCountry, setFromCountry] = useState('');
@@ -73,6 +74,10 @@ export default function CreateOrderPage() {
       newErrors.vehicleTypeId = 'Transport turini tanlang';
     }
 
+    if (!priceUzs || parseFloat(priceUzs) <= 0) {
+      newErrors.priceUzs = 'Buyurtma narxini kiriting';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -105,6 +110,7 @@ export default function CreateOrderPage() {
         },
         weight: parseFloat(weight),
         vehicleTypeId: parseInt(vehicleTypeId),
+        priceUzs: parseInt(priceUzs),
       };
 
       const response = await createOrder(orderData);
@@ -269,6 +275,29 @@ export default function CreateOrderPage() {
             {errors.vehicleTypeId && (
               <span className="form-error">{errors.vehicleTypeId}</span>
             )}
+          </div>
+
+          {/* Buyurtma narxi */}
+          <div className="form-group">
+            <label className="form-label">
+              Buyurtma narxi (so'm) <span className="required">*</span>
+            </label>
+            <input
+              type="number"
+              className={`form-input ${errors.priceUzs ? 'error' : ''}`}
+              value={priceUzs}
+              onChange={(e) => setPriceUzs(e.target.value)}
+              placeholder="Masalan: 500000"
+              min="1"
+              step="1"
+              required
+            />
+            {errors.priceUzs && (
+              <span className="form-error">{errors.priceUzs}</span>
+            )}
+            <span className="form-helper" style={{ color: '#856404', backgroundColor: '#fff3cd', padding: '8px', borderRadius: '4px', display: 'block', marginTop: '8px' }}>
+              ⚠️ Narx faqat o'zbek so'mida va raqamlarda kiritiladi
+            </span>
           </div>
 
           {/* Izoh / Tavsif */}

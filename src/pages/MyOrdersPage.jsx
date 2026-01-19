@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyOrders, deleteOrder } from '../services/api';
+import { getMyOrders, deleteOrder, getUserMe } from '../services/api';
 import PhoneShowModal from '../components/PhoneShowModal.jsx';
+import ClubMembershipModal from '../components/ClubMembershipModal';
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
@@ -10,10 +11,24 @@ export default function MyOrdersPage() {
   const [error, setError] = useState(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [selectedPhone, setSelectedPhone] = useState(null);
+  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [showClubModal, setShowClubModal] = useState(false);
 
   useEffect(() => {
     loadOrders();
+    loadUserData();
   }, []);
+
+  const loadUserData = async () => {
+    try {
+      const response = await getUserMe();
+      if (response.code === 200 && response.result) {
+        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+      }
+    } catch (err) {
+      console.error('Failed to load user data:', err);
+    }
+  };
 
   const loadOrders = async () => {
     setLoading(true);
@@ -56,6 +71,12 @@ export default function MyOrdersPage() {
   };
 
   const handleFindTransport = (order) => {
+    // Check if user has internal dispatcher access
+    if (!isInternalDispatcher) {
+      setShowClubModal(true);
+      return;
+    }
+
     // Order ma'lumotlarini transport qidiruv parametrlariga map qilish
     const filters = {
       // From location
@@ -245,6 +266,11 @@ export default function MyOrdersPage() {
           }}
         />
       )}
+
+      <ClubMembershipModal 
+        isOpen={showClubModal}
+        onClose={() => setShowClubModal(false)}
+      />
     </div>
   );
 }

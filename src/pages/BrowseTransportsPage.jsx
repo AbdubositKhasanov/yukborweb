@@ -370,6 +370,12 @@ function TransportCard({ transport, showOfferButton = false, orderId = null }) {
           <p style={{ margin: '8px 0' }}>⚖️ Sig'im: {transport.weight}</p>
         )}
 
+        {transport.stateNumber && transport.stateNumber.trim() ? (
+          <p style={{ margin: '8px 0' }}>
+            🚗 Davlat raqami: <strong>{transport.stateNumber}</strong>
+          </p>
+        ) : null}
+
         {showDetails && details && details.additionalPhone && (
           <p style={{ margin: '12px 0', padding: '10px', backgroundColor: '#d4edda', borderRadius: '4px', fontWeight: 'bold' }}>
             📞 Telefon: {details.additionalPhone}

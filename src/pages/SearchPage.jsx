@@ -1,28 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { searchCargos } from '../services/api';
+import { useLocation } from 'react-router-dom';
+import { searchCargos, offerForDriver, getUserMe } from '../services/api';
 import { useStaticData } from '../context/StaticDataContext';
 import CargoCard from '../components/CargoCard';
 
 export default function SearchPage() {
+  const location = useLocation();
+  const driverData = location.state || {};
+  const fromDriver = driverData.fromDriver || false;
+  const driverId = driverData.driverId || null;
+  const driverName = driverData.driverName || null;
+  const initialFilters = driverData.filters || {};
+
   const { staticData, loading: staticLoading } = useStaticData();
   const [cargos, setCargos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
+  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
 
   // Filter states
-  const [fromCountry, setFromCountry] = useState('');
-  const [fromRegion, setFromRegion] = useState('');
-  const [fromCity, setFromCity] = useState('');
+  const [fromCountry, setFromCountry] = useState(initialFilters.fromCountry?.toString() || '');
+  const [fromRegion, setFromRegion] = useState(initialFilters.fromRegion?.toString() || '');
+  const [fromCity, setFromCity] = useState(initialFilters.fromCity?.toString() || '');
   const [toCountry, setToCountry] = useState('');
   const [toRegion, setToRegion] = useState('');
   const [toCity, setToCity] = useState('');
-  const [vehicleType, setVehicleType] = useState('');
+  const [vehicleType, setVehicleType] = useState(initialFilters.vehicleType || '');
   const [minWeight, setMinWeight] = useState('');
-  const [maxWeight, setMaxWeight] = useState('');
+  const [maxWeight, setMaxWeight] = useState(initialFilters.maxWeight?.toString() || '');
 
   useEffect(() => {
-    loadCargos();
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const response = await getUserMe();
+      if (response.code === 200 && response.result) {
+        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+      }
+    } catch (err) {
+      console.error('Failed to load user data:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (fromDriver) {
+      // Auto-search when coming from driver
+      loadCargos();
+    } else {
+      loadCargos();
+    }
   }, [page]);
 
   const loadCargos = async () => {
@@ -94,6 +123,26 @@ export default function SearchPage() {
   return (
     <div className="container">
       <h1 className="page-title">Yuklar qidirish</h1>
+
+      {fromDriver && driverName && (
+        <div style={{
+          padding: '15px',
+          backgroundColor: '#d1ecf1',
+          border: '1px solid #bee5eb',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          color: '#0c5460'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+            <strong style={{ fontSize: '16px' }}>
+              👤 {driverName} uchun mos yuklar qidirilmoqda
+            </strong>
+          </div>
+          <p style={{ margin: '10px 0 0', fontSize: '13px', fontStyle: 'italic' }}>
+            Filter'lar haydovchi ma'lumotlariga asosan to'ldirildi. O'zgartirishingiz mumkin.
+          </p>
+        </div>
+      )}
 
       {/* Search Filters */}
       <div className="search-filters">
@@ -272,7 +321,13 @@ export default function SearchPage() {
         <>
           <div className="grid">
             {cargos.map(cargo => (
-              <CargoCard key={cargo.id} cargo={cargo} />
+              <CargoCard 
+                key={cargo.id} 
+                cargo={cargo}
+                showOfferButton={fromDriver}
+                driverId={driverId}
+                isInternalDispatcher={isInternalDispatcher}
+              />
             ))}
           </div>
 
