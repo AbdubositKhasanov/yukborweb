@@ -268,6 +268,7 @@ export default function BrowseTransportsPage() {
                 transport={transport}
                 showOfferButton={fromOrder}
                 orderId={orderId}
+                orderInfo={orderInfo}
               />
             ))}
           </div>
@@ -297,7 +298,7 @@ export default function BrowseTransportsPage() {
   );
 }
 
-function TransportCard({ transport, showOfferButton = false, orderId = null }) {
+function TransportCard({ transport, showOfferButton = false, orderId = null, orderInfo = null }) {
   const [showDetails, setShowDetails] = useState(false);
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -331,6 +332,14 @@ function TransportCard({ transport, showOfferButton = false, orderId = null }) {
       return;
     }
 
+    // Get price from orderInfo, default to 0 if not available
+    const priceUzs = orderInfo?.priceUzs || 0;
+    
+    if (priceUzs <= 0) {
+      alert('Buyurtma narxi noto\'g\'ri');
+      return;
+    }
+
     if (!window.confirm('Ushbu haydovchiga taklif yubormoqchimisiz?')) {
       return;
     }
@@ -339,7 +348,7 @@ function TransportCard({ transport, showOfferButton = false, orderId = null }) {
     setOfferError(null);
 
     try {
-      const response = await offerForDriver(transport.chatId, orderId);
+      const response = await offerForDriver(transport.chatId, orderId, priceUzs);
       if (response.code === 200) {
         setOfferSuccess(true);
         setTimeout(() => setOfferSuccess(false), 3000);

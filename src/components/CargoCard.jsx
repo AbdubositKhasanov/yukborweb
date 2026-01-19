@@ -3,8 +3,15 @@ import PhoneAccessModal from './PhoneAccessModal';
 import { handlePhoneAccess } from '../services/phoneAccess';
 import { requestCargoPhone, offerForDriver } from '../services/api';
 import ClubMembershipModal from './ClubMembershipModal';
+import OfferToDriverModal from './OfferToDriverModal';
 
-export default function CargoCard({ cargo, showOfferButton = false, driverId = null, isInternalDispatcher = false }) {
+export default function CargoCard({ 
+  cargo, 
+  showOfferButton = false, 
+  driverId = null, 
+  isInternalDispatcher = false,
+  showOfferToDriverButton = false
+}) {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState(null);
   const [modalMessage, setModalMessage] = useState('');
@@ -14,6 +21,7 @@ export default function CargoCard({ cargo, showOfferButton = false, driverId = n
   const [offerSuccess, setOfferSuccess] = useState(false);
   const [offerError, setOfferError] = useState(null);
   const [showClubModal, setShowClubModal] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
 
   const handleRequestPhone = async () => {
     setLoading(true);
@@ -55,6 +63,12 @@ export default function CargoCard({ cargo, showOfferButton = false, driverId = n
       return;
     }
 
+    // Validate price
+    if (!cargo.priceUzs || cargo.priceUzs <= 0) {
+      alert('Buyurtma narxi ko\'rsatilmagan');
+      return;
+    }
+
     if (!window.confirm('Ushbu yukni haydovchiga taklif qilmoqchimisiz?')) {
       return;
     }
@@ -63,7 +77,7 @@ export default function CargoCard({ cargo, showOfferButton = false, driverId = n
     setOfferError(null);
 
     try {
-      const response = await offerForDriver(driverId, cargo.id);
+      const response = await offerForDriver(driverId, cargo.id, cargo.priceUzs);
       if (response.code === 200) {
         setOfferSuccess(true);
         setTimeout(() => setOfferSuccess(false), 3000);
@@ -158,6 +172,16 @@ export default function CargoCard({ cargo, showOfferButton = false, driverId = n
               {offering ? 'Yuborilmoqda...' : offerSuccess ? '✓ Yuborildi' : '📨 Taklif qilish'}
             </button>
           )}
+
+          {showOfferToDriverButton && (
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowOfferModal(true)}
+              style={{ width: '100%' }}
+            >
+              👤 Haydovchiga taklif
+            </button>
+          )}
           
           <button
             className="btn btn-primary"
@@ -183,6 +207,12 @@ export default function CargoCard({ cargo, showOfferButton = false, driverId = n
       <ClubMembershipModal 
         isOpen={showClubModal}
         onClose={() => setShowClubModal(false)}
+      />
+
+      <OfferToDriverModal
+        isOpen={showOfferModal}
+        onClose={() => setShowOfferModal(false)}
+        cargo={cargo}
       />
     </>
   );

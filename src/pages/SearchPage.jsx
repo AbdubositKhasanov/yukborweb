@@ -327,6 +327,7 @@ export default function SearchPage() {
                 showOfferButton={fromDriver}
                 driverId={driverId}
                 isInternalDispatcher={isInternalDispatcher}
+                showOfferToDriverButton={isInternalDispatcher && !fromDriver}
               />
             ))}
           </div>

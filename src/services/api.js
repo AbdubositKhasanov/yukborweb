@@ -460,12 +460,26 @@ export const getSavedHarbingers = async () => {
 // DRIVER OFFER
 // ============================================
 
-export const offerForDriver = async (driverId, orderId) => {
+export const offerForDriver = async (driverId, orderId, priceUzs) => {
   const response = await apiClient.post('/offer_for_driver', {
     driver_id: driverId,
     order_id: orderId,
+    priceUzs: priceUzs,
   });
   return response.data;
+};
+
+export const getSuitableTransports = async (filters = {}) => {
+  const params = {
+    ...(filters.fromCountry && { from_country: filters.fromCountry }),
+    ...(filters.fromRegion && { from_region: filters.fromRegion }),
+    ...(filters.fromCity && { from_city: filters.fromCity }),
+    ...(filters.vehicleType && { vehicle_type: filters.vehicleType }),
+    ...(filters.maxWeight && { max_weight: filters.maxWeight }),
+    ...(filters.page !== undefined && { page: filters.page }),
+  };
+
+  return cachedGet('/suitable/transports', params, { skipCache: true });
 };
 
 // ============================================
