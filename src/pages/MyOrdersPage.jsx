@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getMyOrders, deleteOrder, getUserMe } from '../services/api';
 import PhoneShowModal from '../components/PhoneShowModal.jsx';
 import ClubMembershipModal from '../components/ClubMembershipModal';
+import { getOrderStatusText, getOrderStatusClass, hasAppointedDriver } from '../utils/orderStatus';
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
@@ -107,7 +108,8 @@ export default function MyOrdersPage() {
           fromCity: order.fromCity,
           toCity: order.toCity,
           weightKg: order.weightKg,
-          vehicleType: order.vehicleType
+          vehicleType: order.vehicleType,
+          priceUzs: order.priceUzs
         },
         filters: filters
       }
@@ -174,12 +176,8 @@ export default function MyOrdersPage() {
                   {order.cargoName || `${order.fromCity || ''} → ${order.toCity || ''}`}
                 </h3>
                 {order.status && (
-                  <span className={`badge ${
-                    order.status === 'active' || order.status === 'new' ? 'badge-success' : 
-                    order.status === 'completed' ? 'badge-warning' : 
-                    'badge-danger'
-                  }`}>
-                    {order.status}
+                  <span className={`badge ${getOrderStatusClass(order.status)}`}>
+                    {getOrderStatusText(order.status)}
                   </span>
                 )}
               </div>
@@ -206,6 +204,25 @@ export default function MyOrdersPage() {
                 {order.vehicleType && (
                   <p style={{ margin: '8px 0' }}>🚚 Transport turi: {order.vehicleType}</p>
                 )}
+
+                {order.priceUzs && order.priceUzs > 0 && (
+                  <p style={{ margin: '8px 0' }}>
+                    💰 Narxi: {order.priceUzs.toLocaleString('uz-UZ')} so'm
+                  </p>
+                )}
+
+                {hasAppointedDriver(order.status) && order.driverPhone && order.driverPhone.trim() && (
+                  <p style={{ 
+                    margin: '12px 0', 
+                    padding: '12px', 
+                    backgroundColor: '#d4edda', 
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    color: '#155724'
+                  }}>
+                    📞 Haydovchi telefoni: {order.driverPhone}
+                  </p>
+                )}
                 
                 {order.description && order.description !== 'null' && order.description.trim() && (
                   <p style={{ 
@@ -227,13 +244,15 @@ export default function MyOrdersPage() {
               </div>
 
               <div style={{ marginTop: '15px', display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                <button
-                  className="btn btn-success"
-                  onClick={() => handleFindTransport(order)}
-                  style={{ width: '100%' }}
-                >
-                  🚚 Mashina topish
-                </button>
+                {!hasAppointedDriver(order.status) && (
+                  <button
+                    className="btn btn-success"
+                    onClick={() => handleFindTransport(order)}
+                    style={{ width: '100%' }}
+                  >
+                    🚚 Mashina topish
+                  </button>
+                )}
                 
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
