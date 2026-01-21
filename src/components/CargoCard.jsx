@@ -4,6 +4,7 @@ import { handlePhoneAccess } from '../services/phoneAccess';
 import { requestCargoPhone, offerForDriver } from '../services/api';
 import ClubMembershipModal from './ClubMembershipModal';
 import OfferToDriverModal from './OfferToDriverModal';
+import PriceInputModal from './PriceInputModal';
 
 export default function CargoCard({ 
   cargo, 
@@ -22,6 +23,7 @@ export default function CargoCard({
   const [offerError, setOfferError] = useState(null);
   const [showClubModal, setShowClubModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showPriceModal, setShowPriceModal] = useState(false);
 
   const handleRequestPhone = async () => {
     setLoading(true);
@@ -63,23 +65,31 @@ export default function CargoCard({
       return;
     }
 
-    // Validate price
+    // Check if price exists
     if (!cargo.priceUzs || cargo.priceUzs <= 0) {
-      alert('Buyurtma narxi ko\'rsatilmagan');
+      // Open price input modal instead of showing error
+      setShowPriceModal(true);
       return;
     }
 
+    // Price exists, ask for confirmation before sending
     if (!window.confirm('Ushbu yukni haydovchiga taklif qilmoqchimisiz?')) {
       return;
     }
 
+    // Send offer with existing price
+    sendOffer(cargo.priceUzs);
+  };
+
+  const sendOffer = async (price) => {
     setOffering(true);
     setOfferError(null);
 
     try {
-      const response = await offerForDriver(driverId, cargo.id, cargo.priceUzs);
+      const response = await offerForDriver(driverId, cargo.id, price);
       if (response.code === 200) {
         setOfferSuccess(true);
+        setShowPriceModal(false); // Close price modal if it was open
         setTimeout(() => setOfferSuccess(false), 3000);
       } else {
         setOfferError(response.message || 'Taklif yuborishda xatolik');
@@ -213,6 +223,15 @@ export default function CargoCard({
         isOpen={showOfferModal}
         onClose={() => setShowOfferModal(false)}
         cargo={cargo}
+      />
+
+      <PriceInputModal
+        isOpen={showPriceModal}
+        onClose={() => setShowPriceModal(false)}
+        onSubmit={(price) => sendOffer(price)}
+        cargoName={cargo.cargoName || `${cargo.fromCity || ''} → ${cargo.toCity || ''}`}
+        offering={offering}
+        offerError={offerError}
       />
     </>
   );
