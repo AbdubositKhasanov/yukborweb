@@ -34,6 +34,22 @@ export default function SearchPage() {
     loadUserData();
   }, []);
 
+  // Set vehicle type from vehicleTypeId when staticData is loaded
+  useEffect(() => {
+    if (staticData && initialFilters.vehicleTypeId) {
+      const vehicleTypeId = initialFilters.vehicleTypeId;
+      const foundVehicleType = staticData.vehicleTypes?.find(v => v.id === vehicleTypeId);
+      
+      if (foundVehicleType) {
+        console.log('Setting vehicle type from ID:', {
+          vehicleTypeId: vehicleTypeId,
+          vehicleTypeName: foundVehicleType.name
+        });
+        setVehicleType(foundVehicleType.name);
+      }
+    }
+  }, [staticData, initialFilters.vehicleTypeId]);
+
   const loadUserData = async () => {
     try {
       const response = await getUserMe();

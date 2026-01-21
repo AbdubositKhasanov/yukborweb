@@ -59,9 +59,16 @@ export default function MyDriversPage() {
       fromCountry: transportForm?.fromLocation?.countryId,
       fromRegion: transportForm?.fromLocation?.regionId,
       fromCity: transportForm?.fromLocation?.cityId,
-      vehicleType: transportForm?.vehicleType,
+      vehicleTypeId: transportForm?.vehicleTypeId, // Use vehicleTypeId instead of vehicleType
       maxWeight: transportForm?.maxWeight
     };
+
+    console.log('Driver transport filters:', {
+      driverId: driver.chatId,
+      driverName: driver.name,
+      vehicleTypeId: transportForm?.vehicleTypeId,
+      filters: filters
+    });
 
     // Navigate to search page (cargos) with driver filters
     navigate('/', {
