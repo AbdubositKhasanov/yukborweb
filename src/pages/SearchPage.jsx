@@ -18,6 +18,7 @@ export default function SearchPage() {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Filter states
   const [fromCountry, setFromCountry] = useState(initialFilters.fromCountry?.toString() || '');
@@ -57,19 +58,36 @@ export default function SearchPage() {
     }
   }, [staticData, initialFilters.vehicleTypeId]);
 
-  // Auto-load cargos when filters are set from driver navigation
+  // Initial load - wait for filters to be set before loading
   useEffect(() => {
-    if (fromDriver && staticData && vehicleType) {
-      loadCargos();
+    if (isInitialLoad && staticData) {
+      if (fromDriver) {
+        // For driver flow: wait for vehicleType to be set (if vehicleTypeId exists)
+        if (initialFilters.vehicleTypeId) {
+          // Has vehicleTypeId - wait for vehicleType to be set
+          if (vehicleType) {
+            loadCargos();
+            setIsInitialLoad(false);
+          }
+        } else {
+          // No vehicleTypeId - load immediately
+          loadCargos();
+          setIsInitialLoad(false);
+        }
+      } else {
+        // Non-driver flow - load immediately
+        loadCargos();
+        setIsInitialLoad(false);
+      }
     }
-  }, [vehicleType, fromDriver, staticData]);
+  }, [staticData, vehicleType, fromDriver, initialFilters.vehicleTypeId, isInitialLoad]);
 
-  // Load cargos when page changes
+  // Pagination - only load on page change after initial load (skip page 0)
   useEffect(() => {
-    if (!fromDriver || !vehicleType) {
+    if (!isInitialLoad && page > 0) {
       loadCargos();
     }
-  }, [page]);
+  }, [page, isInitialLoad]);
 
   const loadCargos = async () => {
     setLoading(true);
@@ -105,6 +123,7 @@ export default function SearchPage() {
   const handleSearch = (e) => {
     e.preventDefault();
     setPage(0);
+    setIsInitialLoad(false); // Ensure we're not in initial load state
     loadCargos();
   };
 
@@ -119,6 +138,8 @@ export default function SearchPage() {
     setMinWeight('');
     setMaxWeight('');
     setPage(0);
+    setIsInitialLoad(false);
+    loadCargos(); // Load after reset
   };
 
   const filteredFromRegions = staticData?.regions.filter(
