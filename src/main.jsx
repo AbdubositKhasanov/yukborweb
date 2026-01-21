@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 import './styles/yukbor-design-system.css';
 import './styles/main.css';
+import './styles/mobile-responsive.css';
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
