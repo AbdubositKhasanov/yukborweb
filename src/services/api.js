@@ -490,6 +490,22 @@ export const getMyInvitedUsers = async () => {
   return cachedGet('/my/invited/users', {}, { skipCache: true });
 };
 
+/**
+ * Update counterparty driver status (activate/deactivate)
+ * @param {number} driverId - Driver chat ID
+ * @param {boolean} status - true = activate, false = deactivate
+ */
+export const updateCounterpartyDriverStatus = async (driverId, status) => {
+  const response = await apiClient.post('/update/counterparty/driver/status', null, {
+    params: {
+      driverId: driverId,
+      status: status
+    }
+  });
+  apiCache.invalidate('invited-users');
+  return response.data;
+};
+
 // ============================================
 // USER PROFILE
 // ============================================

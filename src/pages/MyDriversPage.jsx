@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyInvitedUsers, getUserMe } from '../services/api';
+import { getMyInvitedUsers, getUserMe, updateCounterpartyDriverStatus } from '../services/api';
 import { formatBalance, getBalanceColor } from '../utils/formatBalance';
 import ClubMembershipModal from '../components/ClubMembershipModal';
 
@@ -81,6 +81,27 @@ export default function MyDriversPage() {
     });
   };
 
+  const handleStatusUpdate = async (driverId, status) => {
+    try {
+      const response = await updateCounterpartyDriverStatus(driverId, status);
+      if (response.code === 200) {
+        // Success - update only this driver's status in local state (no reload!)
+        setDrivers(prevDrivers => 
+          prevDrivers.map(driver => 
+            driver.chatId === driverId 
+              ? { ...driver, driverCurrentStatus: status }
+              : driver
+          )
+        );
+      } else {
+        throw new Error(response.message || 'Status yangilanmadi');
+      }
+    } catch (error) {
+      console.error('Status update error:', error);
+      throw error; // Re-throw to trigger revert in DriverCard
+    }
+  };
+
   const getStatusColor = (isOnline) => {
     return isOnline ? '#28a745' : '#6c757d';
   };
@@ -143,6 +164,7 @@ export default function MyDriversPage() {
               key={driver.chatId}
               driver={driver}
               onFindOrder={handleFindOrder}
+              onStatusUpdate={handleStatusUpdate}
               formatDate={formatDate}
               getStatusColor={getStatusColor}
               getStatusText={getStatusText}
@@ -159,9 +181,38 @@ export default function MyDriversPage() {
   );
 }
 
-function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatusText }) {
+function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatusText, onStatusUpdate }) {
   const transportForm = driver.driverTransportForm;
   const isOnline = driver.driverCurrentStatus === true;
+  
+  // Local state for optimistic update - initialized from driverCurrentStatus
+  const [isActive, setIsActive] = useState(driver.driverCurrentStatus === true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  // Update local state when driver prop changes (from parent update)
+  useEffect(() => {
+    setIsActive(driver.driverCurrentStatus === true);
+  }, [driver.driverCurrentStatus]);
+
+  const handleStatusToggle = async () => {
+    const newStatus = !isActive;
+    const previousStatus = isActive;
+    
+    // Optimistic update
+    setIsActive(newStatus);
+    setUpdatingStatus(true);
+
+    try {
+      await onStatusUpdate(driver.chatId, newStatus);
+      // Success - keep the new status (parent state already updated)
+    } catch (error) {
+      // Error - revert to previous status
+      setIsActive(previousStatus);
+      console.error('Failed to update driver status:', error);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   return (
     <div className="card">
@@ -311,6 +362,94 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
           So'nggi yangilanish: {formatDate(transportForm.time)}
         </p>
       )}
+
+      {/* Driver Status Toggle */}
+      <div style={{
+        marginBottom: '15px',
+        padding: '14px',
+        backgroundColor: isActive ? '#d4edda' : '#f8d7da',
+        borderRadius: '8px',
+        border: `1px solid ${isActive ? '#c3e6cb' : '#f5c6cb'}`
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <div style={{
+              fontSize: '14px',
+              fontWeight: '600',
+              color: isActive ? '#155724' : '#721c24',
+              marginBottom: '4px'
+            }}>
+              {isActive ? '✅ Bo\'sh' : '🔴 Band'}
+            </div>
+            <div style={{
+              fontSize: '12px',
+              color: isActive ? '#155724' : '#721c24',
+              opacity: 0.8
+            }}>
+              {isActive ? 'Haydovchi buyurtma qabul qiladi' : 'Haydovchi band'}
+            </div>
+          </div>
+          
+          <label style={{
+            position: 'relative',
+            display: 'inline-block',
+            width: '52px',
+            height: '28px',
+            cursor: updatingStatus ? 'not-allowed' : 'pointer',
+            opacity: updatingStatus ? 0.6 : 1
+          }}>
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={handleStatusToggle}
+              disabled={updatingStatus}
+              style={{
+                opacity: 0,
+                width: 0,
+                height: 0
+              }}
+            />
+            <span style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: isActive ? '#28a745' : '#dc3545',
+              borderRadius: '28px',
+              transition: '0.3s',
+              cursor: updatingStatus ? 'not-allowed' : 'pointer'
+            }}>
+              <span style={{
+                position: 'absolute',
+                content: '',
+                height: '20px',
+                width: '20px',
+                left: isActive ? '28px' : '4px',
+                bottom: '4px',
+                backgroundColor: 'white',
+                borderRadius: '50%',
+                transition: '0.3s',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }} />
+            </span>
+          </label>
+        </div>
+        {updatingStatus && (
+          <div style={{
+            marginTop: '8px',
+            fontSize: '11px',
+            color: '#666',
+            textAlign: 'center'
+          }}>
+            Yuklanmoqda...
+          </div>
+        )}
+      </div>
 
       {/* Action Button */}
       <button

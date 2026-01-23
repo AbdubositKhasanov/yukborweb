@@ -304,6 +304,39 @@
   }
   
   /* ============================================
+     PROFILE PAGE - Balance Display Mobile
+     ============================================ */
+  
+  /* Profile balance container */
+  div[style*="borderRadius: 12px"][style*="boxShadow"] {
+    padding: 16px !important;
+  }
+  
+  /* Balance amount text - larger and monospaced for readability */
+  div[style*="borderRadius: 12px"] strong[style*="fontSize: 22px"] {
+    font-size: 24px !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    letter-spacing: 1px !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Balance label */
+  div[style*="borderRadius: 12px"] span[style*="fontSize: 16px"] {
+    font-size: 14px !important;
+  }
+  
+  /* Balance icon */
+  div[style*="borderRadius: 12px"] span[style*="fontSize: 28px"] {
+    font-size: 24px !important;
+  }
+  
+  /* Recharge button */
+  div[style*="borderRadius: 12px"] a[style*="padding: 12px 20px"] {
+    padding: 14px 18px !important;
+    font-size: 14px !important;
+  }
+  
+  /* ============================================
      SCROLLBAR
      ============================================ */
   
