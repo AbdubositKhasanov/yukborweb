@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyInvitedUsers, getUserMe, updateCounterpartyDriverStatus } from '../services/api';
+import { getMyInvitedUsers, getUserMe, updateCounterpartyDriverStatus, getLocationsAndVehicles, addInvitedUser } from '../services/api';
 import { formatBalance, getBalanceColor } from '../utils/formatBalance';
+import { showSuccess, showError } from '../utils/toast';
 import ClubMembershipModal from '../components/ClubMembershipModal';
+import CounterpartyTransportModal from '../components/CounterpartyTransportModal';
 
 export default function MyDriversPage() {
   const navigate = useNavigate();
@@ -11,10 +13,18 @@ export default function MyDriversPage() {
   const [error, setError] = useState(null);
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
   const [showClubModal, setShowClubModal] = useState(false);
+  const [staticData, setStaticData] = useState(null);
+  const [showTransportModal, setShowTransportModal] = useState(false);
+  const [selectedDriver, setSelectedDriver] = useState(null);
+  const [transportModalMode, setTransportModalMode] = useState('create');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [invitePhone, setInvitePhone] = useState('');
+  const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
     loadDrivers();
     loadUserData();
+    loadStaticData();
   }, []);
 
   const loadUserData = async () => {
@@ -25,6 +35,17 @@ export default function MyDriversPage() {
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
+    }
+  };
+
+  const loadStaticData = async () => {
+    try {
+      const response = await getLocationsAndVehicles();
+      if (response.code === 200) {
+        setStaticData(response.result);
+      }
+    } catch (err) {
+      console.error('Failed to load static data:', err);
     }
   };
 
@@ -86,9 +107,9 @@ export default function MyDriversPage() {
       const response = await updateCounterpartyDriverStatus(driverId, status);
       if (response.code === 200) {
         // Success - update only this driver's status in local state (no reload!)
-        setDrivers(prevDrivers => 
-          prevDrivers.map(driver => 
-            driver.chatId === driverId 
+        setDrivers(prevDrivers =>
+          prevDrivers.map(driver =>
+            driver.chatId === driverId
               ? { ...driver, driverCurrentStatus: status }
               : driver
           )
@@ -99,6 +120,55 @@ export default function MyDriversPage() {
     } catch (error) {
       console.error('Status update error:', error);
       throw error; // Re-throw to trigger revert in DriverCard
+    }
+  };
+
+  const handleAddTransport = (driver) => {
+    setSelectedDriver(driver);
+    setTransportModalMode('create');
+    setShowTransportModal(true);
+  };
+
+  const handleEditTransport = (driver) => {
+    setSelectedDriver(driver);
+    setTransportModalMode('edit');
+    setShowTransportModal(true);
+  };
+
+  const handleTransportModalClose = () => {
+    setShowTransportModal(false);
+    setSelectedDriver(null);
+  };
+
+  const handleTransportSuccess = () => {
+    loadDrivers(); // Reload drivers to get updated transport data
+  };
+
+  const handleInviteDriver = async (e) => {
+    e.preventDefault();
+
+    if (!invitePhone || !invitePhone.trim()) {
+      showError('Telefon raqamini kiriting');
+      return;
+    }
+
+    setInviting(true);
+
+    try {
+      const response = await addInvitedUser(invitePhone.trim());
+
+      if (response.code === 200) {
+        showSuccess('Haydovchi muvaffaqiyatli qo\'shildi!');
+        setShowInviteModal(false);
+        setInvitePhone('');
+        loadDrivers(); // Reload to show new driver
+      } else {
+        showError(response.message || 'Haydovchini qo\'shib bo\'lmadi');
+      }
+    } catch (err) {
+      showError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -145,7 +215,21 @@ export default function MyDriversPage() {
 
   return (
     <div className="container">
-      <h1 className="page-title">Haydovchilarim</h1>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '20px'
+      }}>
+        <h1 className="page-title" style={{ margin: 0 }}>Haydovchilarim</h1>
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowInviteModal(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <span style={{ fontSize: '18px' }}>+</span> Haydovchi qo'shish
+        </button>
+      </div>
 
       {drivers.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -154,8 +238,15 @@ export default function MyDriversPage() {
             Hozircha haydovchilaringiz yo'q
           </h3>
           <p style={{ color: '#999', marginBottom: '20px' }}>
-            Telegram botdan haydovchilarni taklif qiling
+            Haydovchini telefon raqami orqali qo'shing
           </p>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowInviteModal(true)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <span style={{ fontSize: '18px' }}>+</span> Haydovchi qo'shish
+          </button>
         </div>
       ) : (
         <div className="grid">
@@ -165,6 +256,8 @@ export default function MyDriversPage() {
               driver={driver}
               onFindOrder={handleFindOrder}
               onStatusUpdate={handleStatusUpdate}
+              onAddTransport={handleAddTransport}
+              onEditTransport={handleEditTransport}
               formatDate={formatDate}
               getStatusColor={getStatusColor}
               getStatusText={getStatusText}
@@ -173,17 +266,77 @@ export default function MyDriversPage() {
         </div>
       )}
 
-      <ClubMembershipModal 
+      <ClubMembershipModal
         isOpen={showClubModal}
         onClose={() => setShowClubModal(false)}
       />
+
+      <CounterpartyTransportModal
+        isOpen={showTransportModal}
+        onClose={handleTransportModalClose}
+        onSuccess={handleTransportSuccess}
+        staticData={staticData}
+        driver={selectedDriver}
+        mode={transportModalMode}
+      />
+
+      {/* Invite Driver Modal */}
+      {showInviteModal && (
+        <div className="modal-overlay" onClick={() => setShowInviteModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <h3 className="card-title">Haydovchi qo'shish</h3>
+            <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
+              Haydovchining telefon raqamini kiriting. Haydovchi YukBor tizimida ro'yxatdan o'tgan bo'lishi kerak.
+            </p>
+
+            <form onSubmit={handleInviteDriver}>
+              <div className="form-group">
+                <label className="form-label">
+                  Telefon raqami <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="tel"
+                  className="form-input"
+                  value={invitePhone}
+                  onChange={(e) => setInvitePhone(e.target.value)}
+                  placeholder="+998901234567"
+                  autoFocus
+                  disabled={inviting}
+                />
+              </div>
+
+              <div className="btn-group">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowInviteModal(false);
+                    setInvitePhone('');
+                  }}
+                  disabled={inviting}
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={inviting}
+                >
+                  {inviting ? 'Qo\'shilmoqda...' : 'Qo\'shish'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatusText, onStatusUpdate }) {
+function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatusText, onStatusUpdate, onAddTransport, onEditTransport }) {
   const transportForm = driver.driverTransportForm;
   const isOnline = driver.driverCurrentStatus === true;
+  const hasTransport = transportForm && (transportForm.loc1 || transportForm.vehicleType || transportForm.maxWeight);
   
   // Local state for optimistic update - initialized from driverCurrentStatus
   const [isActive, setIsActive] = useState(driver.driverCurrentStatus === true);
@@ -299,18 +452,40 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
       </div>
 
       {/* Transport Information */}
-      {transportForm && (
+      {hasTransport ? (
         <div style={{ marginBottom: '15px' }}>
-          <p style={{
-            fontSize: '13px',
-            color: '#999',
-            marginBottom: '6px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            fontWeight: '600'
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '6px'
           }}>
-            Transport ma'lumotlari
-          </p>
+            <p style={{
+              fontSize: '13px',
+              color: '#999',
+              margin: 0,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              fontWeight: '600'
+            }}>
+              Transport ma'lumotlari
+            </p>
+            <button
+              type="button"
+              onClick={() => onEditTransport(driver)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#007bff',
+                cursor: 'pointer',
+                fontSize: '13px',
+                padding: '4px 8px',
+                borderRadius: '4px'
+              }}
+            >
+              Tahrirlash
+            </button>
+          </div>
           <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.8' }}>
             {transportForm.loc1 && (
               <p style={{ margin: '4px 0' }}>
@@ -349,6 +524,25 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
               </p>
             )}
           </div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: '15px' }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => onAddTransport(driver)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            <span>+</span> Transport qo'shish
+          </button>
         </div>
       )}
 

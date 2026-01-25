@@ -491,6 +491,16 @@ export const getMyInvitedUsers = async () => {
 };
 
 /**
+ * Add invited user (driver) by phone number
+ * @param {string} phone - Phone number of the driver to invite
+ */
+export const addInvitedUser = async (phone) => {
+  const response = await apiClient.post('/add/invited/user', { phone });
+  apiCache.invalidate('invited-users');
+  return response.data;
+};
+
+/**
  * Update counterparty driver status (activate/deactivate)
  * @param {number} driverId - Driver chat ID
  * @param {boolean} status - true = activate, false = deactivate
@@ -501,6 +511,47 @@ export const updateCounterpartyDriverStatus = async (driverId, status) => {
       driverId: driverId,
       status: status
     }
+  });
+  apiCache.invalidate('invited-users');
+  return response.data;
+};
+
+/**
+ * Create transport for counterparty driver
+ * @param {number} driverId - Driver chat ID
+ * @param {object} transportData - Transport data
+ */
+export const createCounterpartyTransport = async (driverId, transportData) => {
+  const response = await apiClient.post('/create/counterparty/transport', transportData, {
+    params: { driverId }
+  });
+  apiCache.invalidate('invited-users');
+  return response.data;
+};
+
+/**
+ * Update counterparty's transport
+ * @param {string} id - Transport ID
+ * @param {number} driverId - Driver chat ID
+ * @param {object} transportData - Transport data
+ */
+export const updateCounterpartyTransport = async (id, driverId, transportData) => {
+  const response = await apiClient.put(`/update/counterparty/transport/${id}`, transportData, {
+    params: { driverId }
+  });
+  apiCache.invalidate('invited-users');
+  return response.data;
+};
+
+/**
+ * Update counterparty's transport form
+ * @param {string} id - Transport form ID
+ * @param {number} driverId - Driver chat ID
+ * @param {object} transportData - Transport data
+ */
+export const updateCounterpartyTransportForm = async (id, driverId, transportData) => {
+  const response = await apiClient.put(`/update/counterparty/transportForm/${id}`, transportData, {
+    params: { driverId }
   });
   apiCache.invalidate('invited-users');
   return response.data;
