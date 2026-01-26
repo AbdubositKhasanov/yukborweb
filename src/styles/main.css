@@ -46,3 +46,13 @@ textarea {
 }
 
 /* Page-specific overrides can be added here */
+
+/* Spin animation for refresh button */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

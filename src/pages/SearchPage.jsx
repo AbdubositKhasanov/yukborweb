@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { searchCargos, offerForDriver, getUserMe } from '../services/api';
 import { useStaticData } from '../context/StaticDataContext';
@@ -15,6 +15,7 @@ export default function SearchPage() {
   const { staticData, loading: staticLoading } = useStaticData();
   const [cargos, setCargos] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
@@ -89,10 +90,10 @@ export default function SearchPage() {
     }
   }, [page, isInitialLoad]);
 
-  const loadCargos = async () => {
+  const loadCargos = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const filters = {
         fromCountry: fromCountry || undefined,
@@ -117,7 +118,13 @@ export default function SearchPage() {
       setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, [fromCountry, fromRegion, fromCity, toCountry, toRegion, toCity, vehicleType, minWeight, maxWeight, page]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadCargos();
   };
 
   const handleSearch = (e) => {
@@ -160,7 +167,36 @@ export default function SearchPage() {
 
   return (
     <div className="container">
-      <h1 className="page-title">Yuklar qidirish</h1>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '20px',
+        flexWrap: 'wrap',
+        gap: '10px'
+      }}>
+        <h1 className="page-title" style={{ margin: 0 }}>Yuklar qidirish</h1>
+        <button
+          className="btn btn-secondary"
+          onClick={handleRefresh}
+          disabled={loading || refreshing}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 12px',
+            fontSize: '14px',
+            minWidth: 'auto'
+          }}
+          title="Yangilash"
+        >
+          <span style={{
+            display: 'inline-block',
+            animation: refreshing ? 'spin 1s linear infinite' : 'none'
+          }}>🔄</span>
+          {!refreshing && <span>Yangilash</span>}
+        </button>
+      </div>
 
       {fromDriver && driverName && (
         <div style={{

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { searchTransports, getLocationsAndVehicles, getTransportDetails, offerForDriver } from '../services/api';
+import { formatTimeAgo } from '../utils/formatTime';
 
 export default function BrowseTransportsPage() {
   const location = useLocation();
@@ -12,6 +13,7 @@ export default function BrowseTransportsPage() {
 
   const [transports, setTransports] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [staticData, setStaticData] = useState(null);
@@ -48,10 +50,10 @@ export default function BrowseTransportsPage() {
     }
   };
 
-  const loadTransports = async () => {
+  const loadTransports = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const filters = {
         fromCountry: fromCountry || undefined,
@@ -62,23 +64,23 @@ export default function BrowseTransportsPage() {
         page
       };
 
-      console.log('Transport search filters:', filters);
-      console.log('From order:', fromOrder);
-      console.log('Order ID:', orderId);
-
       const response = await searchTransports(filters);
       if (response.code === 200) {
         setTransports(response.result);
-        console.log('Found transports:', response.result?.length);
       } else {
         setError(response.message || 'Transportlar topilmadi');
       }
     } catch (err) {
-      console.error('Transport search error:', err);
       setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, [fromCountry, fromRegion, fromCity, vehicleType, maxWeight, page]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadTransports();
   };
 
   const handleSearch = (e) => {
@@ -106,7 +108,36 @@ export default function BrowseTransportsPage() {
 
   return (
     <div className="container">
-      <h1 className="page-title">Transport qidirish</h1>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '20px',
+        flexWrap: 'wrap',
+        gap: '10px'
+      }}>
+        <h1 className="page-title" style={{ margin: 0 }}>Transport qidirish</h1>
+        <button
+          className="btn btn-secondary"
+          onClick={handleRefresh}
+          disabled={loading || refreshing}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 12px',
+            fontSize: '14px',
+            minWidth: 'auto'
+          }}
+          title="Yangilash"
+        >
+          <span style={{
+            display: 'inline-block',
+            animation: refreshing ? 'spin 1s linear infinite' : 'none'
+          }}>🔄</span>
+          {!refreshing && <span>Yangilash</span>}
+        </button>
+      </div>
 
       {fromOrder && orderInfo && (
         <div style={{
@@ -405,7 +436,7 @@ function TransportCard({ transport, showOfferButton = false, orderId = null, ord
 
         {transport.time && (
           <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#999' }}>
-            Yaratilgan: {new Date(transport.time).toLocaleDateString('uz-UZ')}
+            {formatTimeAgo(transport.time)}
           </p>
         )}
       </div>

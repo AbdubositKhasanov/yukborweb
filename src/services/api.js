@@ -267,7 +267,8 @@ export const searchCargos = async (filters = {}) => {
     ...(filters.page !== undefined && { page: filters.page }),
   };
 
-  return cachedGet('/cargos', params);
+  // Qidiruv har doim yangi ma'lumot olishi kerak - keshlamaymiz
+  return cachedGet('/cargos', params, { skipCache: true });
 };
 
 export const searchTransports = async (filters = {}) => {
@@ -280,7 +281,8 @@ export const searchTransports = async (filters = {}) => {
     ...(filters.page !== undefined && { page: filters.page }),
   };
 
-  return cachedGet('/transports', params);
+  // Qidiruv har doim yangi ma'lumot olishi kerak - keshlamaymiz
+  return cachedGet('/transports', params, { skipCache: true });
 };
 
 // ============================================

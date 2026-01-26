@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyOrders, deleteOrder, getUserMe } from '../services/api';
 import PhoneShowModal from '../components/PhoneShowModal.jsx';
 import ClubMembershipModal from '../components/ClubMembershipModal';
 import { getOrderStatusText, getOrderStatusClass, hasAppointedDriver } from '../utils/orderStatus';
+import { formatTimeAgo } from '../utils/formatTime';
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [selectedPhone, setSelectedPhone] = useState(null);
@@ -31,7 +33,7 @@ export default function MyOrdersPage() {
     }
   };
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -45,7 +47,13 @@ export default function MyOrdersPage() {
       setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, []);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadOrders();
   };
 
   const handleDelete = async (orderId) => {
@@ -121,15 +129,36 @@ export default function MyOrdersPage() {
 
   return (
     <div className="container">
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '20px',
         flexWrap: 'wrap',
         gap: '10px'
       }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Buyurtmalarim</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <h1 className="page-title" style={{ margin: 0 }}>Buyurtmalarim</h1>
+          <button
+            className="btn btn-secondary"
+            onClick={handleRefresh}
+            disabled={loading || refreshing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              fontSize: '14px',
+              minWidth: 'auto'
+            }}
+            title="Yangilash"
+          >
+            <span style={{
+              display: 'inline-block',
+              animation: refreshing ? 'spin 1s linear infinite' : 'none'
+            }}>🔄</span>
+          </button>
+        </div>
         <button
           className="btn btn-primary"
           onClick={() => navigate('/create-order')}
@@ -238,7 +267,7 @@ export default function MyOrdersPage() {
 
                 {order.createdTime && (
                   <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#999' }}>
-                    Yaratilgan: {new Date(order.createdTime).toLocaleDateString('uz-UZ')}
+                    {formatTimeAgo(order.createdTime)}
                   </p>
                 )}
               </div>

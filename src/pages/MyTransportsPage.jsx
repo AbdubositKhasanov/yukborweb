@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyTransports, deleteTransport } from '../services/api';
+import { formatTimeAgo } from '../utils/formatTime';
 
 export default function MyTransportsPage() {
   const navigate = useNavigate();
   const [transports, setTransports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     loadTransports();
   }, []);
 
-  const loadTransports = async () => {
+  const loadTransports = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -26,7 +28,13 @@ export default function MyTransportsPage() {
       setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, []);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadTransports();
   };
 
   const handleDelete = async (transportId) => {
@@ -48,15 +56,36 @@ export default function MyTransportsPage() {
 
   return (
     <div className="container">
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '20px',
         flexWrap: 'wrap',
         gap: '10px'
       }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Transportlarim</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <h1 className="page-title" style={{ margin: 0 }}>Transportlarim</h1>
+          <button
+            className="btn btn-secondary"
+            onClick={handleRefresh}
+            disabled={loading || refreshing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              fontSize: '14px',
+              minWidth: 'auto'
+            }}
+            title="Yangilash"
+          >
+            <span style={{
+              display: 'inline-block',
+              animation: refreshing ? 'spin 1s linear infinite' : 'none'
+            }}>🔄</span>
+          </button>
+        </div>
         <button
           className="btn btn-primary"
           onClick={() => navigate('/create-transport')}
@@ -149,7 +178,7 @@ export default function MyTransportsPage() {
 
                 {transport.time && (
                   <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#999' }}>
-                    Yaratilgan: {new Date(transport.time).toLocaleDateString('uz-UZ')}
+                    {formatTimeAgo(transport.time)}
                   </p>
                 )}
               </div>

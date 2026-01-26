@@ -5,6 +5,7 @@ import { requestCargoPhone, offerForDriver } from '../services/api';
 import ClubMembershipModal from './ClubMembershipModal';
 import OfferToDriverModal from './OfferToDriverModal';
 import PriceInputModal from './PriceInputModal';
+import { formatTimeAgo } from '../utils/formatTime';
 
 export default function CargoCard({ 
   cargo, 
@@ -140,7 +141,7 @@ export default function CargoCard({
 
           {cargo.createdTime && (
             <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#999' }}>
-              Yaratilgan: {new Date(cargo.createdTime).toLocaleDateString('uz-UZ')}
+              {formatTimeAgo(cargo.createdTime)}
             </p>
           )}
         </div>
