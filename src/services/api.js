@@ -271,6 +271,24 @@ export const searchCargos = async (filters = {}) => {
   return cachedGet('/cargos', params, { skipCache: true });
 };
 
+export const searchPlatformCargos = async (filters = {}) => {
+  const params = {
+    ...(filters.fromCountry && { from_country: filters.fromCountry }),
+    ...(filters.fromRegion && { from_region: filters.fromRegion }),
+    ...(filters.fromCity && { from_city: filters.fromCity }),
+    ...(filters.toCountry && { to_country: filters.toCountry }),
+    ...(filters.toRegion && { to_region: filters.toRegion }),
+    ...(filters.toCity && { to_city: filters.toCity }),
+    ...(filters.vehicleType && { vehicle_type: filters.vehicleType }),
+    ...(filters.minWeight && { min_weight: filters.minWeight }),
+    ...(filters.maxWeight && { max_weight: filters.maxWeight }),
+    ...(filters.page !== undefined && { page: filters.page }),
+    source: 'bot',
+  };
+
+  return cachedGet('/cargos', params, { skipCache: true });
+};
+
 export const searchTransports = async (filters = {}) => {
   const params = {
     ...(filters.fromCountry && { from_country: filters.fromCountry }),
@@ -566,6 +584,92 @@ export const updateCounterpartyTransportForm = async (id, driverId, transportDat
 export const updateUser = async (userData) => {
   const response = await apiClient.post('/user/update', userData);
   apiCache.invalidate('user');
+  return response.data;
+};
+
+// ============================================
+// USERBOT & BROADCAST
+// ============================================
+
+/**
+ * Broadcast message to groups via userbots
+ * @param {string} message - Message text to broadcast
+ * @param {string[]|null} userbotPhones - Optional specific userbot phones
+ */
+export const broadcastMessage = async (message, userbotPhones = null) => {
+  const body = { message };
+  if (userbotPhones) body.userbot_phones = userbotPhones;
+  const response = await apiClient.post('/api/userbot/broadcast', body);
+  return response.data;
+};
+
+/**
+ * Get broadcast status by ID
+ * @param {string} broadcastId - Broadcast ID
+ */
+export const getBroadcastStatus = async (broadcastId) => {
+  const response = await apiClient.get(`/api/userbot/broadcast-status/${broadcastId}`);
+  return response.data;
+};
+
+/**
+ * List all userbots (admin only)
+ */
+export const listUserbots = async () => {
+  const response = await apiClient.get('/api/userbot/list');
+  return response.data;
+};
+
+/**
+ * Check userbots status (admin only)
+ * @param {string[]} phones - List of phone numbers
+ */
+export const checkUserbotStatus = async (phones) => {
+  const response = await apiClient.post('/api/userbot/check-status', { phones });
+  return response.data;
+};
+
+/**
+ * Add new userbot (admin only)
+ * @param {string} phone - Phone number
+ * @param {number} apiId - Telegram API ID
+ * @param {string} apiHash - Telegram API Hash
+ */
+export const addUserbot = async (phone, apiId, apiHash) => {
+  const response = await apiClient.post('/api/userbot/add', {
+    phone,
+    api_id: apiId,
+    api_hash: apiHash
+  });
+  return response.data;
+};
+
+/**
+ * Verify userbot code (admin only)
+ * @param {string} phone - Phone number
+ * @param {string} code - Verification code
+ */
+export const verifyUserbotCode = async (phone, code) => {
+  const response = await apiClient.post('/api/userbot/verify-code', { phone, code });
+  return response.data;
+};
+
+/**
+ * Verify userbot password (admin only)
+ * @param {string} phone - Phone number
+ * @param {string} password - 2FA password
+ */
+export const verifyUserbotPassword = async (phone, password) => {
+  const response = await apiClient.post('/api/userbot/verify-password', { phone, password });
+  return response.data;
+};
+
+/**
+ * Remove userbot (admin only)
+ * @param {string} phone - Phone number to remove
+ */
+export const removeUserbot = async (phone) => {
+  const response = await apiClient.delete(`/api/userbot/remove/${phone}`);
   return response.data;
 };
 

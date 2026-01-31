@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getMyOrders, deleteOrder, getUserMe } from '../services/api';
 import PhoneShowModal from '../components/PhoneShowModal.jsx';
 import ClubMembershipModal from '../components/ClubMembershipModal';
+import BroadcastModal from '../components/BroadcastModal';
 import { getOrderStatusText, getOrderStatusClass, hasAppointedDriver } from '../utils/orderStatus';
 import { formatTimeAgo } from '../utils/formatTime';
 
@@ -16,6 +17,8 @@ export default function MyOrdersPage() {
   const [selectedPhone, setSelectedPhone] = useState(null);
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
   const [showClubModal, setShowClubModal] = useState(false);
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastOrder, setBroadcastOrder] = useState(null);
 
   useEffect(() => {
     loadOrders();
@@ -282,7 +285,20 @@ export default function MyOrdersPage() {
                     🚚 Mashina topish
                   </button>
                 )}
-                
+
+                {isInternalDispatcher && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setBroadcastOrder(order);
+                      setShowBroadcastModal(true);
+                    }}
+                    style={{ width: '100%', backgroundColor: '#6f42c1', borderColor: '#6f42c1' }}
+                  >
+                    📡 Guruhlarga tarqatish
+                  </button>
+                )}
+
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
                     className="btn btn-primary"
@@ -315,9 +331,18 @@ export default function MyOrdersPage() {
         />
       )}
 
-      <ClubMembershipModal 
+      <ClubMembershipModal
         isOpen={showClubModal}
         onClose={() => setShowClubModal(false)}
+      />
+
+      <BroadcastModal
+        isOpen={showBroadcastModal}
+        onClose={() => {
+          setShowBroadcastModal(false);
+          setBroadcastOrder(null);
+        }}
+        order={broadcastOrder}
       />
     </div>
   );

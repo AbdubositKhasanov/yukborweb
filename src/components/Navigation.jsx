@@ -13,6 +13,7 @@ const TAB_CONFIG = {
   ],
   logist: [
     { path: '/', label: 'Yuklar', auth: false },
+    { path: '/platform-loads', label: 'Platforma yuklari', auth: true, requireDispatcher: true },
     { path: '/transports', label: 'Transportlar', auth: false },
     { path: '/my-orders', label: 'Buyurtmalarim', auth: true },
     { path: '/my-drivers', label: 'Haydovchilarim', auth: true },
@@ -38,6 +39,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
   const location = useLocation();
   const [userRole, setUserRole] = useState(null);
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
           if (response.code === 200 && response.result) {
             setUserRole(response.result.type);
             setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+            setIsAdmin(response.result.isAdmin === true);
           }
         } catch (error) {
           console.error('Failed to fetch user role:', error);
@@ -70,12 +73,22 @@ export default function Navigation({ isAuthenticated, onLogout }) {
 
     // Use role-specific tabs or fallback to logist tabs
     let tabs = TAB_CONFIG[userRole] || TAB_CONFIG.logist;
-    
+
     // Filter "Harbinger yaratish" for drivers if not internal dispatcher
     if (userRole === 'driver' && !isInternalDispatcher) {
       tabs = tabs.filter(tab => tab.path !== '/create-harbinger');
     }
-    
+
+    // Filter tabs that require dispatcher access
+    if (!isInternalDispatcher) {
+      tabs = tabs.filter(tab => !tab.requireDispatcher);
+    }
+
+    // Add admin tab for admins
+    if (isAdmin) {
+      tabs = [...tabs, { path: '/admin/userbots', label: 'Userbotlar', auth: true }];
+    }
+
     return tabs;
   };
 

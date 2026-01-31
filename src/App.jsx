@@ -20,6 +20,8 @@ const MyHarbingersPage = lazy(() => import('./pages/MyHarbingersPage'));
 const MyDriversPage = lazy(() => import('./pages/MyDriversPage'));
 const DriverStatusPage = lazy(() => import('./pages/DriverStatusPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const PlatformLoadsPage = lazy(() => import('./pages/PlatformLoadsPage'));
+const UserbotManagementPage = lazy(() => import('./pages/UserbotManagementPage'));
 
 function AppContent() {
   const [authToken, setAuthToken] = useState(null);
@@ -105,6 +107,14 @@ function AppContent() {
             }
           />
           <Route
+            path="/platform-loads"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <PlatformLoadsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/my-orders"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
@@ -141,6 +151,14 @@ function AppContent() {
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/userbots"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <UserbotManagementPage />
               </ProtectedRoute>
             }
           />
