@@ -673,6 +673,22 @@ export const removeUserbot = async (phone) => {
   return response.data;
 };
 
+/**
+ * Get group monitoring statistics (admin only)
+ */
+export const getGroupMonitoringStats = async () => {
+  const response = await apiClient.get('/api/userbot/group-monitoring/stats');
+  return response.data;
+};
+
+/**
+ * Get userbot service health status (admin only)
+ */
+export const getUserbotHealth = async () => {
+  const response = await apiClient.get('/api/userbot/health');
+  return response.data;
+};
+
 // ============================================
 // UTILITY
 // ============================================
