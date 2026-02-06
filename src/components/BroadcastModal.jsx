@@ -78,6 +78,9 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
         setStatus({
           status: 'in_progress',
           total_userbots: res.total_userbots,
+          total_groups: res.total_groups || 0,
+          groups_sent: 0,
+          groups_failed: 0,
           successful: 0,
           failed: 0,
           message: res.message,
@@ -183,11 +186,20 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
                 {status.status === 'failed' && 'Tarqatishda xatolik!'}
               </div>
               <div style={{ fontSize: '14px' }}>
-                <p style={{ margin: '4px 0' }}>Jami userbotlar: {status.total_userbots}</p>
-                <p style={{ margin: '4px 0' }}>Muvaffaqiyatli: {status.successful}</p>
-                {status.failed > 0 && (
-                  <p style={{ margin: '4px 0' }}>Xatolik: {status.failed}</p>
+                <p style={{ margin: '4px 0' }}>
+                  Jami guruhlar: {status.total_groups || 0}
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  Yuborildi: {status.groups_sent || 0} / {status.total_groups || 0}
+                </p>
+                {(status.groups_failed || 0) > 0 && (
+                  <p style={{ margin: '4px 0', color: '#dc3545' }}>
+                    Xatolik: {status.groups_failed} guruh
+                  </p>
                 )}
+                <p style={{ margin: '4px 0', fontSize: '12px', color: '#6c757d' }}>
+                  Userbotlar: {status.total_userbots} ta
+                </p>
               </div>
 
               {status.status === 'in_progress' && (
@@ -196,8 +208,8 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
                 }}>
                   <div style={{
                     height: '100%', borderRadius: '3px', backgroundColor: '#007bff',
-                    width: status.total_userbots > 0
-                      ? `${((status.successful + status.failed) / status.total_userbots) * 100}%`
+                    width: status.total_groups > 0
+                      ? `${(((status.groups_sent || 0) + (status.groups_failed || 0)) / status.total_groups) * 100}%`
                       : '0%',
                     transition: 'width 0.3s ease'
                   }} />
@@ -221,8 +233,19 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
                       <span>{detail.groups_sent} guruh</span>
                     </div>
                     {detail.errors && detail.errors.length > 0 && (
-                      <div style={{ color: '#dc3545', marginTop: '4px', fontSize: '12px' }}>
-                        {detail.errors.slice(0, 2).join(', ')}
+                      <div style={{ marginTop: '4px', fontSize: '12px' }}>
+                        {detail.errors.map((err, j) => (
+                          <div key={j} style={{
+                            color: err.includes('bloklangan') || err.includes('banned')
+                              ? '#dc3545'
+                              : err.includes('kutish') || err.includes('FloodWait')
+                                ? '#856404'
+                                : '#dc3545',
+                            marginBottom: '2px'
+                          }}>
+                            {err}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
