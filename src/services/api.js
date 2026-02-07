@@ -674,6 +674,30 @@ export const removeUserbot = async (phone) => {
 };
 
 /**
+ * Get banned groups list (admin only)
+ * @param {string|null} phone - Optional phone to filter
+ */
+export const getBannedGroups = async (phone = null) => {
+  const url = phone
+    ? `/api/userbot/banned-groups?phone=${phone}`
+    : '/api/userbot/banned-groups';
+  const response = await apiClient.get(url);
+  return response.data;
+};
+
+/**
+ * Clear banned groups (admin only)
+ * @param {string|null} phone - Optional phone to filter
+ */
+export const clearBannedGroups = async (phone = null) => {
+  const url = phone
+    ? `/api/userbot/banned-groups?phone=${phone}`
+    : '/api/userbot/banned-groups';
+  const response = await apiClient.delete(url);
+  return response.data;
+};
+
+/**
  * Get group monitoring statistics (admin only)
  */
 export const getGroupMonitoringStats = async () => {

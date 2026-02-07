@@ -9,6 +9,8 @@ import {
   getUserMe,
   getGroupMonitoringStats,
   getUserbotHealth,
+  getBannedGroups,
+  clearBannedGroups,
 } from '../services/api';
 
 // ============================================
@@ -51,6 +53,11 @@ export default function UserbotManagementPage() {
   const [healthData, setHealthData] = useState(null);
   const [monitoringLoading, setMonitoringLoading] = useState(false);
   const monitoringPollRef = useRef(null);
+
+  // Banned groups
+  const [bannedGroups, setBannedGroups] = useState([]);
+  const [bannedLoading, setBannedLoading] = useState(false);
+  const [clearingBanned, setClearingBanned] = useState(false);
 
   // Auto-clear messages
   useEffect(() => {
@@ -99,18 +106,40 @@ export default function UserbotManagementPage() {
   const loadMonitoringStats = async () => {
     setMonitoringLoading(true);
     try {
-      const [statsRes, healthRes] = await Promise.all([
+      const [statsRes, healthRes, bannedRes] = await Promise.all([
         getGroupMonitoringStats(),
         getUserbotHealth(),
+        getBannedGroups(),
       ]);
       setMonitoringStats(statsRes);
       setHealthData(healthRes);
+      setBannedGroups(bannedRes.banned_groups || []);
     } catch (err) {
       setError(
         err.response?.data?.detail || err.message || 'Monitoring yuklanmadi'
       );
     } finally {
       setMonitoringLoading(false);
+    }
+  };
+
+  const handleClearBannedGroups = async (phone = null) => {
+    const msg = phone
+      ? `${phone} uchun bloklangan guruhlarni tozalashni tasdiqlaysizmi?`
+      : 'Barcha bloklangan guruhlarni tozalashni tasdiqlaysizmi?';
+    if (!window.confirm(msg)) return;
+
+    setClearingBanned(true);
+    try {
+      const res = await clearBannedGroups(phone);
+      if (res.success) {
+        setSuccessMsg(res.message);
+        setBannedGroups(phone ? bannedGroups.filter((g) => g.phone !== phone) : []);
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Tozalashda xatolik');
+    } finally {
+      setClearingBanned(false);
     }
   };
 
@@ -976,7 +1005,7 @@ export default function UserbotManagementPage() {
               </div>
 
               {/* Processor Details */}
-              <div className="card">
+              <div className="card" style={{ marginBottom: '16px' }}>
                 <h3 style={{ margin: '0 0 12px', fontSize: '16px' }}>
                   Processor holati
                 </h3>
@@ -1012,6 +1041,107 @@ export default function UserbotManagementPage() {
                     }
                   />
                 </div>
+              </div>
+
+              {/* Banned Groups */}
+              <div className="card">
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '12px',
+                  }}
+                >
+                  <h3 style={{ margin: 0, fontSize: '16px' }}>
+                    Bloklangan guruhlar ({bannedGroups.length})
+                  </h3>
+                  {bannedGroups.length > 0 && (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => handleClearBannedGroups()}
+                      disabled={clearingBanned}
+                      style={{ padding: '4px 12px', fontSize: '12px' }}
+                    >
+                      {clearingBanned ? '...' : 'Barchasini tozalash'}
+                    </button>
+                  )}
+                </div>
+
+                {bannedGroups.length === 0 ? (
+                  <p style={{ color: '#999', fontSize: '14px', margin: 0 }}>
+                    Bloklangan guruhlar yo&apos;q. Broadcast da xatolik
+                    bo&apos;lgan guruhlar avtomatik shu yerga qo&apos;shiladi
+                    va keyingi broadcast da o&apos;tkazib yuboriladi.
+                  </p>
+                ) : (
+                  <>
+                    {/* Guruhlarni userbot bo'yicha guruhlash */}
+                    {Object.entries(
+                      bannedGroups.reduce((acc, g) => {
+                        if (!acc[g.phone]) acc[g.phone] = [];
+                        acc[g.phone].push(g);
+                        return acc;
+                      }, {})
+                    ).map(([phone, groups]) => (
+                      <div key={phone} style={{ marginBottom: '12px' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '6px',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontWeight: '600',
+                              fontSize: '13px',
+                            }}
+                          >
+                            {phone} ({groups.length} guruh)
+                          </span>
+                          <button
+                            onClick={() => handleClearBannedGroups(phone)}
+                            disabled={clearingBanned}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#007bff',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                            }}
+                          >
+                            Tozalash
+                          </button>
+                        </div>
+                        {groups.map((g, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              padding: '6px 10px',
+                              marginBottom: '4px',
+                              backgroundColor: '#fff0f0',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                            }}
+                          >
+                            <span style={{ color: '#dc3545' }}>
+                              {g.group_name || `ID: ${g.group_id}`}
+                            </span>
+                            {g.banned_at && (
+                              <span style={{ color: '#999' }}>
+                                {formatDate(g.banned_at)}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </>
           ) : (
