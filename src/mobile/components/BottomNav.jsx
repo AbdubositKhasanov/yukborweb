@@ -23,8 +23,8 @@ const TAB_CONFIG = {
   ],
   logist: [
     { id: 'home', icon: '📦', label: 'Yuklar', path: '/mobile' },
-    { id: 'search', icon: '👥', label: 'Haydovchi', path: '/mobile/drivers' },
-    { id: 'add', icon: '➕', label: "Qo'shish", path: '/mobile/create-order' },
+    { id: 'drivers', icon: '👥', label: 'Haydovchi', path: '/mobile/drivers' },
+    { id: 'transports', icon: '🚚', label: 'Transport', path: '/mobile/transports' },
     { id: 'orders', icon: '📋', label: 'Buyurtma', path: '/mobile/orders' },
     { id: 'profile', icon: '👤', label: 'Profil', path: '/mobile/profile' },
   ],

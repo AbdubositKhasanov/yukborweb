@@ -115,14 +115,22 @@ export default function MobileHome() {
     return chips;
   }, [staticData]);
 
+  // Track if currently loading more
+  const [loadingMore, setLoadingMore] = useState(false);
+
   // Load cargos
-  const loadCargos = useCallback(async (isRefresh = false) => {
+  const loadCargos = useCallback(async (isRefresh = false, pageNum = null) => {
+    const currentPage = pageNum !== null ? pageNum : (isRefresh ? 0 : page);
+
     try {
       if (isRefresh) {
         setRefreshing(true);
         setPage(0);
-      } else if (page === 0) {
         setLoading(true);
+      } else if (currentPage === 0) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
       }
 
       // MUST match Desktop SearchPage.jsx searchCargos call EXACTLY
@@ -136,12 +144,12 @@ export default function MobileHome() {
         vehicleType: filters.vehicleType || undefined,
         minWeight: filters.minWeight || undefined,
         maxWeight: filters.maxWeight || undefined,
-        page: isRefresh ? 0 : page,
+        page: currentPage,
       });
 
       if (response.code === 200) {
         const newCargos = response.result || [];
-        if (isRefresh || page === 0) {
+        if (isRefresh || currentPage === 0) {
           setCargos(newCargos);
         } else {
           setCargos((prev) => [...prev, ...newCargos]);
@@ -153,6 +161,7 @@ export default function MobileHome() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
   }, [filters, page]);
 
@@ -218,17 +227,12 @@ export default function MobileHome() {
 
   // Load more callback for infinite scroll
   const handleLoadMore = useCallback(() => {
-    if (hasMore && !loading && !refreshing) {
-      setPage((prev) => prev + 1);
+    if (hasMore && !loading && !loadingMore && !refreshing) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      loadCargos(false, nextPage);
     }
-  }, [hasMore, loading, refreshing]);
-
-  // Load more when page changes
-  useEffect(() => {
-    if (page > 0) {
-      loadCargos();
-    }
-  }, [page]);
+  }, [hasMore, loading, loadingMore, refreshing, page, loadCargos]);
 
   // Pull to refresh handler
   const handleRefresh = useCallback(async () => {
@@ -300,7 +304,7 @@ export default function MobileHome() {
               <LoadMoreTrigger
                 onLoadMore={handleLoadMore}
                 hasMore={hasMore}
-                loading={loading && page > 0}
+                loading={loadingMore}
               />
             </>
           )}

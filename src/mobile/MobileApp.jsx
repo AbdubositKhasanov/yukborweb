@@ -75,8 +75,8 @@ function MobileAppContent() {
     } else {
       // logist (default)
       if (path === '' || path === '/' || path === '/yuklar' || path.startsWith('/cargo')) return 'home';
-      if (path.startsWith('/drivers') || path.startsWith('/driver/')) return 'search';
-      if (path.startsWith('/create')) return 'add';
+      if (path.startsWith('/drivers') || path.startsWith('/driver/')) return 'drivers';
+      if (path.startsWith('/transports') || path.startsWith('/transport/')) return 'transports';
       if (path.startsWith('/orders') || path.startsWith('/order/')) return 'orders';
       if (path.startsWith('/profile')) return 'profile';
     }
