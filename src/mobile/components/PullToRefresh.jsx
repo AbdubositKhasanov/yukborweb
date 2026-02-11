@@ -1,63 +1,94 @@
 /**
- * Pull to Refresh - simplified version
- * Shows refresh button + handles pull gesture on mobile
+ * Pull to Refresh wrapper component
+ * Touch gesture based refresh
  */
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 
 export default function PullToRefresh({ onRefresh, children, disabled = false }) {
   const [refreshing, setRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const startY = useRef(0);
+  const isPulling = useRef(false);
 
-  const handleRefresh = async () => {
-    if (disabled || refreshing || !onRefresh) return;
+  const THRESHOLD = 60;
+  const MAX_PULL = 100;
 
-    setRefreshing(true);
-    try {
-      await onRefresh();
-    } finally {
-      setRefreshing(false);
+  const handleTouchStart = useCallback((e) => {
+    if (disabled || refreshing) return;
+    if (window.scrollY > 0) return;
+
+    startY.current = e.touches[0].clientY;
+    isPulling.current = true;
+  }, [disabled, refreshing]);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!isPulling.current || disabled || refreshing) return;
+    if (window.scrollY > 0) {
+      isPulling.current = false;
+      setPullDistance(0);
+      return;
     }
-  };
+
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - startY.current;
+
+    if (diff > 0) {
+      e.preventDefault();
+      const distance = Math.min(diff * 0.4, MAX_PULL);
+      setPullDistance(distance);
+    }
+  }, [disabled, refreshing]);
+
+  const handleTouchEnd = useCallback(async () => {
+    if (!isPulling.current || disabled) return;
+
+    isPulling.current = false;
+
+    if (pullDistance >= THRESHOLD && onRefresh) {
+      setRefreshing(true);
+      try {
+        await onRefresh();
+      } finally {
+        setRefreshing(false);
+      }
+    }
+
+    setPullDistance(0);
+  }, [pullDistance, onRefresh, disabled]);
+
+  const showIndicator = pullDistance > 0 || refreshing;
 
   return (
-    <>
-      {/* Refresh button at top */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        padding: '8px 0',
-        background: 'var(--m-bg)',
-      }}>
-        <button
-          onClick={handleRefresh}
-          disabled={disabled || refreshing}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 16px',
-            fontSize: 13,
-            color: refreshing ? 'var(--m-text-muted)' : 'var(--m-primary)',
-            background: 'var(--m-bg-card)',
-            border: '1px solid var(--m-border)',
-            borderRadius: 20,
-            cursor: disabled ? 'not-allowed' : 'pointer',
-          }}
-        >
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{ minHeight: '100%' }}
+    >
+      {/* Pull indicator */}
+      {showIndicator && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: refreshing ? 50 : pullDistance,
+          overflow: 'hidden',
+          transition: isPulling.current ? 'none' : 'height 0.2s ease',
+        }}>
           {refreshing ? (
-            <>
-              <span className="m-spinner" style={{ width: 16, height: 16 }} />
-              Yangilanmoqda...
-            </>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="m-spinner" style={{ width: 20, height: 20 }} />
+              <span style={{ fontSize: 13, color: 'var(--m-text-muted)' }}>Yangilanmoqda...</span>
+            </div>
           ) : (
-            <>
-              🔄 Yangilash
-            </>
+            <span style={{ fontSize: 13, color: 'var(--m-text-muted)' }}>
+              {pullDistance >= THRESHOLD ? '↑ Qo\'yib yuboring' : '↓ Yangilash uchun torting'}
+            </span>
           )}
-        </button>
-      </div>
+        </div>
+      )}
 
-      {/* Content */}
       {children}
-    </>
+    </div>
   );
 }

@@ -3,11 +3,12 @@
  * Isolated mobile-only UI layer
  * Route: /mobile/*
  */
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
 import MobileProtectedRoute from './components/MobileProtectedRoute';
 import MobileLoading from './components/MobileLoading';
+import CreateActionSheet from './components/CreateActionSheet';
 import { MobileAuthProvider, useMobileAuth } from './context/MobileAuthContext';
 import './styles/mobile.css';
 
@@ -25,6 +26,7 @@ const MobileMyDrivers = lazy(() => import('./pages/MobileMyDrivers'));
 const MobileDriverDetail = lazy(() => import('./pages/MobileDriverDetail'));
 const MobileProfile = lazy(() => import('./pages/MobileProfile'));
 const MobileMyTransports = lazy(() => import('./pages/MobileMyTransports'));
+const MobileCreateTransport = lazy(() => import('./pages/MobileCreateTransport'));
 
 // Role-based default page redirect
 function RoleBasedHome() {
@@ -51,6 +53,9 @@ function RoleBasedHome() {
 function MobileAppContent() {
   const location = useLocation();
   const { isAuthenticated, userRole, loading } = useMobileAuth();
+
+  // Action sheet state for logist "+" tab
+  const [createSheetOpen, setCreateSheetOpen] = useState(false);
 
   // Determine if bottom nav should be shown
   const showBottomNav = isAuthenticated && !location.pathname.includes('/login');
@@ -172,6 +177,14 @@ function MobileAppContent() {
             }
           />
           <Route
+            path="/create-transport"
+            element={
+              <MobileProtectedRoute>
+                <MobileCreateTransport />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
             path="/profile"
             element={
               <MobileProtectedRoute>
@@ -186,7 +199,20 @@ function MobileAppContent() {
       </Suspense>
 
       {showBottomNav && (
-        <BottomNav key={userRole} activeTab={getActiveTab()} userRole={userRole} />
+        <BottomNav
+          key={userRole}
+          activeTab={getActiveTab()}
+          userRole={userRole}
+          onAddClick={() => setCreateSheetOpen(true)}
+        />
+      )}
+
+      {/* Create Action Sheet for logist */}
+      {userRole === 'logist' && (
+        <CreateActionSheet
+          isOpen={createSheetOpen}
+          onClose={() => setCreateSheetOpen(false)}
+        />
       )}
     </div>
   );

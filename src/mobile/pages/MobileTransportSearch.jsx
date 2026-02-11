@@ -10,9 +10,9 @@ import { searchTransports, offerForDriver } from '../../services/api';
 import { formatTimeAgo } from '../../utils/formatTime';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
-import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
+import { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
-import LoadMoreTrigger from '../components/LoadMoreTrigger';
+import Pagination from '../components/Pagination';
 
 export default function MobileTransportSearch() {
   const navigate = useNavigate();
@@ -35,9 +35,8 @@ export default function MobileTransportSearch() {
   // Data state
   const [transports, setTransports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
 
   // UI state
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -121,18 +120,9 @@ export default function MobileTransportSearch() {
   }, [staticData]);
 
   // Load transports
-  const loadTransports = useCallback(async (isRefresh = false, pageNum = null) => {
+  const loadTransports = useCallback(async (pageNum = 0) => {
     try {
-      const currentPage = pageNum !== null ? pageNum : (isRefresh ? 0 : page);
-
-      if (isRefresh) {
-        setPage(0);
-        setLoading(true);
-      } else if (currentPage > 0) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-      }
+      setLoading(true);
 
       // MUST match Desktop BrowseTransportsPage.jsx searchTransports call EXACTLY
       const response = await searchTransports({
@@ -141,43 +131,46 @@ export default function MobileTransportSearch() {
         fromCity: filters.fromCity || undefined,
         vehicleType: filters.vehicleType || undefined,
         maxWeight: filters.maxWeight || undefined,
-        page: currentPage,
+        page: pageNum,
       });
 
       if (response.code === 200) {
         const newTransports = response.result || [];
-        if (isRefresh || currentPage === 0) {
-          setTransports(newTransports);
-        } else {
-          setTransports((prev) => [...prev, ...newTransports]);
+        setTransports(newTransports);
+        // Calculate total pages
+        const hasNextPage = newTransports.length >= 20;
+        if (hasNextPage && pageNum >= totalPages - 1) {
+          setTotalPages(pageNum + 2);
+        } else if (!hasNextPage && newTransports.length > 0) {
+          setTotalPages(pageNum + 1);
+        } else if (newTransports.length === 0 && pageNum === 0) {
+          setTotalPages(1);
         }
-        setHasMore(newTransports.length >= 20);
+        setPage(pageNum);
       }
     } catch (error) {
       console.error('Failed to load transports:', error);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
-  }, [filters, page]);
+  }, [filters, totalPages]);
 
-  // Load more callback
-  const handleLoadMore = useCallback(() => {
-    if (hasMore && !loading && !loadingMore) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      loadTransports(false, nextPage);
+  // Page change handler
+  const handlePageChange = useCallback((newPage) => {
+    if (!loading) {
+      loadTransports(newPage);
     }
-  }, [hasMore, loading, loadingMore, page, loadTransports]);
+  }, [loading, loadTransports]);
 
   // Pull to refresh
   const handleRefresh = useCallback(async () => {
-    await loadTransports(true);
+    setTotalPages(1);
+    await loadTransports(0);
   }, [loadTransports]);
 
   // Initial load
   useEffect(() => {
-    loadTransports(true);
+    loadTransports(0);
     if (fromOrder) {
       setActiveFilters(buildActiveFilters(filters));
     }
@@ -187,9 +180,8 @@ export default function MobileTransportSearch() {
   const handleApplyFilters = () => {
     setActiveFilters(buildActiveFilters(filters));
     setFilterSheetOpen(false);
-    setPage(0);
-    setTransports([]);
-    loadTransports(true);
+    setTotalPages(1);
+    loadTransports(0);
   };
 
   // Handle filter reset - matches Desktop
@@ -220,7 +212,8 @@ export default function MobileTransportSearch() {
     }
     setFilters(newFilters);
     setActiveFilters(buildActiveFilters(newFilters));
-    loadTransports(true);
+    setTotalPages(1);
+    loadTransports(0);
   };
 
   const handleTransportClick = (transport) => {
@@ -326,11 +319,12 @@ export default function MobileTransportSearch() {
                 ))}
               </div>
 
-              {/* Infinite scroll trigger */}
-              <LoadMoreTrigger
-                onLoadMore={handleLoadMore}
-                hasMore={hasMore}
-                loading={loadingMore}
+              {/* Pagination */}
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                loading={loading}
               />
             </>
           )}

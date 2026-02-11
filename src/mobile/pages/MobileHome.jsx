@@ -11,9 +11,9 @@ import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import CargoListItem from '../components/CargoListItem';
-import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
+import { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
-import LoadMoreTrigger from '../components/LoadMoreTrigger';
+import Pagination from '../components/Pagination';
 
 export default function MobileHome() {
   const location = useLocation();
@@ -67,7 +67,7 @@ export default function MobileHome() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
 
   // UI state
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -115,23 +115,13 @@ export default function MobileHome() {
     return chips;
   }, [staticData]);
 
-  // Track if currently loading more
-  const [loadingMore, setLoadingMore] = useState(false);
-
   // Load cargos
-  const loadCargos = useCallback(async (isRefresh = false, pageNum = null) => {
-    const currentPage = pageNum !== null ? pageNum : (isRefresh ? 0 : page);
-
+  const loadCargos = useCallback(async (pageNum = 0, isRefresh = false) => {
     try {
       if (isRefresh) {
         setRefreshing(true);
-        setPage(0);
-        setLoading(true);
-      } else if (currentPage === 0) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
       }
+      setLoading(true);
 
       // MUST match Desktop SearchPage.jsx searchCargos call EXACTLY
       const response = await searchCargos({
@@ -144,40 +134,43 @@ export default function MobileHome() {
         vehicleType: filters.vehicleType || undefined,
         minWeight: filters.minWeight || undefined,
         maxWeight: filters.maxWeight || undefined,
-        page: currentPage,
+        page: pageNum,
       });
 
       if (response.code === 200) {
         const newCargos = response.result || [];
-        if (isRefresh || currentPage === 0) {
-          setCargos(newCargos);
-        } else {
-          setCargos((prev) => [...prev, ...newCargos]);
+        setCargos(newCargos);
+        // Calculate total pages (assuming 20 items per page)
+        // If we get full page, assume there's at least one more
+        const hasNextPage = newCargos.length >= 20;
+        if (hasNextPage && pageNum >= totalPages - 1) {
+          setTotalPages(pageNum + 2);
+        } else if (!hasNextPage && newCargos.length > 0) {
+          setTotalPages(pageNum + 1);
+        } else if (newCargos.length === 0 && pageNum === 0) {
+          setTotalPages(1);
         }
-        setHasMore(newCargos.length >= 20);
+        setPage(pageNum);
       }
     } catch (error) {
       console.error('Failed to load cargos:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
-      setLoadingMore(false);
     }
-  }, [filters, page]);
+  }, [filters, totalPages]);
 
   // Initial load
   useEffect(() => {
-    loadCargos();
+    loadCargos(0);
   }, []);
 
   // Handle filter apply
   const handleApplyFilters = () => {
     setActiveFilters(buildActiveFilters(filters));
     setFilterSheetOpen(false);
-    setPage(0);
-    setCargos([]);
-    setLoading(true);
-    loadCargos(true);
+    setTotalPages(1);
+    loadCargos(0);
   };
 
   // Handle filter reset - includes all filter keys (matches Desktop)
@@ -221,22 +214,21 @@ export default function MobileHome() {
     }
     setFilters(newFilters);
     setActiveFilters(buildActiveFilters(newFilters));
-    setPage(0);
-    loadCargos(true);
+    setTotalPages(1);
+    loadCargos(0);
   };
 
-  // Load more callback for infinite scroll
-  const handleLoadMore = useCallback(() => {
-    if (hasMore && !loading && !loadingMore && !refreshing) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      loadCargos(false, nextPage);
+  // Page change handler
+  const handlePageChange = useCallback((newPage) => {
+    if (!loading && !refreshing) {
+      loadCargos(newPage);
     }
-  }, [hasMore, loading, loadingMore, refreshing, page, loadCargos]);
+  }, [loading, refreshing, loadCargos]);
 
   // Pull to refresh handler
   const handleRefresh = useCallback(async () => {
-    await loadCargos(true);
+    setTotalPages(1);
+    await loadCargos(0, true);
   }, [loadCargos]);
 
   return (
@@ -300,11 +292,12 @@ export default function MobileHome() {
                 ))}
               </div>
 
-              {/* Infinite scroll trigger */}
-              <LoadMoreTrigger
-                onLoadMore={handleLoadMore}
-                hasMore={hasMore}
-                loading={loadingMore}
+              {/* Pagination */}
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                loading={loading}
               />
             </>
           )}
