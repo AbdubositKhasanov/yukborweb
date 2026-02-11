@@ -1,0 +1,476 @@
+/**
+ * Mobile My Orders Page
+ * MUST match Desktop MyOrdersPage.jsx functionality:
+ * - Delete order
+ * - Find transport (Mashina topish)
+ * - Broadcast to groups (Guruhlarga tarqatish)
+ */
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getMyOrders, deleteOrder, getUserMe, broadcastMessage as sendBroadcast, getBroadcastStatus } from '../../services/api';
+import { formatTimeAgo } from '../../utils/formatTime';
+import { getOrderStatusText, getOrderStatusClass, hasAppointedDriver } from '../../utils/orderStatus';
+import TopBar from '../components/TopBar';
+import BottomSheet from '../components/BottomSheet';
+import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
+
+export default function MobileMyOrders() {
+  const navigate = useNavigate();
+
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+
+  // Delete state
+  const [deleteSheet, setDeleteSheet] = useState({ open: false, order: null });
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Broadcast state
+  const [broadcastSheet, setBroadcastSheet] = useState({ open: false, order: null });
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [broadcastId, setBroadcastId] = useState(null);
+  const [broadcastStatus, setBroadcastStatus] = useState(null);
+  const [broadcastError, setBroadcastError] = useState('');
+
+  // Load user data - matches Desktop
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const response = await getUserMe();
+      if (response.code === 200 && response.result) {
+        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+      }
+    } catch (err) {
+      console.error('Failed to load user data:', err);
+    }
+  };
+
+  const loadOrders = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const response = await getMyOrders();
+      if (response.code === 200) {
+        setOrders(response.result || []);
+      }
+    } catch (error) {
+      console.error('Failed to load orders:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  const handleOrderClick = (order) => {
+    navigate(`/mobile/order/${order.id || order._id}`);
+  };
+
+  // Delete order - matches Desktop handleDelete
+  const handleDelete = async () => {
+    const order = deleteSheet.order;
+    if (!order) return;
+
+    try {
+      setDeleteLoading(true);
+      const response = await deleteOrder(order.id || order._id);
+      if (response.code === 200) {
+        setDeleteSheet({ open: false, order: null });
+        loadOrders(); // Reload like Desktop
+      }
+    } catch (err) {
+      console.error('Failed to delete order:', err);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Find transport - matches Desktop handleFindTransport EXACTLY
+  const handleFindTransport = (e, order) => {
+    e.stopPropagation();
+
+    if (!isInternalDispatcher) {
+      // Show club modal or message
+      return;
+    }
+
+    // Build filters from order - matches Desktop MyOrdersPage.jsx
+    const filters = {
+      fromCountry: order.fromLocation?.countryId,
+      fromRegion: order.fromLocation?.regionId,
+      fromCity: order.fromLocation?.cityId,
+      vehicleType: order.vehicleType,
+    };
+
+    navigate('/mobile/transports', {
+      state: {
+        orderId: order.id || order._id,
+        fromOrder: true,
+        orderInfo: {
+          cargoName: order.cargoName,
+          fromCity: order.fromCity,
+          toCity: order.toCity,
+          weightKg: order.weightKg,
+          vehicleType: order.vehicleType,
+          priceUzs: order.priceUzs,
+        },
+        filters: filters,
+      },
+    });
+  };
+
+  // Open broadcast sheet
+  const handleOpenBroadcast = (e, order) => {
+    e.stopPropagation();
+    setBroadcastMessage(buildOrderMessage(order));
+    setBroadcastId(null);
+    setBroadcastStatus(null);
+    setBroadcastError('');
+    setBroadcastSheet({ open: true, order });
+  };
+
+  // Build broadcast message - matches Desktop BroadcastModal
+  const buildOrderMessage = (o) => {
+    let msg = '';
+    if (o.cargoName) msg += `${o.cargoName}\n`;
+    if (o.fromCity || o.fromRegion) msg += `Qayerdan: ${o.fromCity || o.fromRegion}\n`;
+    if (o.toCity || o.toRegion) msg += `Qayerga: ${o.toCity || o.toRegion}\n`;
+    if (o.weightKg) msg += `Og'irligi: ${o.weightKg} t\n`;
+    if (o.vehicleType) msg += `Transport: ${o.vehicleType}\n`;
+    if (o.priceUzs && o.priceUzs > 0) msg += `Narxi: ${o.priceUzs.toLocaleString('uz-UZ')} so'm\n`;
+    if (o.description && o.description !== 'null' && o.description.trim()) {
+      msg += `\n${o.description}\n`;
+    }
+    if (o.additionalPhone) msg += `\nTel: ${o.additionalPhone}`;
+    return msg.trim();
+  };
+
+  // Send broadcast
+  const handleBroadcast = async () => {
+    if (!broadcastMessage.trim()) {
+      setBroadcastError('Xabar matni bo\'sh bo\'lishi mumkin emas');
+      return;
+    }
+
+    try {
+      setBroadcasting(true);
+      setBroadcastError('');
+
+      const response = await sendBroadcast(broadcastMessage.trim());
+
+      if (response.success) {
+        setBroadcastId(response.broadcast_id);
+        setBroadcastStatus({
+          status: 'in_progress',
+          total_userbots: response.total_userbots,
+          total_groups: response.total_groups || 0,
+          groups_sent: 0,
+          groups_failed: 0,
+        });
+        pollBroadcastStatus(response.broadcast_id);
+      } else {
+        setBroadcastError(response.message || 'Tarqatishda xatolik');
+        setBroadcasting(false);
+      }
+    } catch (error) {
+      setBroadcastError('Xatolik yuz berdi');
+      setBroadcasting(false);
+    }
+  };
+
+  const pollBroadcastStatus = async (id) => {
+    const poll = setInterval(async () => {
+      try {
+        const res = await getBroadcastStatus(id);
+        setBroadcastStatus(res);
+        if (res.status === 'completed' || res.status === 'failed') {
+          clearInterval(poll);
+          setBroadcasting(false);
+        }
+      } catch (err) {
+        console.error('Poll error:', err);
+      }
+    }, 3000);
+  };
+
+  // Format location
+  const formatRoute = (order) => {
+    const from = order.fromCity || order.fromRegion || 'Noma\'lum';
+    const to = order.toCity || order.toRegion || 'Noma\'lum';
+    return `${from} → ${to}`;
+  };
+
+  if (loading) {
+    return (
+      <>
+        <TopBar title="Buyurtmalarim" rightIcon="+" onRightAction={() => navigate('/mobile/create-order')} />
+        <main className="m-content">
+          <ListSkeleton count={5} />
+        </main>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <TopBar title="Buyurtmalarim" rightIcon="+" onRightAction={() => navigate('/mobile/create-order')} />
+
+      <main className="m-content">
+        {orders.length === 0 ? (
+          <div className="m-empty">
+            <div className="m-empty-icon">📦</div>
+            <h3 className="m-empty-title">Hali buyurtma yo'q</h3>
+            <p className="m-empty-text">Birinchi buyurtmangizni yarating</p>
+            <button
+              className="m-btn m-btn-primary"
+              onClick={() => navigate('/mobile/create-order')}
+            >
+              + Buyurtma yaratish
+            </button>
+          </div>
+        ) : (
+          <div className="m-card m-card-list">
+            {orders.map((order) => {
+              const isActive = !hasAppointedDriver(order.status);
+              return (
+                <div
+                  key={order.id || order._id}
+                  className="m-list-item"
+                  style={{ flexDirection: 'column', alignItems: 'stretch', padding: 12 }}
+                >
+                  {/* Order info - clickable */}
+                  <div
+                    className="m-card-tap"
+                    onClick={() => handleOrderClick(order)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 12 }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span className={`badge ${getOrderStatusClass(order.status)}`} style={{ fontSize: 10, padding: '2px 8px' }}>
+                          {getOrderStatusText(order.status)}
+                        </span>
+                      </div>
+                      <p className="m-list-item-title" style={{ marginBottom: 4 }}>
+                        {order.cargoName || 'Yuk'}
+                      </p>
+                      <p className="m-list-item-subtitle" style={{ marginBottom: 4 }}>
+                        {formatRoute(order)}
+                      </p>
+                      <div style={{ display: 'flex', gap: 12, fontSize: 13, color: 'var(--m-text-secondary)' }}>
+                        {order.weightKg && <span>⚖️ {order.weightKg}t</span>}
+                        {order.priceUzs > 0 && <span>💰 {order.priceUzs.toLocaleString()}</span>}
+                      </div>
+                      {/* Driver phone if appointed */}
+                      {hasAppointedDriver(order.status) && order.driverPhone && (
+                        <div style={{ marginTop: 8, padding: 8, background: '#d4edda', borderRadius: 6, fontSize: 14, color: '#155724' }}>
+                          📞 Haydovchi: {order.driverPhone}
+                        </div>
+                      )}
+                    </div>
+                    <span className="m-list-item-arrow">→</span>
+                  </div>
+
+                  {/* Action buttons - matches Desktop */}
+                  {isActive && (
+                    <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '1px solid var(--m-border)' }}>
+                      {/* Find transport button */}
+                      <button
+                        className="m-btn m-btn-success"
+                        onClick={(e) => handleFindTransport(e, order)}
+                        style={{ flex: 2, fontSize: 13, padding: '8px 12px' }}
+                      >
+                        🚚 Mashina topish
+                      </button>
+
+                      {/* Broadcast button - only for internal dispatcher */}
+                      {isInternalDispatcher && (
+                        <button
+                          className="m-btn"
+                          onClick={(e) => handleOpenBroadcast(e, order)}
+                          style={{ flex: 1, fontSize: 13, padding: '8px 12px', background: '#6f42c1', color: 'white' }}
+                        >
+                          📡
+                        </button>
+                      )}
+
+                      {/* Delete button */}
+                      <button
+                        className="m-btn m-btn-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteSheet({ open: true, order });
+                        }}
+                        style={{ padding: '8px 12px' }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Time */}
+                  <div style={{ fontSize: 12, color: 'var(--m-text-muted)', marginTop: 8 }}>
+                    {formatTimeAgo(order.createdTime || order.createdAt)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {refreshing && <MobileLoading />}
+      </main>
+
+      {/* Delete confirmation sheet */}
+      <BottomSheet
+        isOpen={deleteSheet.open}
+        onClose={() => setDeleteSheet({ open: false, order: null })}
+        title="Buyurtmani o'chirish"
+      >
+        <div style={{ textAlign: 'center', padding: '16px 0' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🗑️</div>
+          <p style={{ fontSize: 16, color: 'var(--m-text)', marginBottom: 24 }}>
+            Haqiqatan ham o'chirmoqchimisiz?
+          </p>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button
+              className="m-btn m-btn-secondary m-btn-lg"
+              style={{ flex: 1 }}
+              onClick={() => setDeleteSheet({ open: false, order: null })}
+            >
+              Bekor qilish
+            </button>
+            <button
+              className="m-btn m-btn-danger m-btn-lg"
+              style={{ flex: 1 }}
+              onClick={handleDelete}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? 'O\'chirilmoqda...' : 'O\'chirish'}
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
+
+      {/* Broadcast sheet */}
+      <BottomSheet
+        isOpen={broadcastSheet.open}
+        onClose={() => {
+          if (!broadcasting) {
+            setBroadcastSheet({ open: false, order: null });
+            setBroadcastError('');
+          }
+        }}
+        title="📡 Guruhlarga tarqatish"
+        height="full"
+        footer={
+          !broadcastId && (
+            <button
+              className="m-btn m-btn-lg m-btn-full"
+              onClick={handleBroadcast}
+              disabled={broadcasting || !broadcastMessage.trim()}
+              style={{ background: '#6f42c1', color: 'white' }}
+            >
+              {broadcasting ? 'Yuborilmoqda...' : 'Tarqatish'}
+            </button>
+          )
+        }
+      >
+        <div style={{ padding: '8px 0' }}>
+          {!broadcastId && (
+            <>
+              <div className="m-form-group">
+                <label className="m-form-label">Xabar matni</label>
+                <textarea
+                  className="m-form-textarea"
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  rows={10}
+                  maxLength={4096}
+                  style={{ fontFamily: 'inherit' }}
+                />
+                <div style={{ textAlign: 'right', fontSize: 12, color: 'var(--m-text-muted)', marginTop: 4 }}>
+                  {broadcastMessage.length}/4096
+                </div>
+              </div>
+
+              {broadcastError && (
+                <div style={{ padding: 12, background: '#f8d7da', borderRadius: 8, color: '#721c24', marginBottom: 16 }}>
+                  {broadcastError}
+                </div>
+              )}
+            </>
+          )}
+
+          {broadcastId && broadcastStatus && (
+            <div>
+              <div style={{
+                padding: 16, borderRadius: 8, marginBottom: 16,
+                background: broadcastStatus.status === 'completed' ? '#d4edda' :
+                            broadcastStatus.status === 'failed' ? '#f8d7da' : '#fff3cd',
+                color: broadcastStatus.status === 'completed' ? '#155724' :
+                       broadcastStatus.status === 'failed' ? '#721c24' : '#856404'
+              }}>
+                <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
+                  {broadcastStatus.status === 'in_progress' && '⏳ Tarqatilmoqda...'}
+                  {broadcastStatus.status === 'completed' && '✓ Tarqatish yakunlandi!'}
+                  {broadcastStatus.status === 'failed' && '✗ Tarqatishda xatolik!'}
+                </div>
+                <div style={{ fontSize: 14 }}>
+                  <p style={{ margin: '4px 0' }}>
+                    Jami guruhlar: {broadcastStatus.total_groups || 0}
+                  </p>
+                  <p style={{ margin: '4px 0' }}>
+                    Yuborildi: {broadcastStatus.groups_sent || 0} / {broadcastStatus.total_groups || 0}
+                  </p>
+                  {(broadcastStatus.groups_failed || 0) > 0 && (
+                    <p style={{ margin: '4px 0', color: '#dc3545' }}>
+                      Xatolik: {broadcastStatus.groups_failed} guruh
+                    </p>
+                  )}
+                </div>
+
+                {broadcastStatus.status === 'in_progress' && (
+                  <div style={{
+                    marginTop: 12, height: 6, background: 'rgba(0,0,0,0.1)', borderRadius: 3
+                  }}>
+                    <div style={{
+                      height: '100%', borderRadius: 3, background: '#6f42c1',
+                      width: broadcastStatus.total_groups > 0
+                        ? `${(((broadcastStatus.groups_sent || 0) + (broadcastStatus.groups_failed || 0)) / broadcastStatus.total_groups) * 100}%`
+                        : '0%',
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </div>
+                )}
+              </div>
+
+              <button
+                className="m-btn m-btn-primary m-btn-full m-btn-lg"
+                onClick={() => {
+                  setBroadcastSheet({ open: false, order: null });
+                  setBroadcastId(null);
+                  setBroadcastStatus(null);
+                }}
+                disabled={broadcastStatus.status === 'in_progress'}
+              >
+                {broadcastStatus.status === 'in_progress' ? 'Kutilmoqda...' : 'Yopish'}
+              </button>
+            </div>
+          )}
+        </div>
+      </BottomSheet>
+    </>
+  );
+}

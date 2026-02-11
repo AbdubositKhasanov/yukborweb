@@ -122,7 +122,9 @@ apiClient.interceptors.response.use(
           localStorage.removeItem('authToken');
           localStorage.removeItem('userData');
           if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
+            // Redirect to mobile login if on mobile path, else desktop login
+            const isMobile = window.location.pathname.startsWith('/mobile');
+            window.location.href = isMobile ? '/mobile/login' : '/login';
           }
           break;
 
@@ -232,11 +234,13 @@ const cachedGet = async (url, params = {}, options = {}) => {
 
 export const login = async (code) => {
   const response = await apiClient.post('/login/mobile', { code });
-  
+
   if (response.data.code === 200 && response.data.result) {
-    setAuthToken(response.data.result);
+    // Backend returns { result: { token: "..." } } - extract token properly
+    const token = response.data.result.token || response.data.result;
+    setAuthToken(token);
   }
-  
+
   return response.data;
 };
 

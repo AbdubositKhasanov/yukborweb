@@ -1,0 +1,160 @@
+/**
+ * Mobile App Entry Point
+ * Isolated mobile-only UI layer
+ * Route: /mobile/*
+ */
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import BottomNav from './components/BottomNav';
+import MobileProtectedRoute from './components/MobileProtectedRoute';
+import MobileLoading from './components/MobileLoading';
+import { MobileAuthProvider, useMobileAuth } from './context/MobileAuthContext';
+import './styles/mobile.css';
+
+// Lazy load mobile pages
+const MobileHome = lazy(() => import('./pages/MobileHome'));
+const MobileLogin = lazy(() => import('./pages/MobileLogin'));
+const MobileCargoDetail = lazy(() => import('./pages/MobileCargoDetail'));
+const MobileTransportSearch = lazy(() => import('./pages/MobileTransportSearch'));
+const MobileTransportDetail = lazy(() => import('./pages/MobileTransportDetail'));
+const MobileCreateOrder = lazy(() => import('./pages/MobileCreateOrder'));
+const MobileMyOrders = lazy(() => import('./pages/MobileMyOrders'));
+const MobileOrderDetail = lazy(() => import('./pages/MobileOrderDetail'));
+const MobileDriverStatus = lazy(() => import('./pages/MobileDriverStatus'));
+const MobileMyDrivers = lazy(() => import('./pages/MobileMyDrivers'));
+const MobileDriverDetail = lazy(() => import('./pages/MobileDriverDetail'));
+const MobileProfile = lazy(() => import('./pages/MobileProfile'));
+const MobileMyTransports = lazy(() => import('./pages/MobileMyTransports'));
+
+function MobileAppContent() {
+  const location = useLocation();
+  const { isAuthenticated, userRole, loading } = useMobileAuth();
+
+  // Determine if bottom nav should be shown
+  const showBottomNav = isAuthenticated && !location.pathname.includes('/login');
+
+  // Determine active tab based on route
+  const getActiveTab = () => {
+    const path = location.pathname.replace('/mobile', '');
+    if (path === '' || path === '/' || path.startsWith('/cargo')) return 'home';
+    if (path.startsWith('/search') || path.startsWith('/transport') || path.startsWith('/drivers')) return 'search';
+    if (path.startsWith('/create') || path.startsWith('/status')) return 'add';
+    if (path.startsWith('/orders') || path.startsWith('/my-transports')) return 'orders';
+    if (path.startsWith('/profile')) return 'profile';
+    return 'home';
+  };
+
+  if (loading) {
+    return <MobileLoading fullScreen />;
+  }
+
+  return (
+    <div className="m-app">
+      <Suspense fallback={<MobileLoading fullScreen />}>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<MobileHome />} />
+          <Route path="/login" element={<MobileLogin />} />
+          <Route path="/cargo/:id" element={<MobileCargoDetail />} />
+
+          {/* Protected Routes */}
+          <Route
+            path="/transports"
+            element={
+              <MobileProtectedRoute>
+                <MobileTransportSearch />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/transport/:id"
+            element={
+              <MobileProtectedRoute>
+                <MobileTransportDetail />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/create-order"
+            element={
+              <MobileProtectedRoute>
+                <MobileCreateOrder />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/orders"
+            element={
+              <MobileProtectedRoute>
+                <MobileMyOrders />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/order/:id"
+            element={
+              <MobileProtectedRoute>
+                <MobileOrderDetail />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/status"
+            element={
+              <MobileProtectedRoute>
+                <MobileDriverStatus />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/drivers"
+            element={
+              <MobileProtectedRoute>
+                <MobileMyDrivers />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/driver/:id"
+            element={
+              <MobileProtectedRoute>
+                <MobileDriverDetail />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-transports"
+            element={
+              <MobileProtectedRoute>
+                <MobileMyTransports />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <MobileProtectedRoute>
+                <MobileProfile />
+              </MobileProtectedRoute>
+            }
+          />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/mobile" replace />} />
+        </Routes>
+      </Suspense>
+
+      {showBottomNav && (
+        <BottomNav activeTab={getActiveTab()} userRole={userRole} />
+      )}
+    </div>
+  );
+}
+
+export default function MobileApp() {
+  return (
+    <MobileAuthProvider>
+      <MobileAppContent />
+    </MobileAuthProvider>
+  );
+}

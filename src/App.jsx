@@ -7,6 +7,9 @@ import Navigation from './components/Navigation';
 import ProtectedRoute from './components/ProtectedRoute';
 import { PageSkeleton } from './components/LoadingSkeleton';
 
+// Lazy load Mobile App (isolated module)
+const MobileApp = lazy(() => import('./mobile/MobileApp'));
+
 // Lazy load pages for better performance
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
@@ -61,6 +64,19 @@ function AppContent() {
   };
 
   const isAuthenticated = !!authToken;
+
+  // Check if on mobile route - render mobile app without desktop navigation
+  const isMobileRoute = location.pathname.startsWith('/mobile');
+
+  if (isMobileRoute) {
+    return (
+      <Suspense fallback={<PageSkeleton />}>
+        <Routes>
+          <Route path="/mobile/*" element={<MobileApp />} />
+        </Routes>
+      </Suspense>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
