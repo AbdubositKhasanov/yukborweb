@@ -1,7 +1,7 @@
 /**
  * Mobile Home Page
  * Content-first cargo feed with collapsed filters
- * Supports driver context for offer functionality
+ * Pagination matches Desktop SearchPage.jsx pattern exactly
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -13,7 +13,6 @@ import BottomSheet from '../components/BottomSheet';
 import CargoListItem from '../components/CargoListItem';
 import { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
-import Pagination from '../components/Pagination';
 
 export default function MobileHome() {
   const location = useLocation();
@@ -21,7 +20,6 @@ export default function MobileHome() {
   const { isAuthenticated } = useMobileAuth();
 
   // Check for driver context - MUST use same keys as Desktop SearchPage.jsx
-  // Desktop uses: { fromDriver: true, driverId, driverName, filters }
   const fromDriver = location.state?.fromDriver === true;
   const driverId = location.state?.driverId || null;
   const driverName = location.state?.driverName || null;
@@ -30,7 +28,7 @@ export default function MobileHome() {
   // Internal dispatcher check
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
 
-  // Filter state - pre-fill from driver filters if available (matches Desktop SearchPage.jsx)
+  // Filter state - pre-fill from driver filters if available
   const [filters, setFilters] = useState({
     fromCountry: driverFilters.fromCountry?.toString() || '',
     fromRegion: driverFilters.fromRegion?.toString() || '',
@@ -44,7 +42,17 @@ export default function MobileHome() {
   });
   const [activeFilters, setActiveFilters] = useState([]);
 
-  // Load user data to check internal dispatcher status
+  // Data state - matches Desktop SearchPage.jsx exactly
+  const [cargos, setCargos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(0);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // UI state
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+
+  // Load user data
   useEffect(() => {
     if (isAuthenticated) {
       loadUserData();
@@ -62,20 +70,9 @@ export default function MobileHome() {
     }
   };
 
-  // Data state
-  const [cargos, setCargos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-
-  // UI state
-  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-
-  // Build active filter chips - matches Desktop SearchPage.jsx pattern
+  // Build active filter chips
   const buildActiveFilters = useCallback((filterObj) => {
     const chips = [];
-    // From location chips
     if (filterObj.fromCountry) {
       const country = staticData?.countries?.find((c) => String(c.countryId) === filterObj.fromCountry);
       chips.push({ key: 'fromCountry', label: country?.name || filterObj.fromCountry });
@@ -88,7 +85,6 @@ export default function MobileHome() {
       const city = staticData?.cities?.find((c) => String(c.cityId) === filterObj.fromCity);
       chips.push({ key: 'fromCity', label: city?.name || filterObj.fromCity });
     }
-    // To location chips
     if (filterObj.toCountry) {
       const country = staticData?.countries?.find((c) => String(c.countryId) === filterObj.toCountry);
       chips.push({ key: 'toCountry', label: `→ ${country?.name || filterObj.toCountry}` });
@@ -101,12 +97,10 @@ export default function MobileHome() {
       const city = staticData?.cities?.find((c) => String(c.cityId) === filterObj.toCity);
       chips.push({ key: 'toCity', label: `→ ${city?.name || filterObj.toCity}` });
     }
-    // Vehicle type
     if (filterObj.vehicleType) {
       const vehicle = staticData?.vehicleTypes?.find((v) => v.code === filterObj.vehicleType || v.name === filterObj.vehicleType);
       chips.push({ key: 'vehicleType', label: vehicle?.name || filterObj.vehicleType });
     }
-    // Weight range
     if (filterObj.minWeight || filterObj.maxWeight) {
       const min = filterObj.minWeight || '0';
       const max = filterObj.maxWeight || '∞';
@@ -115,15 +109,12 @@ export default function MobileHome() {
     return chips;
   }, [staticData]);
 
-  // Load cargos
-  const loadCargos = useCallback(async (pageNum = 0, isRefresh = false) => {
-    try {
-      if (isRefresh) {
-        setRefreshing(true);
-      }
-      setLoading(true);
+  // Load cargos - matches Desktop SearchPage.jsx pattern
+  // Uses page from state, not as parameter
+  const loadCargos = useCallback(async () => {
+    setLoading(true);
 
-      // MUST match Desktop SearchPage.jsx searchCargos call EXACTLY
+    try {
       const response = await searchCargos({
         fromCountry: filters.fromCountry || undefined,
         fromRegion: filters.fromRegion || undefined,
@@ -134,23 +125,11 @@ export default function MobileHome() {
         vehicleType: filters.vehicleType || undefined,
         minWeight: filters.minWeight || undefined,
         maxWeight: filters.maxWeight || undefined,
-        page: pageNum,
+        page,
       });
 
       if (response.code === 200) {
-        const newCargos = response.result || [];
-        setCargos(newCargos);
-        // Calculate total pages (assuming 20 items per page)
-        // If we get full page, assume there's at least one more
-        const hasNextPage = newCargos.length >= 20;
-        if (hasNextPage && pageNum >= totalPages - 1) {
-          setTotalPages(pageNum + 2);
-        } else if (!hasNextPage && newCargos.length > 0) {
-          setTotalPages(pageNum + 1);
-        } else if (newCargos.length === 0 && pageNum === 0) {
-          setTotalPages(1);
-        }
-        setPage(pageNum);
+        setCargos(response.result || []);
       }
     } catch (error) {
       console.error('Failed to load cargos:', error);
@@ -158,22 +137,34 @@ export default function MobileHome() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, totalPages]);
+  }, [filters, page]);
 
-  // Initial load
+  // Initial load - matches Desktop pattern
   useEffect(() => {
-    loadCargos(0);
-  }, []);
+    if (isInitialLoad) {
+      loadCargos();
+      setIsInitialLoad(false);
+    }
+  }, [isInitialLoad, loadCargos]);
+
+  // Pagination - load on page change (skip initial page 0)
+  // This is the key pattern from Desktop SearchPage.jsx
+  useEffect(() => {
+    if (!isInitialLoad && page >= 0) {
+      loadCargos();
+    }
+  }, [page]);
 
   // Handle filter apply
   const handleApplyFilters = () => {
     setActiveFilters(buildActiveFilters(filters));
     setFilterSheetOpen(false);
-    setTotalPages(1);
-    loadCargos(0);
+    setPage(0);
+    setIsInitialLoad(false);
+    loadCargos();
   };
 
-  // Handle filter reset - includes all filter keys (matches Desktop)
+  // Handle filter reset
   const handleResetFilters = () => {
     setFilters({
       fromCountry: '',
@@ -189,7 +180,7 @@ export default function MobileHome() {
     setActiveFilters([]);
   };
 
-  // Remove single filter - matches Desktop cascade pattern
+  // Remove single filter
   const handleRemoveFilter = (key) => {
     const newFilters = { ...filters };
     if (key === 'weight') {
@@ -214,22 +205,20 @@ export default function MobileHome() {
     }
     setFilters(newFilters);
     setActiveFilters(buildActiveFilters(newFilters));
-    setTotalPages(1);
-    loadCargos(0);
+    setPage(0);
+    // loadCargos will be triggered by page change useEffect
   };
-
-  // Page change handler
-  const handlePageChange = useCallback((newPage) => {
-    if (!loading && !refreshing) {
-      loadCargos(newPage);
-    }
-  }, [loading, refreshing, loadCargos]);
 
   // Pull to refresh handler
   const handleRefresh = useCallback(async () => {
-    setTotalPages(1);
-    await loadCargos(0, true);
-  }, [loadCargos]);
+    setRefreshing(true);
+    if (page === 0) {
+      await loadCargos();
+    } else {
+      setPage(0);
+      // loadCargos will be triggered by page change useEffect
+    }
+  }, [page, loadCargos]);
 
   return (
     <>
@@ -240,7 +229,7 @@ export default function MobileHome() {
       />
 
       <main className="m-content">
-        <PullToRefresh onRefresh={handleRefresh} disabled={loading && page === 0}>
+        <PullToRefresh onRefresh={handleRefresh} disabled={loading}>
           {/* Active filter chips */}
           {activeFilters.length > 0 && (
             <div className="m-chips">
@@ -257,7 +246,7 @@ export default function MobileHome() {
             </div>
           )}
 
-          {/* Driver context banner - matches Desktop pattern */}
+          {/* Driver context banner */}
           {fromDriver && driverName && (
             <div style={{ padding: '12px 16px', background: '#d1ecf1', marginBottom: 0, fontSize: 14, color: '#0c5460' }}>
               <strong>👤 {driverName}</strong> uchun yuk qidirilmoqda
@@ -265,14 +254,14 @@ export default function MobileHome() {
           )}
 
           {/* Cargo list */}
-          {loading && page === 0 ? (
+          {loading && cargos.length === 0 ? (
             <ListSkeleton count={6} />
           ) : cargos.length === 0 ? (
             <div className="m-empty">
               <div className="m-empty-icon">📦</div>
               <h3 className="m-empty-title">Yuklar topilmadi</h3>
               <p className="m-empty-text">
-                Filterlarni o'zgartiring yoki keyinroq qaytib keling
+                Filterlarni o&apos;zgartiring yoki keyinroq qaytib keling
               </p>
               <button className="m-btn m-btn-primary" onClick={() => setFilterSheetOpen(true)}>
                 Filterlar
@@ -292,13 +281,67 @@ export default function MobileHome() {
                 ))}
               </div>
 
-              {/* Pagination */}
-              <Pagination
-                currentPage={page}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-                loading={loading}
-              />
+              {/* Pagination - matches Desktop SearchPage.jsx */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 12,
+                padding: '16px',
+                borderTop: '1px solid var(--m-border)',
+              }}>
+                <button
+                  onClick={() => setPage(p => p - 1)}
+                  disabled={page === 0 || loading}
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    border: '1px solid var(--m-border)',
+                    borderRadius: 8,
+                    background: page === 0 ? 'var(--m-bg)' : 'var(--m-card-bg)',
+                    color: page === 0 ? 'var(--m-text-muted)' : 'var(--m-text)',
+                    cursor: page === 0 ? 'not-allowed' : 'pointer',
+                    opacity: page === 0 ? 0.5 : 1,
+                  }}
+                >
+                  ← Oldingi
+                </button>
+
+                <span style={{
+                  padding: '10px 16px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: 'var(--m-text)',
+                }}>
+                  Sahifa {page + 1}
+                </span>
+
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={cargos.length < 20 || loading}
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    border: '1px solid var(--m-border)',
+                    borderRadius: 8,
+                    background: cargos.length < 20 ? 'var(--m-bg)' : 'var(--m-card-bg)',
+                    color: cargos.length < 20 ? 'var(--m-text-muted)' : 'var(--m-text)',
+                    cursor: cargos.length < 20 ? 'not-allowed' : 'pointer',
+                    opacity: cargos.length < 20 ? 0.5 : 1,
+                  }}
+                >
+                  Keyingi →
+                </button>
+              </div>
+
+              {/* Loading indicator for pagination */}
+              {loading && (
+                <div style={{ textAlign: 'center', padding: 16 }}>
+                  <span className="m-spinner" style={{ width: 24, height: 24 }} />
+                </div>
+              )}
             </>
           )}
         </PullToRefresh>
@@ -377,7 +420,7 @@ export default function MobileHome() {
         </div>
 
         <div className="m-form-group">
-          <label className="m-form-label">Vazn oralig'i (tonna)</label>
+          <label className="m-form-label">Vazn oralig&apos;i (tonna)</label>
           <div className="m-form-row">
             <input
               type="number"

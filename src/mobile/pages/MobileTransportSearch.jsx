@@ -1,7 +1,7 @@
 /**
  * Mobile Transport Search Page
  * Content-first transport list with collapsed filters
- * Supports offer functionality when coming from order
+ * Pagination matches Desktop pattern exactly
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -12,7 +12,6 @@ import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
-import Pagination from '../components/Pagination';
 
 export default function MobileTransportSearch() {
   const navigate = useNavigate();
@@ -32,11 +31,12 @@ export default function MobileTransportSearch() {
   });
   const [activeFilters, setActiveFilters] = useState([]);
 
-  // Data state
+  // Data state - matches Desktop pattern
   const [transports, setTransports] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // UI state
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -64,12 +64,12 @@ export default function MobileTransportSearch() {
     const price = fromOrder.priceUzs || 0;
 
     if (!orderId || !driverId) {
-      setOfferError('Ma\'lumotlar yetarli emas');
+      setOfferError("Ma'lumotlar yetarli emas");
       return;
     }
 
     if (price <= 0) {
-      setOfferError('Buyurtma narxi noto\'g\'ri');
+      setOfferError("Buyurtma narxi noto'g'ri");
       return;
     }
 
@@ -94,7 +94,7 @@ export default function MobileTransportSearch() {
     }
   };
 
-  // Build active filter chips - matches Desktop pattern
+  // Build active filter chips
   const buildActiveFilters = useCallback((filterObj) => {
     const chips = [];
     if (filterObj.fromCountry) {
@@ -119,72 +119,59 @@ export default function MobileTransportSearch() {
     return chips;
   }, [staticData]);
 
-  // Load transports
-  const loadTransports = useCallback(async (pageNum = 0) => {
-    try {
-      setLoading(true);
+  // Load transports - uses page from state (Desktop pattern)
+  const loadTransports = useCallback(async () => {
+    setLoading(true);
 
-      // MUST match Desktop BrowseTransportsPage.jsx searchTransports call EXACTLY
+    try {
       const response = await searchTransports({
         fromCountry: filters.fromCountry || undefined,
         fromRegion: filters.fromRegion || undefined,
         fromCity: filters.fromCity || undefined,
         vehicleType: filters.vehicleType || undefined,
         maxWeight: filters.maxWeight || undefined,
-        page: pageNum,
+        page,
       });
 
       if (response.code === 200) {
-        const newTransports = response.result || [];
-        setTransports(newTransports);
-        // Calculate total pages
-        const hasNextPage = newTransports.length >= 20;
-        if (hasNextPage && pageNum >= totalPages - 1) {
-          setTotalPages(pageNum + 2);
-        } else if (!hasNextPage && newTransports.length > 0) {
-          setTotalPages(pageNum + 1);
-        } else if (newTransports.length === 0 && pageNum === 0) {
-          setTotalPages(1);
-        }
-        setPage(pageNum);
+        setTransports(response.result || []);
       }
     } catch (error) {
       console.error('Failed to load transports:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [filters, totalPages]);
-
-  // Page change handler
-  const handlePageChange = useCallback((newPage) => {
-    if (!loading) {
-      loadTransports(newPage);
-    }
-  }, [loading, loadTransports]);
-
-  // Pull to refresh
-  const handleRefresh = useCallback(async () => {
-    setTotalPages(1);
-    await loadTransports(0);
-  }, [loadTransports]);
+  }, [filters, page]);
 
   // Initial load
   useEffect(() => {
-    loadTransports(0);
-    if (fromOrder) {
-      setActiveFilters(buildActiveFilters(filters));
+    if (isInitialLoad) {
+      loadTransports();
+      setIsInitialLoad(false);
+      if (fromOrder) {
+        setActiveFilters(buildActiveFilters(filters));
+      }
     }
-  }, []);
+  }, [isInitialLoad, loadTransports, fromOrder, buildActiveFilters, filters]);
+
+  // Pagination - load on page change (Desktop pattern)
+  useEffect(() => {
+    if (!isInitialLoad && page >= 0) {
+      loadTransports();
+    }
+  }, [page]);
 
   // Handle filter apply
   const handleApplyFilters = () => {
     setActiveFilters(buildActiveFilters(filters));
     setFilterSheetOpen(false);
-    setTotalPages(1);
-    loadTransports(0);
+    setPage(0);
+    setIsInitialLoad(false);
+    loadTransports();
   };
 
-  // Handle filter reset - matches Desktop
+  // Handle filter reset
   const handleResetFilters = () => {
     setFilters({
       fromCountry: '',
@@ -196,11 +183,10 @@ export default function MobileTransportSearch() {
     setActiveFilters([]);
   };
 
-  // Remove single filter - matches Desktop pattern
+  // Remove single filter
   const handleRemoveFilter = (key) => {
     const newFilters = { ...filters };
     if (key === 'fromCountry') {
-      // Clear cascade
       newFilters.fromCountry = '';
       newFilters.fromRegion = '';
       newFilters.fromCity = '';
@@ -212,9 +198,18 @@ export default function MobileTransportSearch() {
     }
     setFilters(newFilters);
     setActiveFilters(buildActiveFilters(newFilters));
-    setTotalPages(1);
-    loadTransports(0);
+    setPage(0);
   };
+
+  // Pull to refresh
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    if (page === 0) {
+      await loadTransports();
+    } else {
+      setPage(0);
+    }
+  }, [page, loadTransports]);
 
   const handleTransportClick = (transport) => {
     navigate(`/mobile/transport/${transport.id || transport._id}`, {
@@ -224,7 +219,7 @@ export default function MobileTransportSearch() {
 
   // Format transport display
   const formatLocation = (transport) => {
-    return transport.fromCity || transport.fromRegion || 'Noma\'lum';
+    return transport.fromCity || transport.fromRegion || "Noma'lum";
   };
 
   return (
@@ -262,13 +257,13 @@ export default function MobileTransportSearch() {
           )}
 
           {/* Transport list */}
-          {loading && page === 0 ? (
+          {loading && transports.length === 0 ? (
             <ListSkeleton count={6} />
           ) : transports.length === 0 ? (
             <div className="m-empty">
               <div className="m-empty-icon">🚚</div>
               <h3 className="m-empty-title">Transportlar topilmadi</h3>
-              <p className="m-empty-text">Filterlarni o'zgartiring</p>
+              <p className="m-empty-text">Filterlarni o&apos;zgartiring</p>
               <button className="m-btn m-btn-primary" onClick={() => setFilterSheetOpen(true)}>
                 Filterlar
               </button>
@@ -319,13 +314,67 @@ export default function MobileTransportSearch() {
                 ))}
               </div>
 
-              {/* Pagination */}
-              <Pagination
-                currentPage={page}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-                loading={loading}
-              />
+              {/* Pagination - matches Desktop pattern */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 12,
+                padding: '16px',
+                borderTop: '1px solid var(--m-border)',
+              }}>
+                <button
+                  onClick={() => setPage(p => p - 1)}
+                  disabled={page === 0 || loading}
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    border: '1px solid var(--m-border)',
+                    borderRadius: 8,
+                    background: page === 0 ? 'var(--m-bg)' : 'var(--m-card-bg)',
+                    color: page === 0 ? 'var(--m-text-muted)' : 'var(--m-text)',
+                    cursor: page === 0 ? 'not-allowed' : 'pointer',
+                    opacity: page === 0 ? 0.5 : 1,
+                  }}
+                >
+                  ← Oldingi
+                </button>
+
+                <span style={{
+                  padding: '10px 16px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: 'var(--m-text)',
+                }}>
+                  Sahifa {page + 1}
+                </span>
+
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={transports.length < 20 || loading}
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    border: '1px solid var(--m-border)',
+                    borderRadius: 8,
+                    background: transports.length < 20 ? 'var(--m-bg)' : 'var(--m-card-bg)',
+                    color: transports.length < 20 ? 'var(--m-text-muted)' : 'var(--m-text)',
+                    cursor: transports.length < 20 ? 'not-allowed' : 'pointer',
+                    opacity: transports.length < 20 ? 0.5 : 1,
+                  }}
+                >
+                  Keyingi →
+                </button>
+              </div>
+
+              {/* Loading indicator for pagination */}
+              {loading && (
+                <div style={{ textAlign: 'center', padding: 16 }}>
+                  <span className="m-spinner" style={{ width: 24, height: 24 }} />
+                </div>
+              )}
             </>
           )}
         </PullToRefresh>
@@ -370,7 +419,7 @@ export default function MobileTransportSearch() {
                   <strong>📦 Yuk:</strong> {fromOrder.cargoName || fromOrder.cargo_name}
                 </div>
                 <div style={{ fontSize: 14, color: '#1565c0', marginTop: 4 }}>
-                  <strong>💰 Narx:</strong> {fromOrder.priceUzs?.toLocaleString()} so'm
+                  <strong>💰 Narx:</strong> {fromOrder.priceUzs?.toLocaleString()} so&apos;m
                 </div>
               </div>
 
@@ -448,7 +497,7 @@ export default function MobileTransportSearch() {
         </div>
 
         <div className="m-form-group">
-          <label className="m-form-label">Minimal yuk sig'imi (tonna)</label>
+          <label className="m-form-label">Minimal yuk sig&apos;imi (tonna)</label>
           <input
             type="number"
             className="m-form-input"
