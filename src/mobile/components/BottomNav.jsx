@@ -5,30 +5,24 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
+// TAB_CONFIG - Role-specific navigation
+// Roles: driver, factory, logist (default)
 const TAB_CONFIG = {
   driver: [
-    { id: 'home', icon: '🏠', label: 'Asosiy', path: '/mobile' },
-    { id: 'search', icon: '🔍', label: 'Qidirish', path: '/mobile' },
-    { id: 'add', icon: '⚡', label: 'Holat', path: '/mobile/status' },
+    { id: 'home', icon: '⚡', label: 'Holat', path: '/mobile/status' }, // Default for driver
+    { id: 'search', icon: '📦', label: 'Yuklar', path: '/mobile/yuklar' },
     { id: 'orders', icon: '🚚', label: 'Transport', path: '/mobile/my-transports' },
     { id: 'profile', icon: '👤', label: 'Profil', path: '/mobile/profile' },
   ],
-  shipper: [
-    { id: 'home', icon: '🏠', label: 'Asosiy', path: '/mobile' },
-    { id: 'search', icon: '🚚', label: 'Transport', path: '/mobile/transports' },
+  factory: [
+    { id: 'home', icon: '📋', label: 'Buyurtma', path: '/mobile/orders' }, // Default for factory
+    { id: 'search', icon: '📦', label: 'Yuklar', path: '/mobile/yuklar' },
     { id: 'add', icon: '➕', label: "Qo'shish", path: '/mobile/create-order' },
-    { id: 'orders', icon: '📋', label: 'Buyurtma', path: '/mobile/orders' },
+    { id: 'transports', icon: '🚚', label: 'Transport', path: '/mobile/transports' },
     { id: 'profile', icon: '👤', label: 'Profil', path: '/mobile/profile' },
   ],
   logist: [
-    { id: 'home', icon: '🏠', label: 'Asosiy', path: '/mobile' },
-    { id: 'search', icon: '👥', label: 'Haydovchi', path: '/mobile/drivers' },
-    { id: 'add', icon: '➕', label: "Qo'shish", path: '/mobile/create-order' },
-    { id: 'orders', icon: '📋', label: 'Buyurtma', path: '/mobile/orders' },
-    { id: 'profile', icon: '👤', label: 'Profil', path: '/mobile/profile' },
-  ],
-  admin: [
-    { id: 'home', icon: '🏠', label: 'Asosiy', path: '/mobile' },
+    { id: 'home', icon: '📦', label: 'Yuklar', path: '/mobile' },
     { id: 'search', icon: '👥', label: 'Haydovchi', path: '/mobile/drivers' },
     { id: 'add', icon: '➕', label: "Qo'shish", path: '/mobile/create-order' },
     { id: 'orders', icon: '📋', label: 'Buyurtma', path: '/mobile/orders' },
@@ -36,8 +30,8 @@ const TAB_CONFIG = {
   ],
 };
 
-export default function BottomNav({ activeTab, userRole = 'shipper' }) {
-  const tabs = TAB_CONFIG[userRole] || TAB_CONFIG.shipper;
+export default function BottomNav({ activeTab, userRole = 'logist' }) {
+  const tabs = TAB_CONFIG[userRole] || TAB_CONFIG.logist;
 
   return (
     <nav className="m-bottomnav">

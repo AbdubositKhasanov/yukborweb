@@ -12,9 +12,22 @@ import MobileLoading from '../components/MobileLoading';
 
 const TABS = ['Ma\'lumot', 'Tahrirlash', 'Statistika'];
 
+// Helper to get default page by role
+// Roles: driver, factory, logist (default)
+const getDefaultPageByRole = (userType) => {
+  const type = userType?.toLowerCase() || '';
+  if (type === 'driver' || type === 'haydovchi') {
+    return '/mobile/status'; // Haydovchi holati
+  }
+  if (type === 'factory' || type === 'zavod') {
+    return '/mobile/orders'; // Buyurtmalarim
+  }
+  return '/mobile'; // Yuklar (logist default)
+};
+
 export default function MobileProfile() {
   const navigate = useNavigate();
-  const { logout, refreshUser } = useMobileAuth();
+  const { logout, refreshUser, userRole } = useMobileAuth();
 
   const [activeTab, setActiveTab] = useState(0);
   const [user, setUser] = useState(null);
@@ -72,6 +85,8 @@ export default function MobileProfile() {
       setSaving(true);
       setEditError('');
 
+      const oldType = user?.type;
+
       // MUST match Desktop ProfilePage.jsx payload EXACTLY
       const response = await updateUser({
         phone: editData.phone,
@@ -84,7 +99,15 @@ export default function MobileProfile() {
       if (response.code === 200) {
         await refreshUser();
         await loadData();
-        setActiveTab(0); // Switch to info tab
+
+        // If role changed, navigate to the new role's default page
+        if (oldType !== editData.type) {
+          const newDefaultPage = getDefaultPageByRole(editData.type);
+          console.log('[MobileProfile] Role changed from', oldType, 'to', editData.type, '-> navigating to', newDefaultPage);
+          navigate(newDefaultPage, { replace: true });
+        } else {
+          setActiveTab(0); // Switch to info tab
+        }
       } else {
         setEditError(response.message || 'Xatolik yuz berdi');
       }
@@ -177,6 +200,14 @@ export default function MobileProfile() {
                   <span className="m-info-card-label">📅 Ro'yxatdan</span>
                   <span className="m-info-card-value">
                     {user?.time ? new Date(user.time).toLocaleDateString('uz-UZ') : '-'}
+                  </span>
+                </div>
+                <div className="m-info-card-row" style={{ background: '#e3f2fd' }}>
+                  <span className="m-info-card-label">🎭 Faoliyat turi</span>
+                  <span className="m-info-card-value" style={{ color: '#1565c0' }}>
+                    {userRole === 'driver' ? '🚚 Haydovchi' :
+                     userRole === 'factory' ? '🏭 Zavod' :
+                     '📋 Logist'}
                   </span>
                 </div>
               </div>

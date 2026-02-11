@@ -6,7 +6,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUserMe, updateDriverStatus, getDriverTransportForm, updateTransportForm } from '../../services/api';
 import { useStaticData } from '../../context/StaticDataContext';
-import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading from '../components/MobileLoading';
@@ -14,7 +13,6 @@ import MobileLoading from '../components/MobileLoading';
 export default function MobileDriverStatus() {
   const navigate = useNavigate();
   const { staticData } = useStaticData();
-  const { refreshUser } = useMobileAuth();
 
   const [isActive, setIsActive] = useState(false);
   const [location, setLocation] = useState('');
@@ -26,13 +24,13 @@ export default function MobileDriverStatus() {
   const [editLocationSheet, setEditLocationSheet] = useState(false);
   const [editTransportSheet, setEditTransportSheet] = useState(false);
 
-  // Edit form data
-  const [editLocation, setEditLocation] = useState('');
-  const [editTransportData, setEditTransportData] = useState({
-    vehicleType: '',
-    maxWeight: '',
-    stateNumber: '',
-  });
+  // Edit form data - MUST match Desktop EditTransportModal.jsx
+  const [fromCountry, setFromCountry] = useState('');
+  const [fromRegion, setFromRegion] = useState('');
+  const [fromCity, setFromCity] = useState('');
+  const [maxWeight, setMaxWeight] = useState('');
+  const [vehicleTypeId, setVehicleTypeId] = useState('');
+  const [additionalPhone, setAdditionalPhone] = useState('');
 
   useEffect(() => {
     loadStatus();
@@ -46,21 +44,29 @@ export default function MobileDriverStatus() {
         getDriverTransportForm(),
       ]);
 
-      if (userResponse.code === 200) {
+      if (userResponse.code === 200 && userResponse.result) {
         const user = userResponse.result;
-        setIsActive(user.isActive || false);
-        setLocation(user.driverLocation || '');
+        // MUST use correct field names from Desktop
+        setIsActive(user.driverCurrentStatus || false);
+        setLocation(user.driverLastLocName || '');
       }
 
       if (transportResponse.code === 200 && transportResponse.result) {
         const t = transportResponse.result;
         setTransport(t);
-        setEditTransportData({
-          vehicleType: t.vehicleType || '',
-          maxWeight: t.maxWeight?.toString() || '',
-          stateNumber: t.stateNumber || '',
-        });
-        setEditLocation(t.fromRegion || '');
+        // Populate edit form - MUST match Desktop EditTransportModal.jsx
+        setFromCountry(t.fromLocation?.countryId?.toString() || '');
+        setFromRegion(t.fromLocation?.regionId?.toString() || '');
+        setFromCity(t.fromLocation?.cityId?.toString() || '');
+        setMaxWeight(t.maxWeight?.toString() || '');
+        setAdditionalPhone(t.additionalPhone || '');
+
+        if (t.vehicleType && staticData?.vehicleTypes) {
+          const matchedVehicle = staticData.vehicleTypes.find(
+            v => v.name === t.vehicleType
+          );
+          setVehicleTypeId(matchedVehicle ? matchedVehicle.id.toString() : '');
+        }
       }
     } catch (error) {
       console.error('Failed to load status:', error);
@@ -76,14 +82,17 @@ export default function MobileDriverStatus() {
       return;
     }
 
+    // Prevent double-click
+    if (updating) return;
+
     try {
       setUpdating(true);
       const newStatus = !isActive;
       const response = await updateDriverStatus(newStatus);
 
       if (response.code === 200) {
+        // Only update local state - no page refresh
         setIsActive(newStatus);
-        await refreshUser();
       }
     } catch (error) {
       console.error('Failed to update status:', error);
@@ -97,14 +106,22 @@ export default function MobileDriverStatus() {
 
     try {
       setUpdating(true);
+      // MUST match Desktop EditTransportModal.jsx payload
       const response = await updateTransportForm(transport.id, {
-        from_region: editLocation,
+        fromLocation: {
+          cityId: fromCity ? parseInt(fromCity) : null,
+          regionId: fromRegion ? parseInt(fromRegion) : null,
+          countryId: fromCountry ? parseInt(fromCountry) : null,
+        },
       });
 
       if (response.code === 200) {
-        setLocation(staticData?.regions?.find(r => r.code === editLocation)?.name || editLocation);
         setEditLocationSheet(false);
-        await loadStatus();
+        // Refresh to get updated location name
+        const userResponse = await getUserMe();
+        if (userResponse.code === 200 && userResponse.result) {
+          setLocation(userResponse.result.driverLastLocName || '');
+        }
       }
     } catch (error) {
       console.error('Failed to update location:', error);
@@ -122,10 +139,16 @@ export default function MobileDriverStatus() {
 
     try {
       setUpdating(true);
+      // MUST match Desktop EditTransportModal.jsx payload EXACTLY
       const response = await updateTransportForm(transport.id, {
-        vehicle_type: editTransportData.vehicleType,
-        max_weight: parseFloat(editTransportData.maxWeight) || undefined,
-        state_number: editTransportData.stateNumber,
+        additionalContact: additionalPhone || null,
+        fromLocation: {
+          cityId: fromCity ? parseInt(fromCity) : null,
+          regionId: fromRegion ? parseInt(fromRegion) : null,
+          countryId: fromCountry ? parseInt(fromCountry) : null,
+        },
+        maxWeight: maxWeight ? parseFloat(maxWeight) : null,
+        vehicleTypeId: vehicleTypeId ? parseInt(vehicleTypeId) : null,
       });
 
       if (response.code === 200) {
@@ -145,9 +168,17 @@ export default function MobileDriverStatus() {
     const parts = [];
     if (transport.vehicleType) parts.push(transport.vehicleType);
     if (transport.maxWeight) parts.push(`${transport.maxWeight}t`);
-    if (transport.stateNumber) parts.push(transport.stateNumber);
     return parts.join(' • ') || 'Transport';
   };
+
+  // Filtered regions/cities based on selection
+  const filteredRegions = staticData?.regions?.filter(
+    r => r.countryId === parseInt(fromCountry)
+  ) || [];
+
+  const filteredCities = staticData?.cities?.filter(
+    c => c.regionId === parseInt(fromRegion)
+  ) || [];
 
   if (loading) {
     return (
@@ -190,7 +221,6 @@ export default function MobileDriverStatus() {
         <div
           className="m-inline-edit"
           onClick={() => {
-            setEditLocation(transport?.fromRegion || '');
             setEditLocationSheet(true);
           }}
         >
@@ -233,23 +263,67 @@ export default function MobileDriverStatus() {
           <button
             className="m-btn m-btn-primary m-btn-full m-btn-lg"
             onClick={handleSaveLocation}
-            disabled={updating || !editLocation}
+            disabled={updating}
           >
             {updating ? 'Saqlanmoqda...' : 'Saqlash'}
           </button>
         }
       >
+        {/* Country */}
+        <div className="m-form-group">
+          <label className="m-form-label">Davlat</label>
+          <select
+            className="m-form-select"
+            value={fromCountry}
+            onChange={(e) => {
+              setFromCountry(e.target.value);
+              setFromRegion('');
+              setFromCity('');
+            }}
+          >
+            <option value="">Tanlang</option>
+            {staticData?.countries?.map((country) => (
+              <option key={country.countryId} value={country.countryId}>
+                {country.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Region */}
         <div className="m-form-group">
           <label className="m-form-label">Viloyat</label>
           <select
             className="m-form-select"
-            value={editLocation}
-            onChange={(e) => setEditLocation(e.target.value)}
+            value={fromRegion}
+            onChange={(e) => {
+              setFromRegion(e.target.value);
+              setFromCity('');
+            }}
+            disabled={!fromCountry}
           >
             <option value="">Tanlang</option>
-            {staticData?.regions?.map((region) => (
+            {filteredRegions.map((region) => (
               <option key={region.regionId} value={region.regionId}>
                 {region.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* City */}
+        <div className="m-form-group">
+          <label className="m-form-label">Shahar</label>
+          <select
+            className="m-form-select"
+            value={fromCity}
+            onChange={(e) => setFromCity(e.target.value)}
+            disabled={!fromRegion}
+          >
+            <option value="">Tanlang</option>
+            {filteredCities.map((city) => (
+              <option key={city.cityId} value={city.cityId}>
+                {city.name}
               </option>
             ))}
           </select>
@@ -273,42 +347,106 @@ export default function MobileDriverStatus() {
       >
         {transport ? (
           <>
+            {/* Country */}
+            <div className="m-form-group">
+              <label className="m-form-label">Davlat</label>
+              <select
+                className="m-form-select"
+                value={fromCountry}
+                onChange={(e) => {
+                  setFromCountry(e.target.value);
+                  setFromRegion('');
+                  setFromCity('');
+                }}
+              >
+                <option value="">Tanlang</option>
+                {staticData?.countries?.map((country) => (
+                  <option key={country.countryId} value={country.countryId}>
+                    {country.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Region */}
+            <div className="m-form-group">
+              <label className="m-form-label">Viloyat</label>
+              <select
+                className="m-form-select"
+                value={fromRegion}
+                onChange={(e) => {
+                  setFromRegion(e.target.value);
+                  setFromCity('');
+                }}
+                disabled={!fromCountry}
+              >
+                <option value="">Tanlang</option>
+                {filteredRegions.map((region) => (
+                  <option key={region.regionId} value={region.regionId}>
+                    {region.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* City */}
+            <div className="m-form-group">
+              <label className="m-form-label">Shahar</label>
+              <select
+                className="m-form-select"
+                value={fromCity}
+                onChange={(e) => setFromCity(e.target.value)}
+                disabled={!fromRegion}
+              >
+                <option value="">Tanlang</option>
+                {filteredCities.map((city) => (
+                  <option key={city.cityId} value={city.cityId}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Vehicle type */}
             <div className="m-form-group">
               <label className="m-form-label">Transport turi</label>
               <select
                 className="m-form-select"
-                value={editTransportData.vehicleType}
-                onChange={(e) => setEditTransportData({ ...editTransportData, vehicleType: e.target.value })}
+                value={vehicleTypeId}
+                onChange={(e) => setVehicleTypeId(e.target.value)}
               >
                 <option value="">Tanlang</option>
                 {staticData?.vehicleTypes?.map((type) => (
-                  <option key={type.id} value={type.name}>
+                  <option key={type.id} value={type.id}>
                     {type.name}
                   </option>
                 ))}
               </select>
             </div>
 
+            {/* Max weight */}
             <div className="m-form-group">
               <label className="m-form-label">Maksimal vazn (tonna)</label>
               <input
                 type="number"
                 className="m-form-input"
                 placeholder="0"
-                value={editTransportData.maxWeight}
-                onChange={(e) => setEditTransportData({ ...editTransportData, maxWeight: e.target.value })}
+                value={maxWeight}
+                onChange={(e) => setMaxWeight(e.target.value)}
                 inputMode="decimal"
               />
             </div>
 
+            {/* Additional phone */}
             <div className="m-form-group">
-              <label className="m-form-label">Davlat raqami</label>
+              <label className="m-form-label">Qo'shimcha telefon</label>
               <input
-                type="text"
+                type="tel"
                 className="m-form-input"
-                placeholder="01A123BC"
-                value={editTransportData.stateNumber}
-                onChange={(e) => setEditTransportData({ ...editTransportData, stateNumber: e.target.value.toUpperCase() })}
+                placeholder="+998 90 123 45 67"
+                value={additionalPhone}
+                onChange={(e) => setAdditionalPhone(e.target.value)}
+                inputMode="tel"
               />
             </div>
           </>

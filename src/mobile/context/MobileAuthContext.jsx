@@ -10,29 +10,32 @@ const MobileAuthContext = createContext(null);
 export function MobileAuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState('shipper'); // driver, shipper, logist
+  const [userRole, setUserRole] = useState('logist'); // driver, factory, logist
+  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Determine user role based on user data
+  // Roles: driver, factory, logist (default)
+  // isInternalDispatcher gives extra permissions to logist
   const determineRole = (userData) => {
-    if (!userData) return 'shipper';
+    if (!userData) return 'logist';
 
-    // Check if user is admin
-    if (userData.isAdmin) return 'admin';
+    const userType = userData.type?.toLowerCase() || '';
 
-    // Check if user is internal dispatcher
-    if (userData.isInternalDispatcher) return 'logist';
+    console.log('[MobileAuth] User type from API:', userData.type, '-> normalized:', userType);
 
-    // Check activity type
-    const activityType = userData.activityType?.toLowerCase() || '';
-    if (activityType.includes('haydovchi') || activityType.includes('driver')) {
+    if (userType === 'driver' || userType === 'haydovchi') {
+      console.log('[MobileAuth] Role determined: driver');
       return 'driver';
     }
-    if (activityType.includes('logist')) {
-      return 'logist';
+    if (userType === 'factory' || userType === 'zavod') {
+      console.log('[MobileAuth] Role determined: factory');
+      return 'factory';
     }
 
-    return 'shipper';
+    // Default to logist for all other types (including 'logist', 'not_selected', etc.)
+    console.log('[MobileAuth] Role determined: logist (default)');
+    return 'logist';
   };
 
   // Load user data
@@ -51,15 +54,18 @@ export function MobileAuthProvider({ children }) {
       if (response.code === 200 && response.result) {
         setUser(response.result);
         setUserRole(determineRole(response.result));
+        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
         setIsAuthenticated(true);
       } else {
         setIsAuthenticated(false);
         setUser(null);
+        setIsInternalDispatcher(false);
       }
     } catch (error) {
       console.error('Failed to load user:', error);
       setIsAuthenticated(false);
       setUser(null);
+      setIsInternalDispatcher(false);
     } finally {
       setLoading(false);
     }
@@ -86,13 +92,15 @@ export function MobileAuthProvider({ children }) {
     localStorage.removeItem('userData');
     setIsAuthenticated(false);
     setUser(null);
-    setUserRole('shipper');
+    setUserRole('logist');
+    setIsInternalDispatcher(false);
   }, []);
 
   // Force set authenticated - called after successful login
   const setAuthenticated = useCallback((userData) => {
     setUser(userData);
     setUserRole(determineRole(userData));
+    setIsInternalDispatcher(userData?.isInternalDispatcher === true);
     setIsAuthenticated(true);
   }, []);
 
@@ -104,6 +112,7 @@ export function MobileAuthProvider({ children }) {
     isAuthenticated,
     user,
     userRole,
+    isInternalDispatcher,
     loading,
     logout,
     refreshUser,

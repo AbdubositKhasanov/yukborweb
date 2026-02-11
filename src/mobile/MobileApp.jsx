@@ -26,6 +26,28 @@ const MobileDriverDetail = lazy(() => import('./pages/MobileDriverDetail'));
 const MobileProfile = lazy(() => import('./pages/MobileProfile'));
 const MobileMyTransports = lazy(() => import('./pages/MobileMyTransports'));
 
+// Role-based default page redirect
+function RoleBasedHome() {
+  const { isAuthenticated, userRole } = useMobileAuth();
+
+  console.log('[RoleBasedHome] isAuthenticated:', isAuthenticated, 'userRole:', userRole);
+
+  // Redirect based on role - MUST match Desktop behavior
+  if (isAuthenticated) {
+    if (userRole === 'driver') {
+      console.log('[RoleBasedHome] Redirecting driver to /mobile/status');
+      return <Navigate to="/mobile/status" replace />;
+    }
+    if (userRole === 'factory') {
+      console.log('[RoleBasedHome] Redirecting factory to /mobile/orders');
+      return <Navigate to="/mobile/orders" replace />;
+    }
+  }
+
+  // Default: show Yuklar (MobileHome)
+  return <MobileHome />;
+}
+
 function MobileAppContent() {
   const location = useLocation();
   const { isAuthenticated, userRole, loading } = useMobileAuth();
@@ -33,14 +55,32 @@ function MobileAppContent() {
   // Determine if bottom nav should be shown
   const showBottomNav = isAuthenticated && !location.pathname.includes('/login');
 
-  // Determine active tab based on route
+  // Determine active tab based on route and role
   const getActiveTab = () => {
     const path = location.pathname.replace('/mobile', '');
-    if (path === '' || path === '/' || path.startsWith('/cargo')) return 'home';
-    if (path.startsWith('/search') || path.startsWith('/transport') || path.startsWith('/drivers')) return 'search';
-    if (path.startsWith('/create') || path.startsWith('/status')) return 'add';
-    if (path.startsWith('/orders') || path.startsWith('/my-transports')) return 'orders';
-    if (path.startsWith('/profile')) return 'profile';
+
+    // Role-specific tab detection
+    // Roles: driver, factory, logist (default)
+    if (userRole === 'driver') {
+      if (path === '/status') return 'home';
+      if (path === '/yuklar' || path.startsWith('/cargo')) return 'search';
+      if (path.startsWith('/my-transports')) return 'orders';
+      if (path.startsWith('/profile')) return 'profile';
+    } else if (userRole === 'factory') {
+      if (path.startsWith('/orders') || path.startsWith('/order/')) return 'home';
+      if (path === '/yuklar' || path.startsWith('/cargo')) return 'search';
+      if (path.startsWith('/create')) return 'add';
+      if (path.startsWith('/transports') || path.startsWith('/transport/')) return 'transports';
+      if (path.startsWith('/profile')) return 'profile';
+    } else {
+      // logist (default)
+      if (path === '' || path === '/' || path === '/yuklar' || path.startsWith('/cargo')) return 'home';
+      if (path.startsWith('/drivers') || path.startsWith('/driver/')) return 'search';
+      if (path.startsWith('/create')) return 'add';
+      if (path.startsWith('/orders') || path.startsWith('/order/')) return 'orders';
+      if (path.startsWith('/profile')) return 'profile';
+    }
+
     return 'home';
   };
 
@@ -53,7 +93,8 @@ function MobileAppContent() {
       <Suspense fallback={<MobileLoading fullScreen />}>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<MobileHome />} />
+          <Route path="/" element={<RoleBasedHome />} />
+          <Route path="/yuklar" element={<MobileHome />} /> {/* Direct access to Yuklar */}
           <Route path="/login" element={<MobileLogin />} />
           <Route path="/cargo/:id" element={<MobileCargoDetail />} />
 
@@ -145,7 +186,7 @@ function MobileAppContent() {
       </Suspense>
 
       {showBottomNav && (
-        <BottomNav activeTab={getActiveTab()} userRole={userRole} />
+        <BottomNav key={userRole} activeTab={getActiveTab()} userRole={userRole} />
       )}
     </div>
   );

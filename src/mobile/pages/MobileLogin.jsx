@@ -64,6 +64,22 @@ export default function MobileLogin() {
         if (userResponse.code === 200 && userResponse.result) {
           // Set authenticated state directly to ensure navigation bar shows
           setAuthenticated(userResponse.result);
+
+          // Redirect to role-specific default page
+          // Roles: driver, factory, logist (default)
+          const userData = userResponse.result;
+          const userType = userData.type?.toLowerCase() || '';
+          let defaultPath = '/mobile'; // logist default - Yuklar
+
+          if (userType === 'driver' || userType === 'haydovchi') {
+            defaultPath = '/mobile/status'; // Haydovchi holati
+          } else if (userType === 'factory' || userType === 'zavod') {
+            defaultPath = '/mobile/orders'; // Buyurtmalarim
+          }
+
+          const from = location.state?.from?.pathname || defaultPath;
+          navigate(from, { replace: true });
+          return;
         }
 
         const from = location.state?.from?.pathname || '/mobile';
