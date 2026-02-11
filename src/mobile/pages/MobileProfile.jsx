@@ -180,7 +180,7 @@ export default function MobileProfile() {
                     {user?.phone || 'Ko\'rsatilmagan'}
                   </span>
                 </div>
-                {user?.driverLastLocName && (
+                {userRole === 'driver' && user?.driverLastLocName && (
                   <div className="m-info-card-row" style={{ background: '#d4edda' }}>
                     <span className="m-info-card-label">🚚 Haydovchi joylashuvi</span>
                     <span className="m-info-card-value" style={{ color: '#155724' }}>
@@ -188,7 +188,7 @@ export default function MobileProfile() {
                     </span>
                   </div>
                 )}
-                {user?.driverCurrentStatus !== undefined && (
+                {userRole === 'driver' && user?.driverCurrentStatus !== undefined && (
                   <div className="m-info-card-row" style={{ background: user.driverCurrentStatus ? '#d4edda' : '#f8d7da' }}>
                     <span className="m-info-card-label">Status</span>
                     <span className="m-info-card-value" style={{ color: user.driverCurrentStatus ? '#155724' : '#721c24' }}>
@@ -199,7 +199,7 @@ export default function MobileProfile() {
                 <div className="m-info-card-row">
                   <span className="m-info-card-label">📅 Ro'yxatdan</span>
                   <span className="m-info-card-value">
-                    {user?.time ? new Date(user.time).toLocaleDateString('uz-UZ') : '-'}
+                    {user?.time ? new Date(parseInt(user.time)).toLocaleDateString('uz-UZ') : '-'}
                   </span>
                 </div>
                 <div className="m-info-card-row" style={{ background: '#e3f2fd' }}>

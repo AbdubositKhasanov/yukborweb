@@ -216,20 +216,20 @@ export default function ProfilePage() {
                 </a>
               </div>
               
-              {userData.driverLastLocName && (
+              {userData.type === 'driver' && userData.driverLastLocName && (
                 <p style={{ display: 'flex', justifyContent: 'space-between', margin: '10px 0', padding: '10px', backgroundColor: '#d4edda', borderRadius: '4px' }}>
                   <span>🚚 Haydovchi joylashuvi:</span>
                   <strong style={{ color: '#155724' }}>{userData.driverLastLocName}</strong>
                 </p>
               )}
-              {userData.driverCurrentStatus !== undefined && (
-                <p style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  margin: '10px 0', 
-                  padding: '10px', 
-                  backgroundColor: userData.driverCurrentStatus ? '#d4edda' : '#f8d7da', 
-                  borderRadius: '4px' 
+              {userData.type === 'driver' && userData.driverCurrentStatus !== undefined && (
+                <p style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  margin: '10px 0',
+                  padding: '10px',
+                  backgroundColor: userData.driverCurrentStatus ? '#d4edda' : '#f8d7da',
+                  borderRadius: '4px'
                 }}>
                   <span>Status:</span>
                   <strong style={{ color: userData.driverCurrentStatus ? '#155724' : '#721c24' }}>
@@ -239,7 +239,7 @@ export default function ProfilePage() {
               )}
               {userData.time && (
                 <p style={{ margin: '10px 0', fontSize: '12px', color: '#999' }}>
-                  Ro'yxatdan o'tgan: {new Date(userData.time).toLocaleDateString('uz-UZ')}
+                  Ro'yxatdan o'tgan: {new Date(parseInt(userData.time)).toLocaleDateString('uz-UZ')}
                 </p>
               )}
             </div>
