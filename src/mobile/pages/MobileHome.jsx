@@ -47,6 +47,7 @@ export default function MobileHome() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // UI state
@@ -111,7 +112,8 @@ export default function MobileHome() {
 
   // Load cargos - matches Desktop SearchPage.jsx pattern
   // Uses page from state, not as parameter
-  const loadCargos = useCallback(async () => {
+  const loadCargos = useCallback(async (requestedPage) => {
+    const targetPage = requestedPage !== undefined ? requestedPage : page;
     setLoading(true);
 
     try {
@@ -125,11 +127,22 @@ export default function MobileHome() {
         vehicleType: filters.vehicleType || undefined,
         minWeight: filters.minWeight || undefined,
         maxWeight: filters.maxWeight || undefined,
-        page,
+        page: targetPage,
       });
 
       if (response.code === 200) {
-        setCargos(response.result || []);
+        const newCargos = response.result || [];
+
+        // If next page is empty and we're not on first page, keep current data
+        if (newCargos.length === 0 && targetPage > 0) {
+          setHasMore(false);
+          // Revert page to previous
+          setPage(targetPage - 1);
+        } else {
+          setCargos(newCargos);
+          // If we got less than 20 items, there's no more data
+          setHasMore(newCargos.length >= 20);
+        }
       }
     } catch (error) {
       console.error('Failed to load cargos:', error);
@@ -142,26 +155,37 @@ export default function MobileHome() {
   // Initial load - matches Desktop pattern
   useEffect(() => {
     if (isInitialLoad) {
-      loadCargos();
+      loadCargos(0);
       setIsInitialLoad(false);
     }
-  }, [isInitialLoad, loadCargos]);
+  }, [isInitialLoad]);
 
-  // Pagination - load on page change (skip initial page 0)
-  // This is the key pattern from Desktop SearchPage.jsx
-  useEffect(() => {
-    if (!isInitialLoad && page >= 0) {
-      loadCargos();
+  // Handle page change
+  const handleNextPage = () => {
+    if (hasMore && !loading) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      loadCargos(nextPage);
     }
-  }, [page]);
+  };
+
+  const handlePrevPage = () => {
+    if (page > 0 && !loading) {
+      const prevPage = page - 1;
+      setPage(prevPage);
+      setHasMore(true); // Reset hasMore when going back
+      loadCargos(prevPage);
+    }
+  };
 
   // Handle filter apply
   const handleApplyFilters = () => {
     setActiveFilters(buildActiveFilters(filters));
     setFilterSheetOpen(false);
     setPage(0);
+    setHasMore(true);
     setIsInitialLoad(false);
-    loadCargos();
+    loadCargos(0);
   };
 
   // Handle filter reset
@@ -206,19 +230,17 @@ export default function MobileHome() {
     setFilters(newFilters);
     setActiveFilters(buildActiveFilters(newFilters));
     setPage(0);
-    // loadCargos will be triggered by page change useEffect
+    setHasMore(true);
+    loadCargos(0);
   };
 
   // Pull to refresh handler
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    if (page === 0) {
-      await loadCargos();
-    } else {
-      setPage(0);
-      // loadCargos will be triggered by page change useEffect
-    }
-  }, [page, loadCargos]);
+    setPage(0);
+    setHasMore(true);
+    await loadCargos(0);
+  }, [loadCargos]);
 
   return (
     <>
@@ -281,7 +303,7 @@ export default function MobileHome() {
                 ))}
               </div>
 
-              {/* Pagination - matches Desktop SearchPage.jsx */}
+              {/* Pagination */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'center',
@@ -291,7 +313,7 @@ export default function MobileHome() {
                 borderTop: '1px solid var(--m-border)',
               }}>
                 <button
-                  onClick={() => setPage(p => p - 1)}
+                  onClick={handlePrevPage}
                   disabled={page === 0 || loading}
                   style={{
                     padding: '10px 16px',
@@ -318,18 +340,18 @@ export default function MobileHome() {
                 </span>
 
                 <button
-                  onClick={() => setPage(p => p + 1)}
-                  disabled={cargos.length === 0 || loading}
+                  onClick={handleNextPage}
+                  disabled={!hasMore || loading}
                   style={{
                     padding: '10px 16px',
                     fontSize: 14,
                     fontWeight: 500,
                     border: '1px solid var(--m-border)',
                     borderRadius: 8,
-                    background: cargos.length === 0 ? 'var(--m-bg)' : 'var(--m-card-bg)',
-                    color: cargos.length === 0 ? 'var(--m-text-muted)' : 'var(--m-text)',
-                    cursor: cargos.length === 0 ? 'not-allowed' : 'pointer',
-                    opacity: cargos.length === 0 ? 0.5 : 1,
+                    background: !hasMore ? 'var(--m-bg)' : 'var(--m-card-bg)',
+                    color: !hasMore ? 'var(--m-text-muted)' : 'var(--m-text)',
+                    cursor: !hasMore ? 'not-allowed' : 'pointer',
+                    opacity: !hasMore ? 0.5 : 1,
                   }}
                 >
                   Keyingi →

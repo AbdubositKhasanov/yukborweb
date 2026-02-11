@@ -36,6 +36,7 @@ export default function MobileTransportSearch() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // UI state
@@ -119,8 +120,9 @@ export default function MobileTransportSearch() {
     return chips;
   }, [staticData]);
 
-  // Load transports - uses page from state (Desktop pattern)
-  const loadTransports = useCallback(async () => {
+  // Load transports
+  const loadTransports = useCallback(async (requestedPage) => {
+    const targetPage = requestedPage !== undefined ? requestedPage : page;
     setLoading(true);
 
     try {
@@ -130,11 +132,20 @@ export default function MobileTransportSearch() {
         fromCity: filters.fromCity || undefined,
         vehicleType: filters.vehicleType || undefined,
         maxWeight: filters.maxWeight || undefined,
-        page,
+        page: targetPage,
       });
 
       if (response.code === 200) {
-        setTransports(response.result || []);
+        const newTransports = response.result || [];
+
+        // If next page is empty and we're not on first page, keep current data
+        if (newTransports.length === 0 && targetPage > 0) {
+          setHasMore(false);
+          setPage(targetPage - 1);
+        } else {
+          setTransports(newTransports);
+          setHasMore(newTransports.length >= 20);
+        }
       }
     } catch (error) {
       console.error('Failed to load transports:', error);
@@ -147,28 +158,40 @@ export default function MobileTransportSearch() {
   // Initial load
   useEffect(() => {
     if (isInitialLoad) {
-      loadTransports();
+      loadTransports(0);
       setIsInitialLoad(false);
       if (fromOrder) {
         setActiveFilters(buildActiveFilters(filters));
       }
     }
-  }, [isInitialLoad, loadTransports, fromOrder, buildActiveFilters, filters]);
+  }, [isInitialLoad]);
 
-  // Pagination - load on page change (Desktop pattern)
-  useEffect(() => {
-    if (!isInitialLoad && page >= 0) {
-      loadTransports();
+  // Handle page change
+  const handleNextPage = () => {
+    if (hasMore && !loading) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      loadTransports(nextPage);
     }
-  }, [page]);
+  };
+
+  const handlePrevPage = () => {
+    if (page > 0 && !loading) {
+      const prevPage = page - 1;
+      setPage(prevPage);
+      setHasMore(true);
+      loadTransports(prevPage);
+    }
+  };
 
   // Handle filter apply
   const handleApplyFilters = () => {
     setActiveFilters(buildActiveFilters(filters));
     setFilterSheetOpen(false);
     setPage(0);
+    setHasMore(true);
     setIsInitialLoad(false);
-    loadTransports();
+    loadTransports(0);
   };
 
   // Handle filter reset
@@ -199,17 +222,17 @@ export default function MobileTransportSearch() {
     setFilters(newFilters);
     setActiveFilters(buildActiveFilters(newFilters));
     setPage(0);
+    setHasMore(true);
+    loadTransports(0);
   };
 
   // Pull to refresh
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    if (page === 0) {
-      await loadTransports();
-    } else {
-      setPage(0);
-    }
-  }, [page, loadTransports]);
+    setPage(0);
+    setHasMore(true);
+    await loadTransports(0);
+  }, [loadTransports]);
 
   const handleTransportClick = (transport) => {
     navigate(`/mobile/transport/${transport.id || transport._id}`, {
@@ -314,7 +337,7 @@ export default function MobileTransportSearch() {
                 ))}
               </div>
 
-              {/* Pagination - matches Desktop pattern */}
+              {/* Pagination */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'center',
@@ -324,7 +347,7 @@ export default function MobileTransportSearch() {
                 borderTop: '1px solid var(--m-border)',
               }}>
                 <button
-                  onClick={() => setPage(p => p - 1)}
+                  onClick={handlePrevPage}
                   disabled={page === 0 || loading}
                   style={{
                     padding: '10px 16px',
@@ -351,18 +374,18 @@ export default function MobileTransportSearch() {
                 </span>
 
                 <button
-                  onClick={() => setPage(p => p + 1)}
-                  disabled={transports.length === 0 || loading}
+                  onClick={handleNextPage}
+                  disabled={!hasMore || loading}
                   style={{
                     padding: '10px 16px',
                     fontSize: 14,
                     fontWeight: 500,
                     border: '1px solid var(--m-border)',
                     borderRadius: 8,
-                    background: transports.length === 0 ? 'var(--m-bg)' : 'var(--m-card-bg)',
-                    color: transports.length === 0 ? 'var(--m-text-muted)' : 'var(--m-text)',
-                    cursor: transports.length === 0 ? 'not-allowed' : 'pointer',
-                    opacity: transports.length === 0 ? 0.5 : 1,
+                    background: !hasMore ? 'var(--m-bg)' : 'var(--m-card-bg)',
+                    color: !hasMore ? 'var(--m-text-muted)' : 'var(--m-text)',
+                    cursor: !hasMore ? 'not-allowed' : 'pointer',
+                    opacity: !hasMore ? 0.5 : 1,
                   }}
                 >
                   Keyingi →

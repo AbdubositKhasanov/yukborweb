@@ -3,8 +3,8 @@
  * Isolated mobile-only UI layer
  * Route: /mobile/*
  */
-import React, { Suspense, lazy } from 'react';
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect } from 'react';
+import { Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
 import MobileProtectedRoute from './components/MobileProtectedRoute';
 import MobileLoading from './components/MobileLoading';
@@ -52,7 +52,32 @@ function RoleBasedHome() {
 
 function MobileAppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAuthenticated, userRole, loading } = useMobileAuth();
+
+  // Reset scroll position when route changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  // Handle mobile back button - prevent app from closing
+  useEffect(() => {
+    const handlePopState = (e) => {
+      // If we're at the root mobile page, push a new state to prevent exit
+      if (location.pathname === '/mobile' || location.pathname === '/mobile/') {
+        // Push current state back to prevent exit
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+
+    // Push initial state
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [location.pathname]);
 
   // Determine if bottom nav should be shown
   const showBottomNav = isAuthenticated && !location.pathname.includes('/login');
