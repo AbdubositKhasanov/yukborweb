@@ -10,6 +10,7 @@ import { useStaticData } from '../../context/StaticDataContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
+import PullToRefresh from '../components/PullToRefresh';
 
 export default function MobileMyDrivers() {
   const navigate = useNavigate();
@@ -194,16 +195,17 @@ export default function MobileMyDrivers() {
       <TopBar title="Haydovchilarim" rightIcon="+" onRightAction={() => setAddSheet(true)} />
 
       <main className="m-content">
-        {drivers.length === 0 ? (
-          <div className="m-empty">
-            <div className="m-empty-icon">👥</div>
-            <h3 className="m-empty-title">Haydovchilar yo'q</h3>
-            <p className="m-empty-text">Haydovchi qo'shish uchun "+" tugmasini bosing</p>
-            <button className="m-btn m-btn-primary" onClick={() => setAddSheet(true)}>
-              + Haydovchi qo'shish
-            </button>
-          </div>
-        ) : (
+        <PullToRefresh onRefresh={() => loadDrivers(true)} disabled={loading}>
+          {drivers.length === 0 ? (
+            <div className="m-empty">
+              <div className="m-empty-icon">👥</div>
+              <h3 className="m-empty-title">Haydovchilar yo'q</h3>
+              <p className="m-empty-text">Haydovchi qo'shish uchun "+" tugmasini bosing</p>
+              <button className="m-btn m-btn-primary" onClick={() => setAddSheet(true)}>
+                + Haydovchi qo'shish
+              </button>
+            </div>
+          ) : (
           <div className="m-card m-card-list">
             {drivers.map((driver) => {
               const statusDisplay = getStatusDisplay(driver);
@@ -250,9 +252,8 @@ export default function MobileMyDrivers() {
               );
             })}
           </div>
-        )}
-
-        {refreshing && <MobileLoading />}
+          )}
+        </PullToRefresh>
       </main>
 
       {/* Add Driver Sheet */}

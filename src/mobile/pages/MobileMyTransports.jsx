@@ -9,6 +9,7 @@ import { useStaticData } from '../../context/StaticDataContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
+import PullToRefresh from '../components/PullToRefresh';
 
 export default function MobileMyTransports() {
   const navigate = useNavigate();
@@ -130,48 +131,50 @@ export default function MobileMyTransports() {
       <TopBar title="Transportlarim" rightIcon="+" onRightAction={() => setCreateSheet(true)} />
 
       <main className="m-content">
-        {transports.length === 0 ? (
-          <div className="m-empty">
-            <div className="m-empty-icon">🚚</div>
-            <h3 className="m-empty-title">Transport yo'q</h3>
-            <p className="m-empty-text">Transport qo'shing</p>
-            <button className="m-btn m-btn-primary" onClick={() => setCreateSheet(true)}>
-              + Transport qo'shish
-            </button>
-          </div>
-        ) : (
-          <div className="m-card m-card-list">
-            {transports.map((transport) => (
-              <div
-                key={transport.id || transport._id}
-                className="m-list-item"
-              >
-                <div className={`m-status-dot ${transport.isActive ? 'online' : 'offline'}`} />
-                <div className="m-list-item-content">
-                  <p className="m-list-item-title">
-                    {transport.vehicleType || 'Transport'}
-                    {transport.maxWeight && ` ${transport.maxWeight}t`}
-                  </p>
-                  <p className="m-list-item-subtitle">
-                    {transport.stateNumber || 'Raqam yo\'q'}
-                  </p>
-                  {transport.fromRegion && (
-                    <div className="m-list-item-meta">
-                      <span>📍 {transport.fromRegion}</span>
-                    </div>
-                  )}
-                </div>
-                <button
-                  className="m-btn m-btn-ghost"
-                  onClick={(e) => openDeleteSheet(e, transport.id || transport._id)}
-                  style={{ minHeight: 40, padding: '0 12px', color: 'var(--m-danger)' }}
+        <PullToRefresh onRefresh={loadTransports} disabled={loading}>
+          {transports.length === 0 ? (
+            <div className="m-empty">
+              <div className="m-empty-icon">🚚</div>
+              <h3 className="m-empty-title">Transport yo'q</h3>
+              <p className="m-empty-text">Transport qo'shing</p>
+              <button className="m-btn m-btn-primary" onClick={() => setCreateSheet(true)}>
+                + Transport qo'shish
+              </button>
+            </div>
+          ) : (
+            <div className="m-card m-card-list">
+              {transports.map((transport) => (
+                <div
+                  key={transport.id || transport._id}
+                  className="m-list-item"
                 >
-                  🗑️
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+                  <div className={`m-status-dot ${transport.isActive ? 'online' : 'offline'}`} />
+                  <div className="m-list-item-content">
+                    <p className="m-list-item-title">
+                      {transport.vehicleType || 'Transport'}
+                      {transport.maxWeight && ` ${transport.maxWeight}t`}
+                    </p>
+                    <p className="m-list-item-subtitle">
+                      {transport.stateNumber || 'Raqam yo\'q'}
+                    </p>
+                    {transport.fromRegion && (
+                      <div className="m-list-item-meta">
+                        <span>📍 {transport.fromRegion}</span>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="m-btn m-btn-ghost"
+                    onClick={(e) => openDeleteSheet(e, transport.id || transport._id)}
+                    style={{ minHeight: 40, padding: '0 12px', color: 'var(--m-danger)' }}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </PullToRefresh>
       </main>
 
       {/* Create Transport Sheet */}

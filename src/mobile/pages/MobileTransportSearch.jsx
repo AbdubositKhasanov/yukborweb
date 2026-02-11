@@ -11,6 +11,8 @@ import { formatTimeAgo } from '../../utils/formatTime';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
+import PullToRefresh from '../components/PullToRefresh';
+import LoadMoreTrigger from '../components/LoadMoreTrigger';
 
 export default function MobileTransportSearch() {
   const navigate = useNavigate();
@@ -33,6 +35,7 @@ export default function MobileTransportSearch() {
   // Data state
   const [transports, setTransports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
 
@@ -118,12 +121,18 @@ export default function MobileTransportSearch() {
   }, [staticData]);
 
   // Load transports
-  const loadTransports = useCallback(async (isRefresh = false) => {
+  const loadTransports = useCallback(async (isRefresh = false, pageNum = null) => {
     try {
+      const currentPage = pageNum !== null ? pageNum : (isRefresh ? 0 : page);
+
       if (isRefresh) {
         setPage(0);
+        setLoading(true);
+      } else if (currentPage > 0) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
       }
-      setLoading(true);
 
       // MUST match Desktop BrowseTransportsPage.jsx searchTransports call EXACTLY
       const response = await searchTransports({
@@ -132,12 +141,12 @@ export default function MobileTransportSearch() {
         fromCity: filters.fromCity || undefined,
         vehicleType: filters.vehicleType || undefined,
         maxWeight: filters.maxWeight || undefined,
-        page: isRefresh ? 0 : page,
+        page: currentPage,
       });
 
       if (response.code === 200) {
         const newTransports = response.result || [];
-        if (isRefresh || page === 0) {
+        if (isRefresh || currentPage === 0) {
           setTransports(newTransports);
         } else {
           setTransports((prev) => [...prev, ...newTransports]);
@@ -148,8 +157,23 @@ export default function MobileTransportSearch() {
       console.error('Failed to load transports:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, [filters, page]);
+
+  // Load more callback
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && !loading && !loadingMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      loadTransports(false, nextPage);
+    }
+  }, [hasMore, loading, loadingMore, page, loadTransports]);
+
+  // Pull to refresh
+  const handleRefresh = useCallback(async () => {
+    await loadTransports(true);
+  }, [loadTransports]);
 
   // Initial load
   useEffect(() => {
@@ -220,86 +244,97 @@ export default function MobileTransportSearch() {
       />
 
       <main className="m-content">
-        {/* Order info if from order */}
-        {fromOrder && (
-          <div style={{ padding: '12px 16px', background: '#e3f2fd', fontSize: 14 }}>
-            📦 {fromOrder.cargoName || fromOrder.cargo_name} uchun transport qidirish
-          </div>
-        )}
+        <PullToRefresh onRefresh={handleRefresh} disabled={loading}>
+          {/* Order info if from order */}
+          {fromOrder && (
+            <div style={{ padding: '12px 16px', background: '#e3f2fd', fontSize: 14 }}>
+              📦 {fromOrder.cargoName || fromOrder.cargo_name} uchun transport qidirish
+            </div>
+          )}
 
-        {/* Active filter chips */}
-        {activeFilters.length > 0 && (
-          <div className="m-chips">
-            {activeFilters.map((chip) => (
-              <button
-                key={chip.key}
-                className="m-chip active"
-                onClick={() => handleRemoveFilter(chip.key)}
-              >
-                {chip.label}
-                <span className="m-chip-remove">✕</span>
+          {/* Active filter chips */}
+          {activeFilters.length > 0 && (
+            <div className="m-chips">
+              {activeFilters.map((chip) => (
+                <button
+                  key={chip.key}
+                  className="m-chip active"
+                  onClick={() => handleRemoveFilter(chip.key)}
+                >
+                  {chip.label}
+                  <span className="m-chip-remove">✕</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Transport list */}
+          {loading && page === 0 ? (
+            <ListSkeleton count={6} />
+          ) : transports.length === 0 ? (
+            <div className="m-empty">
+              <div className="m-empty-icon">🚚</div>
+              <h3 className="m-empty-title">Transportlar topilmadi</h3>
+              <p className="m-empty-text">Filterlarni o'zgartiring</p>
+              <button className="m-btn m-btn-primary" onClick={() => setFilterSheetOpen(true)}>
+                Filterlar
               </button>
-            ))}
-          </div>
-        )}
-
-        {/* Transport list */}
-        {loading && page === 0 ? (
-          <ListSkeleton count={6} />
-        ) : transports.length === 0 ? (
-          <div className="m-empty">
-            <div className="m-empty-icon">🚚</div>
-            <h3 className="m-empty-title">Transportlar topilmadi</h3>
-            <p className="m-empty-text">Filterlarni o'zgartiring</p>
-            <button className="m-btn m-btn-primary" onClick={() => setFilterSheetOpen(true)}>
-              Filterlar
-            </button>
-          </div>
-        ) : (
-          <div className="m-card m-card-list">
-            {transports.map((transport, index) => (
-              <div
-                key={transport.id || transport._id || index}
-                className="m-list-item m-card-tap"
-                onClick={() => handleTransportClick(transport)}
-              >
-                <div className={`m-status-dot ${transport.isActive ? 'online' : 'offline'}`} />
-                <div className="m-list-item-content">
-                  <p className="m-list-item-title">
-                    {transport.vehicleType || 'Transport'}
-                    {transport.maxWeight && ` ${transport.maxWeight}t`}
-                  </p>
-                  <p className="m-list-item-subtitle">
-                    📍 {formatLocation(transport)}
-                  </p>
-                  {transport.stateNumber && (
-                    <div className="m-list-item-meta">
-                      <span>🔢 {transport.stateNumber}</span>
+            </div>
+          ) : (
+            <>
+              <div className="m-card m-card-list">
+                {transports.map((transport, index) => (
+                  <div
+                    key={transport.id || transport._id || index}
+                    className="m-list-item m-card-tap"
+                    onClick={() => handleTransportClick(transport)}
+                  >
+                    <div className={`m-status-dot ${transport.isActive ? 'online' : 'offline'}`} />
+                    <div className="m-list-item-content">
+                      <p className="m-list-item-title">
+                        {transport.vehicleType || 'Transport'}
+                        {transport.maxWeight && ` ${transport.maxWeight}t`}
+                      </p>
+                      <p className="m-list-item-subtitle">
+                        📍 {formatLocation(transport)}
+                      </p>
+                      {transport.stateNumber && (
+                        <div className="m-list-item-meta">
+                          <span>🔢 {transport.stateNumber}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                  {fromOrder ? (
-                    <button
-                      className="m-btn m-btn-success"
-                      onClick={(e) => handleOfferClick(e, transport)}
-                      style={{ padding: '6px 12px', fontSize: 13, minHeight: 32 }}
-                    >
-                      📨 Taklif
-                    </button>
-                  ) : (
-                    <>
-                      <span style={{ fontSize: 13, color: 'var(--m-text-muted)' }}>
-                        {formatTimeAgo(transport.createdAt || transport.created_at).split(' ')[0]}
-                      </span>
-                      <span className="m-list-item-arrow">→</span>
-                    </>
-                  )}
-                </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                      {fromOrder ? (
+                        <button
+                          className="m-btn m-btn-success"
+                          onClick={(e) => handleOfferClick(e, transport)}
+                          style={{ padding: '6px 12px', fontSize: 13, minHeight: 32 }}
+                        >
+                          📨 Taklif
+                        </button>
+                      ) : (
+                        <>
+                          <span style={{ fontSize: 13, color: 'var(--m-text-muted)' }}>
+                            {formatTimeAgo(transport.createdAt || transport.created_at).split(' ')[0]}
+                          </span>
+                          <span className="m-list-item-arrow">→</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+
+              {/* Infinite scroll trigger */}
+              <LoadMoreTrigger
+                onLoadMore={handleLoadMore}
+                hasMore={hasMore}
+                loading={loadingMore}
+              />
+            </>
+          )}
+        </PullToRefresh>
 
         {/* Offer Bottom Sheet */}
         <BottomSheet
@@ -360,7 +395,6 @@ export default function MobileTransportSearch() {
           )}
         </BottomSheet>
 
-        {loading && page > 0 && <MobileLoading />}
       </main>
 
       {/* Filter Bottom Sheet */}

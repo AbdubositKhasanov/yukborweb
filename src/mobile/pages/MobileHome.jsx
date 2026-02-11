@@ -12,6 +12,8 @@ import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import CargoListItem from '../components/CargoListItem';
 import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
+import PullToRefresh from '../components/PullToRefresh';
+import LoadMoreTrigger from '../components/LoadMoreTrigger';
 
 export default function MobileHome() {
   const location = useLocation();
@@ -214,13 +216,12 @@ export default function MobileHome() {
     loadCargos(true);
   };
 
-  // Handle scroll for infinite loading
-  const handleScroll = (e) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    if (scrollHeight - scrollTop <= clientHeight + 100 && hasMore && !loading) {
+  // Load more callback for infinite scroll
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && !loading && !refreshing) {
       setPage((prev) => prev + 1);
     }
-  };
+  }, [hasMore, loading, refreshing]);
 
   // Load more when page changes
   useEffect(() => {
@@ -228,6 +229,11 @@ export default function MobileHome() {
       loadCargos();
     }
   }, [page]);
+
+  // Pull to refresh handler
+  const handleRefresh = useCallback(async () => {
+    await loadCargos(true);
+  }, [loadCargos]);
 
   return (
     <>
@@ -237,68 +243,68 @@ export default function MobileHome() {
         onRightAction={() => setFilterSheetOpen(true)}
       />
 
-      <main className="m-content" onScroll={handleScroll}>
-        {/* Active filter chips */}
-        {activeFilters.length > 0 && (
-          <div className="m-chips">
-            {activeFilters.map((chip) => (
-              <button
-                key={chip.key}
-                className="m-chip active"
-                onClick={() => handleRemoveFilter(chip.key)}
-              >
-                {chip.label}
-                <span className="m-chip-remove">✕</span>
+      <main className="m-content">
+        <PullToRefresh onRefresh={handleRefresh} disabled={loading && page === 0}>
+          {/* Active filter chips */}
+          {activeFilters.length > 0 && (
+            <div className="m-chips">
+              {activeFilters.map((chip) => (
+                <button
+                  key={chip.key}
+                  className="m-chip active"
+                  onClick={() => handleRemoveFilter(chip.key)}
+                >
+                  {chip.label}
+                  <span className="m-chip-remove">✕</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Driver context banner - matches Desktop pattern */}
+          {fromDriver && driverName && (
+            <div style={{ padding: '12px 16px', background: '#d1ecf1', marginBottom: 0, fontSize: 14, color: '#0c5460' }}>
+              <strong>👤 {driverName}</strong> uchun yuk qidirilmoqda
+            </div>
+          )}
+
+          {/* Cargo list */}
+          {loading && page === 0 ? (
+            <ListSkeleton count={6} />
+          ) : cargos.length === 0 ? (
+            <div className="m-empty">
+              <div className="m-empty-icon">📦</div>
+              <h3 className="m-empty-title">Yuklar topilmadi</h3>
+              <p className="m-empty-text">
+                Filterlarni o'zgartiring yoki keyinroq qaytib keling
+              </p>
+              <button className="m-btn m-btn-primary" onClick={() => setFilterSheetOpen(true)}>
+                Filterlar
               </button>
-            ))}
-          </div>
-        )}
+            </div>
+          ) : (
+            <>
+              <div className="m-card m-card-list">
+                {cargos.map((cargo, index) => (
+                  <CargoListItem
+                    key={cargo.id || cargo._id || index}
+                    cargo={cargo}
+                    showOfferButton={fromDriver && isInternalDispatcher}
+                    driverId={driverId}
+                    isInternalDispatcher={isInternalDispatcher}
+                  />
+                ))}
+              </div>
 
-        {/* Cargo list */}
-        {/* Driver context banner - matches Desktop pattern */}
-        {fromDriver && driverName && (
-          <div style={{ padding: '12px 16px', background: '#d1ecf1', marginBottom: 0, fontSize: 14, color: '#0c5460' }}>
-            <strong>👤 {driverName}</strong> uchun yuk qidirilmoqda
-          </div>
-        )}
-
-        {loading && page === 0 ? (
-          <ListSkeleton count={6} />
-        ) : cargos.length === 0 ? (
-          <div className="m-empty">
-            <div className="m-empty-icon">📦</div>
-            <h3 className="m-empty-title">Yuklar topilmadi</h3>
-            <p className="m-empty-text">
-              Filterlarni o'zgartiring yoki keyinroq qaytib keling
-            </p>
-            <button className="m-btn m-btn-primary" onClick={() => setFilterSheetOpen(true)}>
-              Filterlar
-            </button>
-          </div>
-        ) : (
-          <div className="m-card m-card-list">
-            {cargos.map((cargo, index) => (
-              <CargoListItem
-                key={cargo.id || cargo._id || index}
-                cargo={cargo}
-                showOfferButton={fromDriver && isInternalDispatcher}
-                driverId={driverId}
-                isInternalDispatcher={isInternalDispatcher}
+              {/* Infinite scroll trigger */}
+              <LoadMoreTrigger
+                onLoadMore={handleLoadMore}
+                hasMore={hasMore}
+                loading={loading && page > 0}
               />
-            ))}
-          </div>
-        )}
-
-        {/* Loading more indicator */}
-        {loading && page > 0 && <MobileLoading />}
-
-        {/* Pull to refresh hint */}
-        {refreshing && (
-          <div className="m-ptr">
-            <div className="m-spinner" style={{ width: 20, height: 20 }} />
-            <span style={{ marginLeft: 8 }}>Yangilanmoqda...</span>
-          </div>
-        )}
+            </>
+          )}
+        </PullToRefresh>
       </main>
 
       {/* Filter Bottom Sheet */}

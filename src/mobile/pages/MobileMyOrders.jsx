@@ -13,6 +13,7 @@ import { getOrderStatusText, getOrderStatusClass, hasAppointedDriver } from '../
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
+import PullToRefresh from '../components/PullToRefresh';
 
 export default function MobileMyOrders() {
   const navigate = useNavigate();
@@ -228,19 +229,20 @@ export default function MobileMyOrders() {
       <TopBar title="Buyurtmalarim" rightIcon="+" onRightAction={() => navigate('/mobile/create-order')} />
 
       <main className="m-content">
-        {orders.length === 0 ? (
-          <div className="m-empty">
-            <div className="m-empty-icon">📦</div>
-            <h3 className="m-empty-title">Hali buyurtma yo'q</h3>
-            <p className="m-empty-text">Birinchi buyurtmangizni yarating</p>
-            <button
-              className="m-btn m-btn-primary"
-              onClick={() => navigate('/mobile/create-order')}
-            >
-              + Buyurtma yaratish
-            </button>
-          </div>
-        ) : (
+        <PullToRefresh onRefresh={() => loadOrders(true)} disabled={loading}>
+          {orders.length === 0 ? (
+            <div className="m-empty">
+              <div className="m-empty-icon">📦</div>
+              <h3 className="m-empty-title">Hali buyurtma yo'q</h3>
+              <p className="m-empty-text">Birinchi buyurtmangizni yarating</p>
+              <button
+                className="m-btn m-btn-primary"
+                onClick={() => navigate('/mobile/create-order')}
+              >
+                + Buyurtma yaratish
+              </button>
+            </div>
+          ) : (
           <div className="m-card m-card-list">
             {orders.map((order) => {
               const isActive = !hasAppointedDriver(order.status);
@@ -327,9 +329,8 @@ export default function MobileMyOrders() {
               );
             })}
           </div>
-        )}
-
-        {refreshing && <MobileLoading />}
+          )}
+        </PullToRefresh>
       </main>
 
       {/* Delete confirmation sheet */}

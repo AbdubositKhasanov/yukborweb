@@ -1141,3 +1141,76 @@
 .m-px-16 { padding-left: 16px; padding-right: 16px; }
 .m-py-16 { padding-top: 16px; padding-bottom: 16px; }
 .m-hidden { display: none !important; }
+
+/* ============================================
+   Pull to Refresh
+   ============================================ */
+.m-ptr-container {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+.m-ptr-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--m-bg);
+}
+
+.m-ptr-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.m-ptr-arrow {
+  font-size: 13px;
+  color: var(--m-text-muted);
+  transition: transform 0.2s ease;
+  padding: 12px;
+}
+
+/* Load More Trigger */
+.m-load-more {
+  min-height: 1px;
+}
+
+/* Refresh Button (fallback for non-touch) */
+.m-refresh-btn {
+  position: fixed;
+  top: calc(var(--m-top-bar-height) + 8px);
+  right: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--m-bg-card);
+  border: 1px solid var(--m-border);
+  box-shadow: var(--m-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 50;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.m-refresh-btn:active {
+  transform: scale(0.95);
+  background: var(--m-bg);
+}
+
+.m-refresh-btn.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
