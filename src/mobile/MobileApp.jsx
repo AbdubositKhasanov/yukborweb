@@ -3,12 +3,11 @@
  * Isolated mobile-only UI layer
  * Route: /mobile/*
  */
-import React, { useState, Suspense, lazy } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
 import MobileProtectedRoute from './components/MobileProtectedRoute';
 import MobileLoading from './components/MobileLoading';
-import CreateActionSheet from './components/CreateActionSheet';
 import { MobileAuthProvider, useMobileAuth } from './context/MobileAuthContext';
 import './styles/mobile.css';
 
@@ -27,6 +26,7 @@ const MobileDriverDetail = lazy(() => import('./pages/MobileDriverDetail'));
 const MobileProfile = lazy(() => import('./pages/MobileProfile'));
 const MobileMyTransports = lazy(() => import('./pages/MobileMyTransports'));
 const MobileCreateTransport = lazy(() => import('./pages/MobileCreateTransport'));
+const MobileMyListings = lazy(() => import('./pages/MobileMyListings'));
 
 // Role-based default page redirect
 function RoleBasedHome() {
@@ -54,9 +54,6 @@ function MobileAppContent() {
   const location = useLocation();
   const { isAuthenticated, userRole, loading } = useMobileAuth();
 
-  // Action sheet state for logist "+" tab
-  const [createSheetOpen, setCreateSheetOpen] = useState(false);
-
   // Determine if bottom nav should be shown
   const showBottomNav = isAuthenticated && !location.pathname.includes('/login');
 
@@ -80,9 +77,9 @@ function MobileAppContent() {
     } else {
       // logist (default)
       if (path === '' || path === '/' || path === '/yuklar' || path.startsWith('/cargo')) return 'home';
-      if (path.startsWith('/drivers') || path.startsWith('/driver/')) return 'drivers';
       if (path.startsWith('/transports') || path.startsWith('/transport/')) return 'transports';
-      if (path.startsWith('/orders') || path.startsWith('/order/')) return 'orders';
+      if (path.startsWith('/drivers') || path.startsWith('/driver/')) return 'drivers';
+      if (path.startsWith('/my-listings') || path.startsWith('/orders') || path.startsWith('/order/') || path.startsWith('/my-transports') || path.startsWith('/create')) return 'listings';
       if (path.startsWith('/profile')) return 'profile';
     }
 
@@ -185,6 +182,14 @@ function MobileAppContent() {
             }
           />
           <Route
+            path="/my-listings"
+            element={
+              <MobileProtectedRoute>
+                <MobileMyListings />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
             path="/profile"
             element={
               <MobileProtectedRoute>
@@ -203,15 +208,6 @@ function MobileAppContent() {
           key={userRole}
           activeTab={getActiveTab()}
           userRole={userRole}
-          onAddClick={() => setCreateSheetOpen(true)}
-        />
-      )}
-
-      {/* Create Action Sheet for logist */}
-      {userRole === 'logist' && (
-        <CreateActionSheet
-          isOpen={createSheetOpen}
-          onClose={() => setCreateSheetOpen(false)}
         />
       )}
     </div>

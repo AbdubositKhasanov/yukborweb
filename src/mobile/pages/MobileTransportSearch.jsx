@@ -352,17 +352,17 @@ export default function MobileTransportSearch() {
 
                 <button
                   onClick={() => setPage(p => p + 1)}
-                  disabled={transports.length < 20 || loading}
+                  disabled={transports.length === 0 || loading}
                   style={{
                     padding: '10px 16px',
                     fontSize: 14,
                     fontWeight: 500,
                     border: '1px solid var(--m-border)',
                     borderRadius: 8,
-                    background: transports.length < 20 ? 'var(--m-bg)' : 'var(--m-card-bg)',
-                    color: transports.length < 20 ? 'var(--m-text-muted)' : 'var(--m-text)',
-                    cursor: transports.length < 20 ? 'not-allowed' : 'pointer',
-                    opacity: transports.length < 20 ? 0.5 : 1,
+                    background: transports.length === 0 ? 'var(--m-bg)' : 'var(--m-card-bg)',
+                    color: transports.length === 0 ? 'var(--m-text-muted)' : 'var(--m-text)',
+                    cursor: transports.length === 0 ? 'not-allowed' : 'pointer',
+                    opacity: transports.length === 0 ? 0.5 : 1,
                   }}
                 >
                   Keyingi →

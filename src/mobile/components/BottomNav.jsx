@@ -23,46 +23,28 @@ const TAB_CONFIG = {
   ],
   logist: [
     { id: 'home', icon: '📦', label: 'Yuklar', path: '/mobile' },
+    { id: 'transports', icon: '🚚', label: 'Transport', path: '/mobile/transports' },
     { id: 'drivers', icon: '👥', label: 'Haydovchi', path: '/mobile/drivers' },
-    { id: 'add', icon: '➕', label: "Qo'shish", action: true }, // Action instead of path
-    { id: 'orders', icon: '📋', label: 'Buyurtma', path: '/mobile/orders' },
+    { id: 'listings', icon: '📋', label: "E'lonlarim", path: '/mobile/my-listings' },
     { id: 'profile', icon: '👤', label: 'Profil', path: '/mobile/profile' },
   ],
 };
 
-export default function BottomNav({ activeTab, userRole = 'logist', onAddClick }) {
+export default function BottomNav({ activeTab, userRole = 'logist' }) {
   const tabs = TAB_CONFIG[userRole] || TAB_CONFIG.logist;
 
   return (
     <nav className="m-bottomnav">
-      {tabs.map((tab) => {
-        // Action tab (e.g., logist "+" button)
-        if (tab.action) {
-          return (
-            <button
-              key={tab.id}
-              className={`m-bottomnav-item ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={onAddClick}
-              style={{ background: 'none', border: 'none' }}
-            >
-              <span className="m-bottomnav-icon">{tab.icon}</span>
-              <span className="m-bottomnav-label">{tab.label}</span>
-            </button>
-          );
-        }
-
-        // Regular navigation tab
-        return (
-          <Link
-            key={tab.id}
-            to={tab.path}
-            className={`m-bottomnav-item ${activeTab === tab.id ? 'active' : ''}`}
-          >
-            <span className="m-bottomnav-icon">{tab.icon}</span>
-            <span className="m-bottomnav-label">{tab.label}</span>
-          </Link>
-        );
-      })}
+      {tabs.map((tab) => (
+        <Link
+          key={tab.id}
+          to={tab.path}
+          className={`m-bottomnav-item ${activeTab === tab.id ? 'active' : ''}`}
+        >
+          <span className="m-bottomnav-icon">{tab.icon}</span>
+          <span className="m-bottomnav-label">{tab.label}</span>
+        </Link>
+      ))}
     </nav>
   );
 }
