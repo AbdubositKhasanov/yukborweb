@@ -36,7 +36,6 @@ export default function MobileTransportSearch() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // UI state
@@ -120,9 +119,8 @@ export default function MobileTransportSearch() {
     return chips;
   }, [staticData]);
 
-  // Load transports
-  const loadTransports = useCallback(async (requestedPage) => {
-    const targetPage = requestedPage !== undefined ? requestedPage : page;
+  // Load transports - matches Desktop pattern exactly
+  const loadTransports = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -132,20 +130,11 @@ export default function MobileTransportSearch() {
         fromCity: filters.fromCity || undefined,
         vehicleType: filters.vehicleType || undefined,
         maxWeight: filters.maxWeight || undefined,
-        page: targetPage,
+        page,
       });
 
       if (response.code === 200) {
-        const newTransports = response.result || [];
-
-        // If next page is empty and we're not on first page, keep current data
-        if (newTransports.length === 0 && targetPage > 0) {
-          setHasMore(false);
-          setPage(targetPage - 1);
-        } else {
-          setTransports(newTransports);
-          setHasMore(newTransports.length >= 20);
-        }
+        setTransports(response.result || []);
       }
     } catch (error) {
       console.error('Failed to load transports:', error);
@@ -158,40 +147,27 @@ export default function MobileTransportSearch() {
   // Initial load
   useEffect(() => {
     if (isInitialLoad) {
-      loadTransports(0);
+      loadTransports();
       setIsInitialLoad(false);
       if (fromOrder) {
         setActiveFilters(buildActiveFilters(filters));
       }
     }
-  }, [isInitialLoad]);
+  }, [isInitialLoad, loadTransports]);
 
-  // Handle page change
-  const handleNextPage = () => {
-    if (hasMore && !loading) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      loadTransports(nextPage);
+  // Pagination - load on page change
+  useEffect(() => {
+    if (!isInitialLoad && page > 0) {
+      loadTransports();
     }
-  };
-
-  const handlePrevPage = () => {
-    if (page > 0 && !loading) {
-      const prevPage = page - 1;
-      setPage(prevPage);
-      setHasMore(true);
-      loadTransports(prevPage);
-    }
-  };
+  }, [page]);
 
   // Handle filter apply
   const handleApplyFilters = () => {
     setActiveFilters(buildActiveFilters(filters));
     setFilterSheetOpen(false);
     setPage(0);
-    setHasMore(true);
-    setIsInitialLoad(false);
-    loadTransports(0);
+    setIsInitialLoad(true); // Trigger reload via initial load effect
   };
 
   // Handle filter reset
@@ -222,16 +198,14 @@ export default function MobileTransportSearch() {
     setFilters(newFilters);
     setActiveFilters(buildActiveFilters(newFilters));
     setPage(0);
-    setHasMore(true);
-    loadTransports(0);
+    setIsInitialLoad(true); // Trigger reload
   };
 
   // Pull to refresh
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     setPage(0);
-    setHasMore(true);
-    await loadTransports(0);
+    await loadTransports();
   }, [loadTransports]);
 
   const handleTransportClick = (transport) => {
@@ -347,7 +321,7 @@ export default function MobileTransportSearch() {
                 borderTop: '1px solid var(--m-border)',
               }}>
                 <button
-                  onClick={handlePrevPage}
+                  onClick={() => setPage(p => p - 1)}
                   disabled={page === 0 || loading}
                   style={{
                     padding: '10px 16px',
@@ -374,18 +348,18 @@ export default function MobileTransportSearch() {
                 </span>
 
                 <button
-                  onClick={handleNextPage}
-                  disabled={!hasMore || loading}
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={loading}
                   style={{
                     padding: '10px 16px',
                     fontSize: 14,
                     fontWeight: 500,
                     border: '1px solid var(--m-border)',
                     borderRadius: 8,
-                    background: !hasMore ? 'var(--m-bg)' : 'var(--m-card-bg)',
-                    color: !hasMore ? 'var(--m-text-muted)' : 'var(--m-text)',
-                    cursor: !hasMore ? 'not-allowed' : 'pointer',
-                    opacity: !hasMore ? 0.5 : 1,
+                    background: 'var(--m-card-bg)',
+                    color: 'var(--m-text)',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.5 : 1,
                   }}
                 >
                   Keyingi →
