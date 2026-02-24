@@ -19,15 +19,18 @@ export default function MobileTransportSearch() {
   const { staticData } = useStaticData();
 
   // If coming from order, pre-fill filters
-  const fromOrder = location.state?.order;
+  // Desktop pattern: state = { fromOrder: true, orderId, orderInfo: {...}, filters: {...} }
+  const fromOrder = location.state?.fromOrder ? location.state.orderInfo : location.state?.order || null;
+  const fromOrderId = location.state?.orderId || null;
 
   // Filter state - matches Desktop BrowseTransportsPage.jsx
+  const initialFilters = location.state?.filters || {};
   const [filters, setFilters] = useState({
-    fromCountry: fromOrder?.fromCountry?.toString() || '',
-    fromRegion: fromOrder?.fromRegion?.toString() || '',
-    fromCity: fromOrder?.fromCity?.toString() || '',
-    vehicleType: fromOrder?.vehicleType || '',
-    maxWeight: fromOrder?.weight?.toString() || '',
+    fromCountry: initialFilters.fromCountry?.toString() || '',
+    fromRegion: initialFilters.fromRegion?.toString() || '',
+    fromCity: initialFilters.fromCity?.toString() || '',
+    vehicleType: initialFilters.vehicleType || '',
+    maxWeight: '',
   });
   const [activeFilters, setActiveFilters] = useState([]);
 
@@ -59,7 +62,7 @@ export default function MobileTransportSearch() {
     const transport = offerSheet.transport;
     if (!transport || !fromOrder) return;
 
-    const orderId = fromOrder.id || fromOrder._id;
+    const orderId = fromOrderId || fromOrder.id || fromOrder._id;
     const driverId = transport.chatId;
     const price = fromOrder.priceUzs || 0;
 

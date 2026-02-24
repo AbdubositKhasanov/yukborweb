@@ -83,8 +83,14 @@ export default function MobileCargoDetail() {
     try {
       setPhoneLoading(true);
       const response = await requestCargoPhone(id);
-      if (response.code === 200 && response.result?.phone) {
-        setPhoneSheet({ open: true, phone: response.result.phone });
+      if (response.code === 200 && response.result) {
+        // Desktop pattern: additionalPhone has priority over phone
+        const phone = response.result.additionalPhone || response.result.phone;
+        if (phone) {
+          setPhoneSheet({ open: true, phone });
+        } else {
+          setError('Telefon raqam topilmadi');
+        }
       } else {
         setError('Telefon raqamni olishda xatolik');
       }

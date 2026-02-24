@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getTransportDetails } from '../../services/api';
 import { formatTimeAgo } from '../../utils/formatTime';
+import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading from '../components/MobileLoading';
@@ -14,11 +15,13 @@ export default function MobileTransportDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated } = useMobileAuth();
 
   const fromOrder = location.state?.order;
 
   const [transport, setTransport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneSheet, setPhoneSheet] = useState({ open: false, phone: '' });
   const [error, setError] = useState('');
 
@@ -42,12 +45,30 @@ export default function MobileTransportDetail() {
     }
   };
 
-  const handleShowPhone = () => {
-    if (transport?.phone || transport?.phoneNumber) {
-      setPhoneSheet({
-        open: true,
-        phone: transport.phone || transport.phoneNumber
-      });
+  const handleShowPhone = async () => {
+    if (!isAuthenticated) {
+      navigate('/mobile/login', { state: { from: { pathname: `/mobile/transport/${id}` } } });
+      return;
+    }
+
+    try {
+      setPhoneLoading(true);
+      // Desktop pattern: call API to get phone (additionalPhone has priority)
+      const response = await getTransportDetails(id);
+      if (response.code === 200 && response.result) {
+        const phone = response.result.additionalPhone || response.result.phone;
+        if (phone) {
+          setPhoneSheet({ open: true, phone });
+        } else {
+          setError('Telefon raqam topilmadi');
+        }
+      } else {
+        setError('Telefon raqamni olishda xatolik');
+      }
+    } catch (err) {
+      setError('Xatolik yuz berdi');
+    } finally {
+      setPhoneLoading(false);
     }
   };
 
@@ -165,9 +186,14 @@ export default function MobileTransportDetail() {
         <button
           className="m-btn m-btn-primary m-btn-lg"
           onClick={handleShowPhone}
+          disabled={phoneLoading}
           style={{ flex: 1 }}
         >
-          📞 Qo'ng'iroq qilish
+          {phoneLoading ? (
+            <span className="m-spinner" style={{ width: 20, height: 20 }} />
+          ) : (
+            <>📞 Qo'ng'iroq qilish</>
+          )}
         </button>
       </div>
 

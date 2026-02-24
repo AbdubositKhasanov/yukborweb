@@ -63,13 +63,20 @@ export default function MobileMyTransports() {
       setCreateLoading(true);
       setCreateError('');
 
+      // MUST match Desktop CreateTransportPage.jsx payload (camelCase)
       const response = await createTransport({
-        from_region: createData.fromRegion || undefined,
-        vehicle_type: createData.vehicleType || undefined,
-        max_weight: createData.maxWeight ? parseFloat(createData.maxWeight) : undefined,
-        state_number: createData.stateNumber,
-        additional_phone: createData.additionalPhone || undefined,
-        description: createData.description || undefined,
+        fromLocation: {
+          regionId: createData.fromRegion ? parseInt(createData.fromRegion) : null,
+          countryId: null,
+          cityId: null,
+        },
+        vehicleTypeId: createData.vehicleType
+          ? (staticData?.vehicleTypes?.find(v => v.name === createData.vehicleType)?.id || null)
+          : null,
+        maxWeight: createData.maxWeight ? parseFloat(createData.maxWeight) : null,
+        stateNumber: createData.stateNumber,
+        additionalPhone: createData.additionalPhone || null,
+        otherDesc: createData.description || null,
       });
 
       if (response.code === 200) {
