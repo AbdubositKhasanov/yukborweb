@@ -60,23 +60,31 @@ function MobileAppContent() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  // Handle mobile back button - prevent app from closing
+  // Handle Android back button — only prevent app exit at root mobile pages
   useEffect(() => {
+    const isRootPage = () => {
+      const path = location.pathname.replace(/\/$/, '');
+      const rootPages = ['/mobile', '/mobile/status', '/mobile/orders'];
+      return rootPages.includes(path);
+    };
+
     const handlePopState = (e) => {
-      // If we're at the root mobile page, push a new state to prevent exit
-      if (location.pathname === '/mobile' || location.pathname === '/mobile/') {
-        // Push current state back to prevent exit
-        window.history.pushState(null, '', window.location.href);
+      // Skip if a BottomSheet handled this popstate
+      if (e.state?.bottomSheet) return;
+
+      if (isRootPage()) {
+        // At root — push state back to prevent browser from exiting the app
+        window.history.pushState({ mobileRoot: true }, '', window.location.href);
       }
     };
 
-    // Push initial state
-    window.history.pushState(null, '', window.location.href);
-    window.addEventListener('popstate', handlePopState);
+    // Only push a guard state at root pages
+    if (isRootPage()) {
+      window.history.pushState({ mobileRoot: true }, '', window.location.href);
+    }
 
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, [location.pathname]);
 
   // Determine if bottom nav should be shown

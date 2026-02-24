@@ -1,6 +1,6 @@
 /**
  * Bottom Sheet Component
- * Mobile-native modal pattern
+ * Mobile-native modal pattern with Android back button support
  */
 import React, { useEffect, useRef } from 'react';
 
@@ -13,6 +13,8 @@ export default function BottomSheet({
   height = 'auto', // 'auto', 'half', 'full'
 }) {
   const sheetRef = useRef(null);
+  const closedByBackRef = useRef(false);
+  const historyPushedRef = useRef(false);
 
   // Close on overlay click
   const handleOverlayClick = (e) => {
@@ -31,6 +33,35 @@ export default function BottomSheet({
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  // Android back button support — close sheet on back instead of navigating
+  useEffect(() => {
+    if (!isOpen) {
+      // When sheet closes NOT via back button, pop the extra history entry
+      if (historyPushedRef.current && !closedByBackRef.current) {
+        window.history.back();
+      }
+      historyPushedRef.current = false;
+      closedByBackRef.current = false;
+      return;
+    }
+
+    // Sheet opened — push a history entry so Android back triggers popstate
+    closedByBackRef.current = false;
+    window.history.pushState({ bottomSheet: true }, '');
+    historyPushedRef.current = true;
+
+    const handlePopState = () => {
+      closedByBackRef.current = true;
+      historyPushedRef.current = false;
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, [isOpen, onClose]);
 
   // Prevent body scroll when open
