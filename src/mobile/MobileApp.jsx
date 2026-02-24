@@ -60,32 +60,8 @@ function MobileAppContent() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  // Handle Android back button — only prevent app exit at root mobile pages
-  useEffect(() => {
-    const isRootPage = () => {
-      const path = location.pathname.replace(/\/$/, '');
-      const rootPages = ['/mobile', '/mobile/status', '/mobile/orders'];
-      return rootPages.includes(path);
-    };
-
-    const handlePopState = (e) => {
-      // Skip if a BottomSheet handled this popstate
-      if (e.state?.bottomSheet) return;
-
-      if (isRootPage()) {
-        // At root — push state back to prevent browser from exiting the app
-        window.history.pushState({ mobileRoot: true }, '', window.location.href);
-      }
-    };
-
-    // Only push a guard state at root pages
-    if (isRootPage()) {
-      window.history.pushState({ mobileRoot: true }, '', window.location.href);
-    }
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [location.pathname]);
+  // No history manipulation here — let React Router handle all navigation naturally.
+  // Android hardware back button works with browser history by default.
 
   // Determine if bottom nav should be shown
   const showBottomNav = isAuthenticated && !location.pathname.includes('/login');
