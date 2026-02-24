@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getMyInvitedUsers, updateCounterpartyDriverStatus, createCounterpartyTransport, updateCounterpartyTransport } from '../../services/api';
+import { getMyInvitedUsers, updateCounterpartyDriverStatus, createCounterpartyTransport, updateCounterpartyTransportForm } from '../../services/api';
 import { useStaticData } from '../../context/StaticDataContext';
 import { formatBalance, getBalanceColor } from '../../utils/formatBalance';
 import TopBar from '../components/TopBar';
@@ -153,20 +153,26 @@ export default function MobileDriverDetail() {
       setTransportLoading(true);
       setTransportError('');
 
+      // MUST match Desktop CounterpartyTransportModal.jsx payload (camelCase)
+      const vehicleType = staticData?.vehicleTypes?.find(v => v.name === transportData.vehicleType);
       const payload = {
-        from_region: transportData.fromRegion || undefined,
-        vehicle_type: transportData.vehicleType || undefined,
-        max_weight: transportData.maxWeight ? parseFloat(transportData.maxWeight) : undefined,
-        state_number: transportData.stateNumber || undefined,
-        additional_phone: transportData.additionalPhone || undefined,
-        description: transportData.description || undefined,
+        fromLocation: {
+          regionId: transportData.fromRegion ? parseInt(transportData.fromRegion) : null,
+          countryId: null,
+          cityId: null,
+        },
+        maxWeight: transportData.maxWeight ? parseFloat(transportData.maxWeight) : null,
+        vehicleTypeId: vehicleType ? vehicleType.id : null,
+        additionalContact: transportData.additionalPhone || null,
+        otherDesc: transportData.description || null,
+        stateNumber: transportData.stateNumber?.trim() || null,
       };
 
       let response;
       const driverId = driver.chatId || driver.id;
       const transportForm = driver.transport || driver.driverTransportForm;
       if (hasExistingTransport && transportForm?.id) {
-        response = await updateCounterpartyTransport(transportForm.id, driverId, payload);
+        response = await updateCounterpartyTransportForm(transportForm.id, driverId, payload);
       } else {
         response = await createCounterpartyTransport(driverId, payload);
       }
