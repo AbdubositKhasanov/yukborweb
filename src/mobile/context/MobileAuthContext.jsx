@@ -4,6 +4,7 @@
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getUserMe } from '../../services/api';
+import { trackLogout, setAnalyticsUserProperties } from '../../services/analytics';
 
 const MobileAuthContext = createContext(null);
 
@@ -56,6 +57,11 @@ export function MobileAuthProvider({ children }) {
         setUserRole(determineRole(response.result));
         setIsInternalDispatcher(response.result.isInternalDispatcher === true);
         setIsAuthenticated(true);
+        setAnalyticsUserProperties(
+          response.result.chatId,
+          determineRole(response.result),
+          response.result.isInternalDispatcher
+        );
       } else {
         setIsAuthenticated(false);
         setUser(null);
@@ -88,6 +94,7 @@ export function MobileAuthProvider({ children }) {
   }, [loadUser]);
 
   const logout = useCallback(() => {
+    trackLogout();
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
     setIsAuthenticated(false);

@@ -1,6 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { trackPhoneView, trackPhoneRequest } from '../services/analytics';
 
 export default function PhoneAccessModal({ isOpen, onClose, type, message, phone }) {
+  useEffect(() => {
+    if (!isOpen) return;
+    if (type === 'success') trackPhoneView();
+    else if (type === 'premium_required') trackPhoneRequest('premium_required');
+    else if (type === 'unauthorized') trackPhoneRequest('unauthorized');
+  }, [isOpen, type]);
+
   if (!isOpen) return null;
 
   const renderContent = () => {

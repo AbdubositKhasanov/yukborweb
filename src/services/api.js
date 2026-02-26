@@ -1,6 +1,22 @@
 import axios from 'axios';
 import CryptoJS from 'crypto-js';
 import { showError } from '../utils/toast';
+import {
+  trackSearch,
+  trackOrderCreate,
+  trackOrderUpdate,
+  trackOrderDelete,
+  trackTransportCreate,
+  trackTransportUpdate,
+  trackTransportDelete,
+  trackHarbingerCreate,
+  trackHarbingerUpdate,
+  trackHarbingerDelete,
+  trackDriverStatusToggle,
+  trackDriverInvite,
+  trackDriverOfferSent,
+  trackProfileUpdate,
+} from './analytics';
 
 // Environment configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -258,6 +274,7 @@ export const getUserMe = async () => {
 // ============================================
 
 export const searchCargos = async (filters = {}) => {
+  trackSearch('cargo', filters);
   const params = {
     ...(filters.fromCountry && { from_country: filters.fromCountry }),
     ...(filters.fromRegion && { from_region: filters.fromRegion }),
@@ -276,6 +293,7 @@ export const searchCargos = async (filters = {}) => {
 };
 
 export const searchPlatformCargos = async (filters = {}) => {
+  trackSearch('platform_cargo', filters);
   const params = {
     ...(filters.fromCountry && { from_country: filters.fromCountry }),
     ...(filters.fromRegion && { from_region: filters.fromRegion }),
@@ -294,6 +312,7 @@ export const searchPlatformCargos = async (filters = {}) => {
 };
 
 export const searchTransports = async (filters = {}) => {
+  trackSearch('transport', filters);
   const params = {
     ...(filters.fromCountry && { from_country: filters.fromCountry }),
     ...(filters.fromRegion && { from_region: filters.fromRegion }),
@@ -364,20 +383,22 @@ export const getMyOrder = async (id) => {
 
 export const createOrder = async (orderData) => {
   const response = await apiClient.post('/create/order', orderData);
-  // Invalidate orders cache
   apiCache.invalidate('orders');
+  trackOrderCreate();
   return response.data;
 };
 
 export const updateOrder = async (id, orderData) => {
   const response = await apiClient.put(`/update/order/${id}`, orderData);
   apiCache.invalidate('orders');
+  trackOrderUpdate(id);
   return response.data;
 };
 
 export const deleteOrder = async (id) => {
   const response = await apiClient.delete(`/order/${id}`);
   apiCache.invalidate('orders');
+  trackOrderDelete(id);
   return response.data;
 };
 
@@ -396,18 +417,21 @@ export const getMyTransport = async (id) => {
 export const createTransport = async (transportData) => {
   const response = await apiClient.post('/create/transport', transportData);
   apiCache.invalidate('transports');
+  trackTransportCreate();
   return response.data;
 };
 
 export const updateTransport = async (id, transportData) => {
   const response = await apiClient.put(`/update/transport/${id}`, transportData);
   apiCache.invalidate('transports');
+  trackTransportUpdate(id);
   return response.data;
 };
 
 export const deleteTransport = async (id) => {
   const response = await apiClient.delete(`/transport/${id}`);
   apiCache.invalidate('transports');
+  trackTransportDelete(id);
   return response.data;
 };
 
@@ -417,6 +441,7 @@ export const deleteTransport = async (id) => {
 
 export const updateDriverStatus = async (isActive) => {
   const response = await apiClient.post('/update/driver/status', isActive);
+  trackDriverStatusToggle(isActive);
   return response.data;
 };
 
@@ -449,18 +474,21 @@ export const getMyHarbinger = async (id) => {
 export const createHarbinger = async (harbingerData) => {
   const response = await apiClient.post('/create/harbinger', harbingerData);
   apiCache.invalidate('harbingers');
+  trackHarbingerCreate();
   return response.data;
 };
 
 export const updateHarbinger = async (id, harbingerData) => {
   const response = await apiClient.put(`/update/harbinger/${id}`, harbingerData);
   apiCache.invalidate('harbingers');
+  trackHarbingerUpdate(id);
   return response.data;
 };
 
 export const deleteHarbinger = async (id) => {
   const response = await apiClient.delete(`/harbinger/${id}`);
   apiCache.invalidate('harbingers');
+  trackHarbingerDelete(id);
   return response.data;
 };
 
@@ -490,6 +518,7 @@ export const offerForDriver = async (driverId, orderId, priceUzs) => {
     order_id: orderId,
     priceUzs: priceUzs,
   });
+  trackDriverOfferSent(driverId, orderId);
   return response.data;
 };
 
@@ -521,6 +550,7 @@ export const getMyInvitedUsers = async () => {
 export const addInvitedUser = async (phone) => {
   const response = await apiClient.post('/add/invited/user', { phone });
   apiCache.invalidate('invited-users');
+  trackDriverInvite();
   return response.data;
 };
 
@@ -588,6 +618,7 @@ export const updateCounterpartyTransportForm = async (id, driverId, transportDat
 export const updateUser = async (userData) => {
   const response = await apiClient.post('/user/update', userData);
   apiCache.invalidate('user');
+  trackProfileUpdate();
   return response.data;
 };
 

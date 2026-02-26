@@ -9,6 +9,7 @@ import BottomNav from './components/BottomNav';
 import MobileProtectedRoute from './components/MobileProtectedRoute';
 import MobileLoading from './components/MobileLoading';
 import { MobileAuthProvider, useMobileAuth } from './context/MobileAuthContext';
+import { trackPageView } from '../services/analytics';
 import './styles/mobile.css';
 
 // Lazy load mobile pages
@@ -55,9 +56,10 @@ function MobileAppContent() {
   const navigate = useNavigate();
   const { isAuthenticated, userRole, loading } = useMobileAuth();
 
-  // Reset scroll position when route changes
+  // Reset scroll position and track page view when route changes
   useEffect(() => {
     window.scrollTo(0, 0);
+    trackPageView(location.pathname);
   }, [location.pathname]);
 
   // No history manipulation here — let React Router handle all navigation naturally.

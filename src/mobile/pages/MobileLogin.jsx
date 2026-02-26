@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { login, getUserMe } from '../../services/api';
 import { useMobileAuth } from '../context/MobileAuthContext';
+import { trackLogin, setAnalyticsUserProperties } from '../../services/analytics';
 import TopBar from '../components/TopBar';
 
 const TELEGRAM_BOT_URL = 'https://t.me/yukbor_global_bot?start=login';
@@ -68,6 +69,9 @@ export default function MobileLogin() {
           // Redirect to role-specific default page
           // Roles: driver, factory, logist (default)
           const userData = userResponse.result;
+          const role = userData.type?.toLowerCase() || 'unknown';
+          trackLogin('telegram_mobile', role);
+          setAnalyticsUserProperties(userData.chatId, role, userData.isInternalDispatcher);
           const userType = userData.type?.toLowerCase() || '';
           let defaultPath = '/mobile'; // logist default - Yuklar
 

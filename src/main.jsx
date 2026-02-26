@@ -2,9 +2,15 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
 import App from './App';
+import './services/firebase';
+import { trackAppOpen, trackFirstOpen } from './services/analytics';
 import './styles/yukbor-design-system.css';
 import './styles/main.css';
 import './styles/mobile-responsive.css';
+
+// Firebase Analytics — app open events
+trackAppOpen();
+trackFirstOpen();
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

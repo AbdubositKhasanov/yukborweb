@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTelegramLoginUrl } from '../config/config';
 import { login } from '../services/api';
+import { trackLogin } from '../services/analytics';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -41,7 +42,8 @@ export default function LoginPage() {
       if (response.code === 200 && response.result.token) {
         // Save token
         localStorage.setItem('authToken', response.result.token);
-        
+        trackLogin('telegram', 'unknown');
+
         // Reload the page to refresh app state
         window.location.href = '/';
       } else {

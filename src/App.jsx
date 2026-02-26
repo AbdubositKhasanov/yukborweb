@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import ProtectedRoute from './components/ProtectedRoute';
 import { PageSkeleton } from './components/LoadingSkeleton';
+import { trackPageView, trackLogout } from './services/analytics';
 
 // Lazy load Mobile App (isolated module)
 const MobileApp = lazy(() => import('./mobile/MobileApp'));
@@ -50,13 +51,13 @@ function AppContent() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Track page views (for analytics)
+  // Track page views (Firebase Analytics)
   useEffect(() => {
-    // You can add Google Analytics or other tracking here
-    // logPageView(location.pathname + location.search);
+    trackPageView(location.pathname);
   }, [location]);
 
   const handleLogout = () => {
+    trackLogout();
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
     setAuthToken(null);
