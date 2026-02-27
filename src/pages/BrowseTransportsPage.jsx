@@ -416,9 +416,9 @@ function TransportCard({ transport, showOfferButton = false, orderId = null, ord
           </p>
         ) : null}
 
-        {showDetails && details && details.additionalPhone && (
+        {showDetails && details && (details.additionalPhone || details.phone) && (
           <p style={{ margin: '12px 0', padding: '10px', backgroundColor: '#d4edda', borderRadius: '4px', fontWeight: 'bold' }}>
-            📞 Telefon: {details.additionalPhone}
+            📞 Telefon: {details.additionalPhone || details.phone}
           </p>
         )}
 

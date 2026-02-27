@@ -125,9 +125,9 @@ export default function MobileTransportDetail() {
         {/* Status and type */}
         <div className="m-detail-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <div className={`m-status-dot ${transport.isActive ? 'online' : 'offline'}`} style={{ width: 12, height: 12 }} />
-            <span style={{ fontSize: 14, color: transport.isActive ? 'var(--m-success)' : 'var(--m-text-muted)' }}>
-              {transport.isActive ? 'Faol' : 'Nofaol'}
+            <div className={`m-status-dot ${transport.status === 'active' || transport.isActive ? 'online' : 'offline'}`} style={{ width: 12, height: 12 }} />
+            <span style={{ fontSize: 14, color: (transport.status === 'active' || transport.isActive) ? 'var(--m-success)' : 'var(--m-text-muted)' }}>
+              {(transport.status === 'active' || transport.isActive) ? 'Faol' : 'Nofaol'}
             </span>
           </div>
           <h1 className="m-detail-title">
@@ -149,7 +149,7 @@ export default function MobileTransportDetail() {
         <div className="m-detail-section">
           <h2 className="m-detail-section-title">📍 Joylashuv</h2>
           <div style={{ fontSize: 18, color: 'var(--m-text)' }}>
-            {transport.fromCity || transport.fromRegion || 'Noma\'lum'}
+            {transport.loc1 || transport.fromCity || transport.fromRegion || 'Noma\'lum'}
           </div>
         </div>
 
@@ -164,11 +164,11 @@ export default function MobileTransportDetail() {
         )}
 
         {/* Description */}
-        {transport.description && (
+        {(transport.otherDesc || transport.description) && (
           <div className="m-detail-section">
             <h2 className="m-detail-section-title">📝 Izoh</h2>
             <p style={{ fontSize: 16, color: 'var(--m-text)', margin: 0, lineHeight: 1.5 }}>
-              {transport.description}
+              {transport.otherDesc || transport.description}
             </p>
           </div>
         )}
@@ -176,7 +176,7 @@ export default function MobileTransportDetail() {
         {/* Time */}
         <div className="m-detail-section">
           <div style={{ fontSize: 14, color: 'var(--m-text-muted)' }}>
-            ⏱️ {formatTimeAgo(transport.createdAt || transport.created_at)}
+            ⏱️ {formatTimeAgo(transport.time || transport.createdAt || transport.created_at)}
           </div>
         </div>
       </main>

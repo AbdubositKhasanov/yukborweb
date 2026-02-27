@@ -219,7 +219,7 @@ export default function MobileTransportSearch() {
 
   // Format transport display
   const formatLocation = (transport) => {
-    return transport.fromCity || transport.fromRegion || "Noma'lum";
+    return transport.loc1 || transport.fromCity || transport.fromRegion || "Noma'lum";
   };
 
   return (
@@ -277,11 +277,11 @@ export default function MobileTransportSearch() {
                     className="m-list-item m-card-tap"
                     onClick={() => handleTransportClick(transport)}
                   >
-                    <div className={`m-status-dot ${transport.isActive ? 'online' : 'offline'}`} />
+                    <div className={`m-status-dot ${transport.status === 'active' || transport.isActive ? 'online' : 'offline'}`} />
                     <div className="m-list-item-content">
                       <p className="m-list-item-title">
-                        {transport.vehicleType || 'Transport'}
-                        {transport.maxWeight && ` ${transport.maxWeight}t`}
+                        {transport.name || transport.vehicleType || 'Transport'}
+                        {(transport.weight || transport.maxWeight) && ` ${transport.weight || `${transport.maxWeight}t`}`}
                       </p>
                       <p className="m-list-item-subtitle">
                         📍 {formatLocation(transport)}
@@ -304,7 +304,7 @@ export default function MobileTransportSearch() {
                       ) : (
                         <>
                           <span style={{ fontSize: 13, color: 'var(--m-text-muted)' }}>
-                            {formatTimeAgo(transport.createdAt || transport.created_at).split(' ')[0]}
+                            {formatTimeAgo(transport.time || transport.createdAt || transport.created_at).split(' ')[0]}
                           </span>
                           <span className="m-list-item-arrow">→</span>
                         </>
@@ -401,8 +401,8 @@ export default function MobileTransportSearch() {
             <div style={{ padding: '8px 0' }}>
               <div style={{ marginBottom: 16, padding: 12, background: 'var(--m-bg)', borderRadius: 8 }}>
                 <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                  {offerSheet.transport.vehicleType || 'Transport'}
-                  {offerSheet.transport.maxWeight && ` ${offerSheet.transport.maxWeight}t`}
+                  {offerSheet.transport.name || offerSheet.transport.vehicleType || 'Transport'}
+                  {(offerSheet.transport.weight || offerSheet.transport.maxWeight) && ` ${offerSheet.transport.weight || `${offerSheet.transport.maxWeight}t`}`}
                 </div>
                 <div style={{ fontSize: 14, color: 'var(--m-text-secondary)' }}>
                   📍 {formatLocation(offerSheet.transport)}

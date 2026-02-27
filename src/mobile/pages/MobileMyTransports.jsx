@@ -155,7 +155,7 @@ export default function MobileMyTransports() {
                   key={transport.id || transport._id}
                   className="m-list-item"
                 >
-                  <div className={`m-status-dot ${transport.isActive ? 'online' : 'offline'}`} />
+                  <div className={`m-status-dot ${transport.status === 'active' || transport.isActive ? 'online' : 'offline'}`} />
                   <div className="m-list-item-content">
                     <p className="m-list-item-title">
                       {transport.vehicleType || 'Transport'}
@@ -164,9 +164,9 @@ export default function MobileMyTransports() {
                     <p className="m-list-item-subtitle">
                       {transport.stateNumber || 'Raqam yo\'q'}
                     </p>
-                    {transport.fromRegion && (
+                    {(transport.loc1 || transport.fromRegion) && (
                       <div className="m-list-item-meta">
-                        <span>📍 {transport.fromRegion}</span>
+                        <span>📍 {transport.loc1 || transport.fromRegion}</span>
                       </div>
                     )}
                   </div>
