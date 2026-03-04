@@ -225,6 +225,43 @@ export default function SearchPage() {
     setCreatingHarbinger(true);
 
     try {
+      const parseOptionalInt = (value) => {
+        if (value === '' || value === null || value === undefined) return null;
+        const parsed = parseInt(value, 10);
+        return Number.isNaN(parsed) ? null : parsed;
+      };
+
+      let cityId = parseOptionalInt(fromCity);
+      let regionId = parseOptionalInt(fromRegion);
+      let countryId = parseOptionalInt(fromCountry);
+
+      if (cityId && (!regionId || !countryId)) {
+        const city = staticData?.cities?.find((item) => item.cityId === cityId);
+        if (city) {
+          regionId = regionId ?? city.regionId;
+          countryId = countryId ?? city.countryId;
+        }
+      }
+
+      if (regionId && !countryId) {
+        const region = staticData?.regions?.find((item) => item.regionId === regionId);
+        if (region) {
+          countryId = region.countryId;
+        }
+      }
+
+      if (countryId && regionId === null) {
+        regionId = 0;
+      }
+      if (regionId !== null && cityId === null) {
+        cityId = 0;
+      }
+
+      if (!countryId) {
+        showError('Xabarchi yaratish uchun kamida "Qayerdan" filtri tanlanishi kerak');
+        return;
+      }
+
       const selectedVehicleType = staticData?.vehicleTypes?.find(
         (vehicle) =>
           vehicle.name === vehicleType ||
@@ -232,14 +269,17 @@ export default function SearchPage() {
           String(vehicle.id) === String(vehicleType)
       );
 
+      const parsedMinWeight = minWeight ? parseFloat(minWeight) : null;
+      const parsedMaxWeight = maxWeight ? parseFloat(maxWeight) : null;
+
       const harbingerData = {
         fromLocation: {
-          cityId: fromCity ? parseInt(fromCity, 10) : null,
-          regionId: fromRegion ? parseInt(fromRegion, 10) : null,
-          countryId: fromCountry ? parseInt(fromCountry, 10) : null,
+          cityId,
+          regionId,
+          countryId,
         },
-        minWeight: minWeight ? parseFloat(minWeight) : null,
-        maxWeight: maxWeight ? parseFloat(maxWeight) : null,
+        minWeight: Number.isNaN(parsedMinWeight) ? null : parsedMinWeight,
+        maxWeight: Number.isNaN(parsedMaxWeight) ? null : parsedMaxWeight,
         vehicleTypeId: selectedVehicleType?.id || null,
       };
 

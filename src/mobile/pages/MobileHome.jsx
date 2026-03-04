@@ -283,6 +283,43 @@ export default function MobileHome() {
     setCreatingHarbinger(true);
 
     try {
+      const parseOptionalInt = (value) => {
+        if (value === '' || value === null || value === undefined) return null;
+        const parsed = parseInt(value, 10);
+        return Number.isNaN(parsed) ? null : parsed;
+      };
+
+      let cityId = parseOptionalInt(filters.fromCity);
+      let regionId = parseOptionalInt(filters.fromRegion);
+      let countryId = parseOptionalInt(filters.fromCountry);
+
+      if (cityId && (!regionId || !countryId)) {
+        const city = staticData?.cities?.find((item) => item.cityId === cityId);
+        if (city) {
+          regionId = regionId ?? city.regionId;
+          countryId = countryId ?? city.countryId;
+        }
+      }
+
+      if (regionId && !countryId) {
+        const region = staticData?.regions?.find((item) => item.regionId === regionId);
+        if (region) {
+          countryId = region.countryId;
+        }
+      }
+
+      if (countryId && regionId === null) {
+        regionId = 0;
+      }
+      if (regionId !== null && cityId === null) {
+        cityId = 0;
+      }
+
+      if (!countryId) {
+        showError('Xabarchi yaratish uchun kamida "Qayerdan" filtri tanlanishi kerak');
+        return;
+      }
+
       const selectedVehicleType = staticData?.vehicleTypes?.find(
         (vehicle) =>
           vehicle.name === filters.vehicleType ||
@@ -290,14 +327,17 @@ export default function MobileHome() {
           String(vehicle.id) === String(filters.vehicleType)
       );
 
+      const parsedMinWeight = filters.minWeight ? parseFloat(filters.minWeight) : null;
+      const parsedMaxWeight = filters.maxWeight ? parseFloat(filters.maxWeight) : null;
+
       const harbingerData = {
         fromLocation: {
-          cityId: filters.fromCity ? parseInt(filters.fromCity, 10) : null,
-          regionId: filters.fromRegion ? parseInt(filters.fromRegion, 10) : null,
-          countryId: filters.fromCountry ? parseInt(filters.fromCountry, 10) : null,
+          cityId,
+          regionId,
+          countryId,
         },
-        minWeight: filters.minWeight ? parseFloat(filters.minWeight) : null,
-        maxWeight: filters.maxWeight ? parseFloat(filters.maxWeight) : null,
+        minWeight: Number.isNaN(parsedMinWeight) ? null : parsedMinWeight,
+        maxWeight: Number.isNaN(parsedMaxWeight) ? null : parsedMaxWeight,
         vehicleTypeId: selectedVehicleType?.id || null,
       };
 
