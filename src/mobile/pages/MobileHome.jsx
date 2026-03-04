@@ -4,17 +4,20 @@
  * Pagination matches Desktop SearchPage.jsx pattern exactly
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useStaticData } from '../../context/StaticDataContext';
-import { searchCargos, getUserMe } from '../../services/api';
+import { searchCargos, createHarbinger, getUserMe } from '../../services/api';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import CargoListItem from '../components/CargoListItem';
 import { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
+import ClubMembershipModal from '../../components/ClubMembershipModal';
+import { showError, showSuccess } from '../../utils/toast';
 
 export default function MobileHome() {
+  const navigate = useNavigate();
   const location = useLocation();
   const { staticData } = useStaticData();
   const { isAuthenticated } = useMobileAuth();
@@ -48,6 +51,11 @@ export default function MobileHome() {
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchSnapshotKey, setSearchSnapshotKey] = useState('');
+  const [creatingHarbinger, setCreatingHarbinger] = useState(false);
+  const [harbingerCreatedForCurrentSearch, setHarbingerCreatedForCurrentSearch] = useState(false);
+  const [showClubModal, setShowClubModal] = useState(false);
 
   // UI state
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -109,6 +117,34 @@ export default function MobileHome() {
     return chips;
   }, [staticData]);
 
+  const buildSearchKey = (searchState) => {
+    return JSON.stringify({
+      fromCountry: searchState.fromCountry || '',
+      fromRegion: searchState.fromRegion || '',
+      fromCity: searchState.fromCity || '',
+      toCountry: searchState.toCountry || '',
+      toRegion: searchState.toRegion || '',
+      toCity: searchState.toCity || '',
+      vehicleType: searchState.vehicleType || '',
+      minWeight: searchState.minWeight || '',
+      maxWeight: searchState.maxWeight || '',
+    });
+  };
+
+  const hasSelectedSearchOptions = (searchState) => {
+    return Boolean(
+      searchState.fromCountry ||
+        searchState.fromRegion ||
+        searchState.fromCity ||
+        searchState.toCountry ||
+        searchState.toRegion ||
+        searchState.toCity ||
+        searchState.vehicleType ||
+        searchState.minWeight ||
+        searchState.maxWeight
+    );
+  };
+
   // Load cargos - matches Desktop SearchPage.jsx pattern exactly
   const loadCargos = useCallback(async () => {
     setLoading(true);
@@ -155,8 +191,15 @@ export default function MobileHome() {
 
   // Handle filter apply
   const handleApplyFilters = () => {
+    const currentSearchKey = buildSearchKey(filters);
+    if (currentSearchKey !== searchSnapshotKey) {
+      setHarbingerCreatedForCurrentSearch(false);
+    }
+
     setActiveFilters(buildActiveFilters(filters));
     setFilterSheetOpen(false);
+    setSearchSnapshotKey(currentSearchKey);
+    setHasSearched(hasSelectedSearchOptions(filters));
     setPage(0);
     setIsInitialLoad(true); // Trigger reload via initial load effect
   };
@@ -175,6 +218,9 @@ export default function MobileHome() {
       maxWeight: '',
     });
     setActiveFilters([]);
+    setHasSearched(false);
+    setSearchSnapshotKey('');
+    setHarbingerCreatedForCurrentSearch(false);
   };
 
   // Remove single filter
@@ -202,6 +248,12 @@ export default function MobileHome() {
     }
     setFilters(newFilters);
     setActiveFilters(buildActiveFilters(newFilters));
+    const currentSearchKey = buildSearchKey(newFilters);
+    if (currentSearchKey !== searchSnapshotKey) {
+      setHarbingerCreatedForCurrentSearch(false);
+    }
+    setSearchSnapshotKey(currentSearchKey);
+    setHasSearched(hasSelectedSearchOptions(newFilters));
     setPage(0);
     setIsInitialLoad(true); // Trigger reload
   };
@@ -212,6 +264,56 @@ export default function MobileHome() {
     setPage(0);
     await loadCargos();
   }, [loadCargos]);
+
+  const handleCreateHarbingerFromFilters = async () => {
+    if (!isAuthenticated) {
+      navigate('/mobile/login', { state: { from: { pathname: location.pathname } } });
+      return;
+    }
+
+    if (!isInternalDispatcher) {
+      setShowClubModal(true);
+      return;
+    }
+
+    if (!hasSearched || !searchSnapshotKey || harbingerCreatedForCurrentSearch) {
+      return;
+    }
+
+    setCreatingHarbinger(true);
+
+    try {
+      const selectedVehicleType = staticData?.vehicleTypes?.find(
+        (vehicle) =>
+          vehicle.name === filters.vehicleType ||
+          vehicle.code === filters.vehicleType ||
+          String(vehicle.id) === String(filters.vehicleType)
+      );
+
+      const harbingerData = {
+        fromLocation: {
+          cityId: filters.fromCity ? parseInt(filters.fromCity, 10) : null,
+          regionId: filters.fromRegion ? parseInt(filters.fromRegion, 10) : null,
+          countryId: filters.fromCountry ? parseInt(filters.fromCountry, 10) : null,
+        },
+        minWeight: filters.minWeight ? parseFloat(filters.minWeight) : null,
+        maxWeight: filters.maxWeight ? parseFloat(filters.maxWeight) : null,
+        vehicleTypeId: selectedVehicleType?.id || null,
+      };
+
+      const response = await createHarbinger(harbingerData);
+      if (response.code === 200) {
+        setHarbingerCreatedForCurrentSearch(true);
+        showSuccess("Tanlangan qidiruv filterlari bo'yicha xabarchi yaratildi");
+      } else {
+        showError(response.message || 'Xabarchi yaratishda xatolik');
+      }
+    } catch (error) {
+      showError(error.response?.data?.message || error.message || 'Xatolik yuz berdi');
+    } finally {
+      setCreatingHarbinger(false);
+    }
+  };
 
   return (
     <>
@@ -243,6 +345,40 @@ export default function MobileHome() {
           {fromDriver && driverName && (
             <div style={{ padding: '12px 16px', background: '#d1ecf1', marginBottom: 0, fontSize: 14, color: '#0c5460' }}>
               <strong>👤 {driverName}</strong> uchun yuk qidirilmoqda
+            </div>
+          )}
+
+          {hasSearched && (
+            <div
+              className="m-card"
+              style={{
+                margin: '12px 12px 0',
+                padding: '14px',
+                border: '1px solid var(--m-border)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              <div style={{ fontSize: 14, color: 'var(--m-text-secondary)', lineHeight: 1.45 }}>
+                Shu filterlar asosida yangi buyurtma tushsa sizga xabar beraylikmi?
+              </div>
+              <button
+                type="button"
+                className="m-btn m-btn-success m-btn-full"
+                onClick={handleCreateHarbingerFromFilters}
+                disabled={
+                  creatingHarbinger ||
+                  !searchSnapshotKey ||
+                  harbingerCreatedForCurrentSearch
+                }
+              >
+                {creatingHarbinger
+                  ? 'Yaratilmoqda...'
+                  : harbingerCreatedForCurrentSearch
+                    ? 'Xabarchi yaratildi'
+                    : 'Xabarchi yaratish'}
+              </button>
             </div>
           )}
 
@@ -434,6 +570,8 @@ export default function MobileHome() {
           </div>
         </div>
       </BottomSheet>
+
+      <ClubMembershipModal isOpen={showClubModal} onClose={() => setShowClubModal(false)} />
     </>
   );
 }

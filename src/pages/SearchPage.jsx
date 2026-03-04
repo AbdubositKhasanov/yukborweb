@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
-import { searchCargos, offerForDriver, getUserMe } from '../services/api';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { searchCargos, createHarbinger, getUserMe } from '../services/api';
 import { useStaticData } from '../context/StaticDataContext';
 import CargoCard from '../components/CargoCard';
+import ClubMembershipModal from '../components/ClubMembershipModal';
+import { showError, showSuccess } from '../utils/toast';
 
 export default function SearchPage() {
+  const navigate = useNavigate();
   const location = useLocation();
   const driverData = location.state || {};
   const fromDriver = driverData.fromDriver || false;
@@ -20,6 +23,11 @@ export default function SearchPage() {
   const [page, setPage] = useState(0);
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [creatingHarbinger, setCreatingHarbinger] = useState(false);
+  const [showClubModal, setShowClubModal] = useState(false);
+  const [searchSnapshotKey, setSearchSnapshotKey] = useState('');
+  const [harbingerCreatedForCurrentSearch, setHarbingerCreatedForCurrentSearch] = useState(false);
 
   // Filter states
   const [fromCountry, setFromCountry] = useState(initialFilters.fromCountry?.toString() || '');
@@ -122,6 +130,34 @@ export default function SearchPage() {
     }
   }, [fromCountry, fromRegion, fromCity, toCountry, toRegion, toCity, vehicleType, minWeight, maxWeight, page]);
 
+  const buildSearchKey = (searchState) => {
+    return JSON.stringify({
+      fromCountry: searchState.fromCountry || '',
+      fromRegion: searchState.fromRegion || '',
+      fromCity: searchState.fromCity || '',
+      toCountry: searchState.toCountry || '',
+      toRegion: searchState.toRegion || '',
+      toCity: searchState.toCity || '',
+      vehicleType: searchState.vehicleType || '',
+      minWeight: searchState.minWeight || '',
+      maxWeight: searchState.maxWeight || '',
+    });
+  };
+
+  const hasSelectedSearchOptions = (searchState) => {
+    return Boolean(
+      searchState.fromCountry ||
+        searchState.fromRegion ||
+        searchState.fromCity ||
+        searchState.toCountry ||
+        searchState.toRegion ||
+        searchState.toCity ||
+        searchState.vehicleType ||
+        searchState.minWeight ||
+        searchState.maxWeight
+    );
+  };
+
   const handleRefresh = () => {
     setRefreshing(true);
     loadCargos();
@@ -129,7 +165,26 @@ export default function SearchPage() {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    const currentSearchState = {
+      fromCountry,
+      fromRegion,
+      fromCity,
+      toCountry,
+      toRegion,
+      toCity,
+      vehicleType,
+      minWeight,
+      maxWeight,
+    };
+    const currentSearchKey = buildSearchKey(currentSearchState);
+
+    if (currentSearchKey !== searchSnapshotKey) {
+      setHarbingerCreatedForCurrentSearch(false);
+    }
+
+    setSearchSnapshotKey(currentSearchKey);
     setPage(0);
+    setHasSearched(hasSelectedSearchOptions(currentSearchState));
     setIsInitialLoad(false); // Ensure we're not in initial load state
     loadCargos();
   };
@@ -145,8 +200,61 @@ export default function SearchPage() {
     setMinWeight('');
     setMaxWeight('');
     setPage(0);
+    setHasSearched(false);
+    setSearchSnapshotKey('');
+    setHarbingerCreatedForCurrentSearch(false);
     setIsInitialLoad(false);
     loadCargos(); // Load after reset
+  };
+
+  const handleCreateHarbingerFromFilters = async () => {
+    if (!localStorage.getItem('authToken')) {
+      navigate('/login');
+      return;
+    }
+
+    if (!isInternalDispatcher) {
+      setShowClubModal(true);
+      return;
+    }
+
+    if (!hasSearched || !searchSnapshotKey || harbingerCreatedForCurrentSearch) {
+      return;
+    }
+
+    setCreatingHarbinger(true);
+
+    try {
+      const selectedVehicleType = staticData?.vehicleTypes?.find(
+        (vehicle) =>
+          vehicle.name === vehicleType ||
+          vehicle.code === vehicleType ||
+          String(vehicle.id) === String(vehicleType)
+      );
+
+      const harbingerData = {
+        fromLocation: {
+          cityId: fromCity ? parseInt(fromCity, 10) : null,
+          regionId: fromRegion ? parseInt(fromRegion, 10) : null,
+          countryId: fromCountry ? parseInt(fromCountry, 10) : null,
+        },
+        minWeight: minWeight ? parseFloat(minWeight) : null,
+        maxWeight: maxWeight ? parseFloat(maxWeight) : null,
+        vehicleTypeId: selectedVehicleType?.id || null,
+      };
+
+      const response = await createHarbinger(harbingerData);
+      if (response.code === 200) {
+        setHarbingerCreatedForCurrentSearch(true);
+        showSuccess('Tanlangan qidiruv filterlari bo‘yicha xabarchi yaratildi');
+      } else {
+        showError(response.message || 'Xabarchi yaratishda xatolik');
+      }
+    } catch (err) {
+      showError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
+    } finally {
+      setCreatingHarbinger(false);
+    }
   };
 
   const filteredFromRegions = staticData?.regions.filter(
@@ -382,6 +490,41 @@ export default function SearchPage() {
         </form>
       </div>
 
+      {hasSearched && (
+        <div
+          className="card"
+          style={{
+            marginBottom: '20px',
+            padding: '16px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ color: '#555', lineHeight: '1.5' }}>
+            Shu filterlar bo‘yicha yangi buyurtma tushsa sizga xabar beraylikmi?
+          </div>
+          <button
+            type="button"
+            className="btn btn-success"
+            onClick={handleCreateHarbingerFromFilters}
+            disabled={
+              creatingHarbinger ||
+              !searchSnapshotKey ||
+              harbingerCreatedForCurrentSearch
+            }
+          >
+            {creatingHarbinger
+              ? 'Yaratilmoqda...'
+              : harbingerCreatedForCurrentSearch
+                ? 'Xabarchi yaratildi'
+                : 'Xabarchi yaratish'}
+          </button>
+        </div>
+      )}
+
       {/* Results */}
       {loading && <div className="loading">Yuklanmoqda...</div>}
       
@@ -427,6 +570,8 @@ export default function SearchPage() {
           </div>
         </>
       )}
+
+      <ClubMembershipModal isOpen={showClubModal} onClose={() => setShowClubModal(false)} />
     </div>
   );
 }
