@@ -12,12 +12,16 @@ export const handlePhoneAccess = async (apiFunc, id) => {
     
     if (response.code === 200) {
       const phone = response.result?.additionalPhone || response.result?.phone;
+      const telegramUsername = response.result?.telegramUsername || null;
+      const chatId = response.result?.chatId || null;
 
       if (phone) {
         return {
           success: true,
           type: 'success',
           phone,
+          telegramUsername,
+          chatId,
           message: 'Telefon raqam:',
         };
       } else {

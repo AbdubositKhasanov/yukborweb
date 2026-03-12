@@ -1,6 +1,6 @@
 /**
  * Mobile Transport Detail Page
- * Full transport info with call action
+ * Full transport info with inline contact section
  */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -8,8 +8,13 @@ import { getTransportDetails } from '../../services/api';
 import { formatTimeAgo } from '../../utils/formatTime';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
-import BottomSheet from '../components/BottomSheet';
 import MobileLoading from '../components/MobileLoading';
+
+function getTelegramLink(telegramUsername, chatId) {
+  if (telegramUsername) return `https://t.me/${telegramUsername}`;
+  if (chatId) return `tg://user?id=${chatId}`;
+  return null;
+}
 
 export default function MobileTransportDetail() {
   const { id } = useParams();
@@ -21,13 +26,25 @@ export default function MobileTransportDetail() {
 
   const [transport, setTransport] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [phoneLoading, setPhoneLoading] = useState(false);
-  const [phoneSheet, setPhoneSheet] = useState({ open: false, phone: '' });
   const [error, setError] = useState('');
+
+  // Contact state (inline on page)
+  const [contactPhone, setContactPhone] = useState(null);
+  const [contactTelegramUsername, setContactTelegramUsername] = useState(null);
+  const [contactChatId, setContactChatId] = useState(null);
+  const [contactLoaded, setContactLoaded] = useState(false);
+  const [contactLoading, setContactLoading] = useState(false);
 
   useEffect(() => {
     loadTransport();
   }, [id]);
+
+  // Auto-load contact info when authenticated
+  useEffect(() => {
+    if (isAuthenticated && id && !contactLoaded) {
+      loadContact();
+    }
+  }, [isAuthenticated, id]);
 
   const loadTransport = async () => {
     try {
@@ -45,42 +62,21 @@ export default function MobileTransportDetail() {
     }
   };
 
-  const handleShowPhone = async () => {
-    if (!isAuthenticated) {
-      navigate('/mobile/login', { state: { from: { pathname: `/mobile/transport/${id}` } } });
-      return;
-    }
-
+  const loadContact = async () => {
     try {
-      setPhoneLoading(true);
-      // Desktop pattern: call API to get phone (additionalPhone has priority)
+      setContactLoading(true);
       const response = await getTransportDetails(id);
       if (response.code === 200 && response.result) {
         const phone = response.result.additionalPhone || response.result.phone;
-        if (phone) {
-          setPhoneSheet({ open: true, phone });
-        } else {
-          setError('Sizda ushbu telefon raqamni ko\'rish uchun ruxsat yo\'q');
-        }
-      } else {
-        setError('Telefon raqamni olishda xatolik');
+        setContactPhone(phone || null);
+        setContactTelegramUsername(response.result.telegramUsername || null);
+        setContactChatId(response.result.chatId || null);
       }
     } catch (err) {
-      setError('Xatolik yuz berdi');
+      // silently fail
     } finally {
-      setPhoneLoading(false);
-    }
-  };
-
-  const handleCall = () => {
-    if (phoneSheet.phone) {
-      window.location.href = `tel:${phoneSheet.phone}`;
-    }
-  };
-
-  const handleCopyPhone = () => {
-    if (phoneSheet.phone) {
-      navigator.clipboard.writeText(phoneSheet.phone);
+      setContactLoaded(true);
+      setContactLoading(false);
     }
   };
 
@@ -114,7 +110,7 @@ export default function MobileTransportDetail() {
     <>
       <TopBar title="Transport" showBack />
 
-      <main className="m-content m-content-padded" style={{ paddingBottom: 100 }}>
+      <main className="m-content m-content-padded">
         {/* Order context if any */}
         {fromOrder && (
           <div style={{ padding: 12, background: '#e3f2fd', borderRadius: 8, marginBottom: 16, fontSize: 14 }}>
@@ -179,45 +175,49 @@ export default function MobileTransportDetail() {
             ⏱️ {formatTimeAgo(transport.time || transport.createdAt || transport.created_at)}
           </div>
         </div>
+
+        {/* Contact section — inline on page */}
+        {!isAuthenticated && (
+          <div className="m-detail-section">
+            <button
+              className="m-btn m-btn-primary m-btn-lg"
+              onClick={() => navigate('/mobile/login', { state: { from: { pathname: `/mobile/transport/${id}` } } })}
+              style={{ width: '100%' }}
+            >
+              🔑 Kirish (kontakt ko'rish uchun)
+            </button>
+          </div>
+        )}
+        {isAuthenticated && contactLoading && (
+          <div className="m-detail-section">
+            <div style={{ textAlign: 'center', padding: 16, color: 'var(--m-text-muted)' }}>
+              Yuklanmoqda...
+            </div>
+          </div>
+        )}
+        {contactLoaded && contactPhone && (
+          <div className="m-detail-section">
+            <h2 className="m-detail-section-title">📱 Bog'lanish</h2>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <a href={`tel:${contactPhone}`} className="m-btn m-btn-success m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
+                📞 Qo'ng'iroq
+              </a>
+              {getTelegramLink(contactTelegramUsername, contactChatId) && (
+                <a href={getTelegramLink(contactTelegramUsername, contactChatId)} target="_blank" rel="noopener noreferrer" className="m-btn m-btn-primary m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
+                  💬 Telegram
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+        {contactLoaded && !contactPhone && (
+          <div className="m-detail-section">
+            <div style={{ padding: 12, background: '#fff3cd', borderRadius: 8, color: '#856404' }}>
+              🔒 Telefon raqamni ko'rish uchun ruxsat yo'q
+            </div>
+          </div>
+        )}
       </main>
-
-      {/* Action bar */}
-      <div className="m-action-bar">
-        <button
-          className="m-btn m-btn-primary m-btn-lg"
-          onClick={handleShowPhone}
-          disabled={phoneLoading}
-          style={{ flex: 1 }}
-        >
-          {phoneLoading ? (
-            <span className="m-spinner" style={{ width: 20, height: 20 }} />
-          ) : (
-            <>📞 Qo'ng'iroq qilish</>
-          )}
-        </button>
-      </div>
-
-      {/* Phone bottom sheet */}
-      <BottomSheet
-        isOpen={phoneSheet.open}
-        onClose={() => setPhoneSheet({ open: false, phone: '' })}
-        title="📞 Telefon raqami"
-      >
-        <div style={{ textAlign: 'center', padding: '24px 0' }}>
-          <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 24, color: 'var(--m-text)' }}>
-            {phoneSheet.phone}
-          </div>
-
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button className="m-btn m-btn-secondary m-btn-lg" onClick={handleCopyPhone} style={{ flex: 1 }}>
-              📋 Nusxalash
-            </button>
-            <button className="m-btn m-btn-success m-btn-lg" onClick={handleCall} style={{ flex: 1 }}>
-              📞 Qo'ng'iroq
-            </button>
-          </div>
-        </div>
-      </BottomSheet>
     </>
   );
 }

@@ -18,6 +18,8 @@ export default function CargoCard({
   const [modalType, setModalType] = useState(null);
   const [modalMessage, setModalMessage] = useState('');
   const [phone, setPhone] = useState(null);
+  const [telegramUsername, setTelegramUsername] = useState(null);
+  const [contactChatId, setContactChatId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [offering, setOffering] = useState(false);
   const [offerSuccess, setOfferSuccess] = useState(false);
@@ -34,6 +36,8 @@ export default function CargoCard({
       setModalType(result.type);
       setModalMessage(result.message || '');
       setPhone(result.phone || null);
+      setTelegramUsername(result.telegramUsername || null);
+      setContactChatId(result.chatId || null);
       setShowModal(true);
     } catch (error) {
       setModalType('error');
@@ -202,6 +206,8 @@ export default function CargoCard({
           type={modalType}
           message={modalMessage}
           phone={phone}
+          telegramUsername={telegramUsername}
+          chatId={contactChatId}
         />
       )}
 

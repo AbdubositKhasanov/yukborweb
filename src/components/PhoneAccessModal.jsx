@@ -1,7 +1,13 @@
 import React, { useEffect } from 'react';
 import { trackPhoneView, trackPhoneRequest } from '../services/analytics';
 
-export default function PhoneAccessModal({ isOpen, onClose, type, message, phone }) {
+function getTelegramLink(telegramUsername, chatId) {
+  if (telegramUsername) return `https://t.me/${telegramUsername}`;
+  if (chatId) return `tg://user?id=${chatId}`;
+  return null;
+}
+
+export default function PhoneAccessModal({ isOpen, onClose, type, message, phone, telegramUsername, chatId }) {
   useEffect(() => {
     if (!isOpen) return;
     if (type === 'success') trackPhoneView();
@@ -16,7 +22,8 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
     switch (type) {
       case 'unauthorized':
         return (
-          <div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔑</div>
             <h3 className="card-title">Kirish talab qilinadi</h3>
             <p style={{ marginBottom: '20px', color: '#666' }}>{message}</p>
             <button className="btn btn-primary" onClick={onClose}>
@@ -28,7 +35,8 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
       case 'premium_required':
       case 'permission_denied':
         return (
-          <div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
             <h3 className="card-title">
               {type === 'permission_denied' ? 'Ruxsat yo\'q' : 'Premium xizmat'}
             </h3>
@@ -51,8 +59,10 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
         );
 
       case 'success':
+        const tgLink = getTelegramLink(telegramUsername, chatId);
         return (
-          <div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📞</div>
             <h3 className="card-title">Telefon raqam</h3>
             <div style={{
               padding: '20px',
@@ -73,15 +83,29 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
                 {phone}
               </a>
             </div>
-            <button className="btn btn-primary" onClick={onClose}>
-              Yopish
-            </button>
+            <div className="btn-group">
+              {tgLink && (
+                <a
+                  href={tgLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                  style={{ textDecoration: 'none' }}
+                >
+                  💬 Telegram
+                </a>
+              )}
+              <button className="btn btn-secondary" onClick={onClose}>
+                Yopish
+              </button>
+            </div>
           </div>
         );
 
       default:
         return (
-          <div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
             <h3 className="card-title">Xatolik</h3>
             <p style={{ marginBottom: '20px', color: '#dc3545' }}>{message}</p>
             <button className="btn btn-primary" onClick={onClose}>
