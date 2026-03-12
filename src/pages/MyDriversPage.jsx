@@ -11,7 +11,7 @@ export default function MyDriversPage() {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [permissions, setPermissions] = useState(null);
   const [showClubModal, setShowClubModal] = useState(false);
   const [staticData, setStaticData] = useState(null);
   const [showTransportModal, setShowTransportModal] = useState(false);
@@ -31,7 +31,7 @@ export default function MyDriversPage() {
     try {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
-        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+        setPermissions(response.result.permissions || null);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -67,8 +67,8 @@ export default function MyDriversPage() {
   };
 
   const handleFindOrder = (driver) => {
-    // Check if user has internal dispatcher access
-    if (!isInternalDispatcher) {
+    // Check if user has offer permission
+    if (!permissions?.offerToDriver) {
       setShowClubModal(true);
       return;
     }

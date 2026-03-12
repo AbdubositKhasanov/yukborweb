@@ -28,8 +28,8 @@ export default function MobileHome() {
   const driverName = location.state?.driverName || null;
   const driverFilters = location.state?.filters || {};
 
-  // Internal dispatcher check
-  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  // Permissions check
+  const [permissions, setPermissions] = useState(null);
 
   // Filter state - pre-fill from driver filters if available
   const [filters, setFilters] = useState({
@@ -71,7 +71,7 @@ export default function MobileHome() {
     try {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
-        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+        setPermissions(response.result.permissions || null);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -271,7 +271,7 @@ export default function MobileHome() {
       return;
     }
 
-    if (!isInternalDispatcher) {
+    if (!permissions?.createHarbinger) {
       setShowClubModal(true);
       return;
     }
@@ -443,9 +443,9 @@ export default function MobileHome() {
                   <CargoListItem
                     key={cargo.id || cargo._id || index}
                     cargo={cargo}
-                    showOfferButton={fromDriver && isInternalDispatcher}
+                    showOfferButton={fromDriver && !!permissions?.offerToDriver}
                     driverId={driverId}
-                    isInternalDispatcher={isInternalDispatcher}
+                    canOffer={!!permissions?.offerToDriver}
                   />
                 ))}
               </div>

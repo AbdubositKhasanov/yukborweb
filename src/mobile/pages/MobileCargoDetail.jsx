@@ -24,7 +24,7 @@ export default function MobileCargoDetail() {
   const [error, setError] = useState('');
 
   // User and permission state
-  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [permissions, setPermissions] = useState(null);
 
   // Offer to driver state
   const [offerSheet, setOfferSheet] = useState(false);
@@ -47,7 +47,7 @@ export default function MobileCargoDetail() {
     try {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
-        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+        setPermissions(response.result.permissions || null);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -286,7 +286,7 @@ export default function MobileCargoDetail() {
             )}
           </button>
         </div>
-        {isInternalDispatcher && (
+        {permissions?.offerToDriver && (
           <button
             className="m-btn m-btn-lg"
             onClick={handleOpenOfferSheet}

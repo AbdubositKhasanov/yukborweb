@@ -16,6 +16,7 @@ export default function MyOrdersPage() {
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [selectedPhone, setSelectedPhone] = useState(null);
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [permissions, setPermissions] = useState(null);
   const [showClubModal, setShowClubModal] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastOrder, setBroadcastOrder] = useState(null);
@@ -30,6 +31,7 @@ export default function MyOrdersPage() {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
         setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+        setPermissions(response.result.permissions || null);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -83,8 +85,8 @@ export default function MyOrdersPage() {
   };
 
   const handleFindTransport = (order) => {
-    // Check if user has internal dispatcher access
-    if (!isInternalDispatcher) {
+    // Check if user has offer permission
+    if (!permissions?.offerToDriver) {
       setShowClubModal(true);
       return;
     }

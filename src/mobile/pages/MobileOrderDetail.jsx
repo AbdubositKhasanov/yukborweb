@@ -33,6 +33,7 @@ export default function MobileOrderDetail() {
 
   // User and permission state
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [permissions, setPermissions] = useState(null);
 
   // Phone sheet
   const [phoneSheet, setPhoneSheet] = useState({ open: false, phone: '' });
@@ -57,6 +58,7 @@ export default function MobileOrderDetail() {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
         setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+        setPermissions(response.result.permissions || null);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -102,7 +104,7 @@ export default function MobileOrderDetail() {
 
   const handleFindTransport = () => {
     // MUST match Desktop MyOrdersPage.jsx handleFindTransport EXACTLY
-    if (!isInternalDispatcher) {
+    if (!permissions?.offerToDriver) {
       // Permission check - matches Desktop
       return;
     }

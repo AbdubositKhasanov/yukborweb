@@ -39,6 +39,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
   const location = useLocation();
   const [userRole, setUserRole] = useState(null);
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [permissions, setPermissions] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -50,6 +51,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
           if (response.code === 200 && response.result) {
             setUserRole(response.result.type);
             setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+            setPermissions(response.result.permissions || null);
             setIsAdmin(response.result.isAdmin === true);
           }
         } catch (error) {
@@ -74,8 +76,8 @@ export default function Navigation({ isAuthenticated, onLogout }) {
     // Use role-specific tabs or fallback to logist tabs
     let tabs = TAB_CONFIG[userRole] || TAB_CONFIG.logist;
 
-    // Filter "Harbinger yaratish" for drivers if not internal dispatcher
-    if (userRole === 'driver' && !isInternalDispatcher) {
+    // Filter "Harbinger yaratish" for drivers if no permission
+    if (userRole === 'driver' && !permissions?.createHarbinger) {
       tabs = tabs.filter(tab => tab.path !== '/create-harbinger');
     }
 

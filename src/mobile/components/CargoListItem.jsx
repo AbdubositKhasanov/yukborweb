@@ -14,7 +14,7 @@ export default function CargoListItem({
   onClick,
   showOfferButton = false,
   driverId = null,
-  isInternalDispatcher = false,
+  canOffer = false,
 }) {
   const navigate = useNavigate();
   const [offerSheet, setOfferSheet] = useState(false);

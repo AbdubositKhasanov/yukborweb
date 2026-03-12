@@ -13,6 +13,7 @@ export function MobileAuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState('logist'); // driver, factory, logist
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [permissions, setPermissions] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Determine user role based on user data
@@ -56,6 +57,7 @@ export function MobileAuthProvider({ children }) {
         setUser(response.result);
         setUserRole(determineRole(response.result));
         setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+        setPermissions(response.result.permissions || null);
         setIsAuthenticated(true);
         setAnalyticsUserProperties(
           response.result.chatId,
@@ -66,12 +68,14 @@ export function MobileAuthProvider({ children }) {
         setIsAuthenticated(false);
         setUser(null);
         setIsInternalDispatcher(false);
+        setPermissions(null);
       }
     } catch (error) {
       console.error('Failed to load user:', error);
       setIsAuthenticated(false);
       setUser(null);
       setIsInternalDispatcher(false);
+      setPermissions(null);
     } finally {
       setLoading(false);
     }
@@ -101,6 +105,7 @@ export function MobileAuthProvider({ children }) {
     setUser(null);
     setUserRole('logist');
     setIsInternalDispatcher(false);
+    setPermissions(null);
   }, []);
 
   // Force set authenticated - called after successful login
@@ -108,6 +113,7 @@ export function MobileAuthProvider({ children }) {
     setUser(userData);
     setUserRole(determineRole(userData));
     setIsInternalDispatcher(userData?.isInternalDispatcher === true);
+    setPermissions(userData?.permissions || null);
     setIsAuthenticated(true);
   }, []);
 
@@ -120,6 +126,7 @@ export function MobileAuthProvider({ children }) {
     user,
     userRole,
     isInternalDispatcher,
+    permissions,
     loading,
     logout,
     refreshUser,

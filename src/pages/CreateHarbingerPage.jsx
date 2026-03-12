@@ -11,7 +11,7 @@ export default function CreateHarbingerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [permissions, setPermissions] = useState(null);
   const [showClubModal, setShowClubModal] = useState(false);
 
   const [fromCountry, setFromCountry] = useState('');
@@ -30,7 +30,7 @@ export default function CreateHarbingerPage() {
     try {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
-        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+        setPermissions(response.result.permissions || null);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -40,8 +40,8 @@ export default function CreateHarbingerPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check if user has internal dispatcher access
-    if (!isInternalDispatcher) {
+    // Check if user has harbinger creation permission
+    if (!permissions?.createHarbinger) {
       setShowClubModal(true);
       return;
     }

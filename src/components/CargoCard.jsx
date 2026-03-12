@@ -7,11 +7,11 @@ import OfferToDriverModal from './OfferToDriverModal';
 import PriceInputModal from './PriceInputModal';
 import { formatTimeAgo } from '../utils/formatTime';
 
-export default function CargoCard({ 
-  cargo, 
-  showOfferButton = false, 
-  driverId = null, 
-  isInternalDispatcher = false,
+export default function CargoCard({
+  cargo,
+  showOfferButton = false,
+  driverId = null,
+  canOffer = false,
   showOfferToDriverButton = false
 }) {
   const [showModal, setShowModal] = useState(false);
@@ -55,8 +55,8 @@ export default function CargoCard({
   };
 
   const handleOffer = async () => {
-    // Check if user has internal dispatcher access
-    if (!isInternalDispatcher) {
+    // Check if user has offer permission
+    if (!canOffer) {
       setShowClubModal(true);
       return;
     }

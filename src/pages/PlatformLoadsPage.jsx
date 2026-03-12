@@ -18,7 +18,7 @@ export default function PlatformLoadsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
-  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [permissions, setPermissions] = useState(null);
 
   // Filter states
   const [fromCountry, setFromCountry] = useState(initialFilters.fromCountry?.toString() || '');
@@ -39,7 +39,7 @@ export default function PlatformLoadsPage() {
     try {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
-        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+        setPermissions(response.result.permissions || null);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -375,8 +375,8 @@ export default function PlatformLoadsPage() {
                 cargo={cargo}
                 showOfferButton={fromDriver}
                 driverId={driverId}
-                isInternalDispatcher={isInternalDispatcher}
-                showOfferToDriverButton={isInternalDispatcher && !fromDriver}
+                canOffer={!!permissions?.offerToDriver}
+                showOfferToDriverButton={!!permissions?.offerToDriver && !fromDriver}
               />
             ))}
           </div>

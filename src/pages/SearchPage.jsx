@@ -21,7 +21,7 @@ export default function SearchPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
-  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [permissions, setPermissions] = useState(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
   const [creatingHarbinger, setCreatingHarbinger] = useState(false);
@@ -48,7 +48,7 @@ export default function SearchPage() {
     try {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
-        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+        setPermissions(response.result.permissions || null);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -213,7 +213,7 @@ export default function SearchPage() {
       return;
     }
 
-    if (!isInternalDispatcher) {
+    if (!permissions?.createHarbinger) {
       setShowClubModal(true);
       return;
     }
@@ -583,8 +583,8 @@ export default function SearchPage() {
                 cargo={cargo}
                 showOfferButton={fromDriver}
                 driverId={driverId}
-                isInternalDispatcher={isInternalDispatcher}
-                showOfferToDriverButton={isInternalDispatcher && !fromDriver}
+                canOffer={!!permissions?.offerToDriver}
+                showOfferToDriverButton={!!permissions?.offerToDriver && !fromDriver}
               />
             ))}
           </div>

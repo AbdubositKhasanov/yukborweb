@@ -22,6 +22,7 @@ export default function MobileMyOrders() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [permissions, setPermissions] = useState(null);
 
   // Delete state
   const [deleteSheet, setDeleteSheet] = useState({ open: false, order: null });
@@ -45,6 +46,7 @@ export default function MobileMyOrders() {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
         setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+        setPermissions(response.result.permissions || null);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -102,7 +104,7 @@ export default function MobileMyOrders() {
   const handleFindTransport = (e, order) => {
     e.stopPropagation();
 
-    if (!isInternalDispatcher) {
+    if (!permissions?.offerToDriver) {
       // Show club modal or message
       return;
     }
