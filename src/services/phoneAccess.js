@@ -12,17 +12,29 @@ export const handlePhoneAccess = async (apiFunc, id) => {
     
     if (response.code === 200) {
       const phone = response.result?.additionalPhone || response.result?.phone;
-      
-      return {
-        success: true,
-        phone: phone || null,
-        isPremium: !!phone,
-      };
+
+      if (phone) {
+        return {
+          success: true,
+          type: 'success',
+          phone,
+          message: 'Telefon raqam:',
+        };
+      } else {
+        return {
+          success: true,
+          type: 'permission_denied',
+          phone: null,
+          message: 'Sizda ushbu telefon raqamni ko\'rish uchun ruxsat yo\'q',
+        };
+      }
     } else {
-      showError(response.message || 'Telefon raqamni olishda xatolik');
+      const message = response.message || 'Telefon raqamni olishda xatolik';
+      showError(message);
       return {
         success: false,
-        isPremium: false,
+        type: 'error',
+        message,
       };
     }
   } catch (error) {
@@ -30,7 +42,8 @@ export const handlePhoneAccess = async (apiFunc, id) => {
     showError(errorMessage);
     return {
       success: false,
-      isPremium: false,
+      type: 'error',
+      message: errorMessage,
     };
   }
 };

@@ -6,6 +6,7 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
     if (!isOpen) return;
     if (type === 'success') trackPhoneView();
     else if (type === 'premium_required') trackPhoneRequest('premium_required');
+    else if (type === 'permission_denied') trackPhoneRequest('permission_denied');
     else if (type === 'unauthorized') trackPhoneRequest('unauthorized');
   }, [isOpen, type]);
 
@@ -25,9 +26,12 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
         );
 
       case 'premium_required':
+      case 'permission_denied':
         return (
           <div>
-            <h3 className="card-title">Premium xizmat</h3>
+            <h3 className="card-title">
+              {type === 'permission_denied' ? 'Ruxsat yo\'q' : 'Premium xizmat'}
+            </h3>
             <p style={{ marginBottom: '20px', color: '#666' }}>{message}</p>
             <div className="btn-group">
               <button className="btn btn-secondary" onClick={onClose}>

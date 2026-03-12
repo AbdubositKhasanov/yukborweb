@@ -30,20 +30,10 @@ export default function CargoCard({
     setLoading(true);
     try {
       const result = await handlePhoneAccess(requestCargoPhone, cargo.id);
-      
-      if (result.success && result.isPremium) {
-        setModalType('success');
-        setModalMessage('Telefon raqam:');
-        setPhone(result.phone);
-      } else if (result.success && !result.isPremium) {
-        setModalType('premium');
-        setModalMessage('Telefon raqamni ko\'rish uchun Premium tarif kerak');
-        setPhone(null);
-      } else {
-        setModalType('error');
-        setModalMessage('Xatolik yuz berdi');
-        setPhone(null);
-      }
+
+      setModalType(result.type);
+      setModalMessage(result.message || '');
+      setPhone(result.phone || null);
       setShowModal(true);
     } catch (error) {
       setModalType('error');

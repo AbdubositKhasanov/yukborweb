@@ -22,16 +22,16 @@ export default function ClubMembershipModal({ isOpen, onClose }) {
           </div>
           
           <h3 className="card-title" style={{ marginBottom: '15px' }}>
-            Maxsus funksiya
+            Ruxsat yo'q
           </h3>
-          
+
           <p style={{
             marginBottom: '25px',
             color: '#666',
             lineHeight: '1.6',
             fontSize: '15px'
           }}>
-            Bu funksiya faqat club a'zolari uchun amal qiladi
+            Sizda ushbu funksiyadan foydalanish uchun ruxsat yo'q. Qo'shimcha ma'lumot uchun qo'llab-quvvatlash xizmatiga murojaat qiling.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -44,7 +44,7 @@ export default function ClubMembershipModal({ isOpen, onClose }) {
                 fontSize: '15px'
               }}
             >
-              A'zo bo'lish
+              Qo'llab-quvvatlash
             </button>
             
             <button

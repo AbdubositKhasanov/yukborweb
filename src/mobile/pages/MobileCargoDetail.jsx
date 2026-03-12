@@ -89,7 +89,7 @@ export default function MobileCargoDetail() {
         if (phone) {
           setPhoneSheet({ open: true, phone });
         } else {
-          setError('Telefon raqam topilmadi');
+          setError('Sizda ushbu telefon raqamni ko\'rish uchun ruxsat yo\'q');
         }
       } else {
         setError('Telefon raqamni olishda xatolik');
