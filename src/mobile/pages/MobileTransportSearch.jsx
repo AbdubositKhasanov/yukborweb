@@ -263,7 +263,11 @@ export default function MobileTransportSearch() {
             <div className="m-empty">
               <div className="m-empty-icon">🚚</div>
               <h3 className="m-empty-title">Transportlar topilmadi</h3>
-              <p className="m-empty-text">Filterlarni o&apos;zgartiring</p>
+              <p className="m-empty-text">
+                {filters.vehicleType
+                  ? `"${filters.vehicleType}" turi bo\u2019yicha transport topilmadi. Boshqa turni tanlang.`
+                  : 'Filterlarni o\u2019zgartiring'}
+              </p>
               <button className="m-btn m-btn-primary" onClick={() => setFilterSheetOpen(true)}>
                 Filterlar
               </button>

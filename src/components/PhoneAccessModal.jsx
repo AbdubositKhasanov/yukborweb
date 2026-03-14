@@ -3,7 +3,7 @@ import { trackPhoneView, trackPhoneRequest } from '../services/analytics';
 
 function getTelegramLink(telegramUsername, chatId) {
   if (telegramUsername) return `https://t.me/${telegramUsername}`;
-  if (chatId) return `tg://user?id=${chatId}`;
+  if (chatId && chatId > 0) return `https://t.me/yukbor_global_bot?start=contact_${chatId}`;
   return null;
 }
 

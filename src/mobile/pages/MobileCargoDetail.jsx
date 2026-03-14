@@ -14,7 +14,7 @@ import MobileLoading from '../components/MobileLoading';
 
 function getTelegramLink(telegramUsername, chatId) {
   if (telegramUsername) return `https://t.me/${telegramUsername}`;
-  if (chatId) return `tg://user?id=${chatId}`;
+  if (chatId && chatId > 0) return `https://t.me/yukbor_global_bot?start=contact_${chatId}`;
   return null;
 }
 
@@ -265,6 +265,21 @@ export default function MobileCargoDetail() {
             ⏱️ {formatTimeAgo(cargo.createdAt || cargo.created_at)}
           </div>
         </div>
+
+        {/* Message link */}
+        {cargo.messageUrl && (
+          <div className="m-detail-section">
+            <a
+              href={cargo.messageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="m-btn m-btn-lg"
+              style={{ width: '100%', textDecoration: 'none', textAlign: 'center', background: '#0088cc', color: 'white' }}
+            >
+              💬 Telegramdagi xabarga o&apos;tish
+            </a>
+          </div>
+        )}
 
         {/* Contact section — inline on page */}
         {!isAuthenticated && (

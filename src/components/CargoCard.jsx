@@ -138,6 +138,23 @@ export default function CargoCard({
               {formatTimeAgo(cargo.createdTime)}
             </p>
           )}
+
+          {cargo.messageUrl && (
+            <a
+              href={cargo.messageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                marginTop: '8px',
+                fontSize: '13px',
+                color: '#0088cc',
+                textDecoration: 'none',
+              }}
+            >
+              💬 Xabarga o&apos;tish
+            </a>
+          )}
         </div>
 
         {offerSuccess && (

@@ -571,7 +571,11 @@ export default function SearchPage() {
       {error && <div className="error-message">{error}</div>}
       
       {!loading && !error && cargos.length === 0 && (
-        <div className="empty-state">Hech qanday yuk topilmadi</div>
+        <div className="empty-state">
+          {vehicleType
+            ? `"${vehicleType}" turi bo\u2019yicha yuk topilmadi. Boshqa turni tanlang yoki filterni tozalang.`
+            : 'Hech qanday yuk topilmadi'}
+        </div>
       )}
       
       {!loading && !error && cargos.length > 0 && (

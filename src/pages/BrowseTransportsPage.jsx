@@ -287,7 +287,11 @@ export default function BrowseTransportsPage() {
       {error && <div className="error-message">{error}</div>}
       
       {!loading && !error && transports.length === 0 && (
-        <div className="empty-state">Hech qanday transport topilmadi</div>
+        <div className="empty-state">
+          {vehicleType
+            ? `"${vehicleType}" turi bo\u2019yicha transport topilmadi. Boshqa turni tanlang yoki filterni tozalang.`
+            : 'Hech qanday transport topilmadi'}
+        </div>
       )}
       
       {!loading && !error && transports.length > 0 && (

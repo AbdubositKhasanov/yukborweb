@@ -430,7 +430,9 @@ export default function MobileHome() {
               <div className="m-empty-icon">📦</div>
               <h3 className="m-empty-title">Yuklar topilmadi</h3>
               <p className="m-empty-text">
-                Filterlarni o&apos;zgartiring yoki keyinroq qaytib keling
+                {filters.vehicleType
+                  ? `"${filters.vehicleType}" turi bo\u2019yicha yuk topilmadi. Boshqa turni tanlang.`
+                  : 'Filterlarni o\u2019zgartiring yoki keyinroq qaytib keling'}
               </p>
               <button className="m-btn m-btn-primary" onClick={() => setFilterSheetOpen(true)}>
                 Filterlar

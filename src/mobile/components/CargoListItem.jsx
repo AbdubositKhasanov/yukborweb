@@ -105,6 +105,20 @@ export default function CargoListItem({
             {cargo.vehicleType && <span>{cargo.vehicleType}</span>}
             {cargo.vehicleType && cargo.priceUzs && <span>•</span>}
             {cargo.priceUzs && <span>{formatPrice(cargo.priceUzs)} so'm</span>}
+            {cargo.messageUrl && (
+              <>
+                <span>•</span>
+                <a
+                  href={cargo.messageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ color: '#0088cc', textDecoration: 'none' }}
+                >
+                  💬 Xabar
+                </a>
+              </>
+            )}
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
