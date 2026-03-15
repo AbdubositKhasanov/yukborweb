@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { searchCargos, createHarbinger, getUserMe } from '../services/api';
+import { searchCargos, textSearchCargos, createHarbinger, getUserMe } from '../services/api';
 import { useStaticData } from '../context/StaticDataContext';
 import CargoCard from '../components/CargoCard';
 import ClubMembershipModal from '../components/ClubMembershipModal';
@@ -28,6 +28,11 @@ export default function SearchPage() {
   const [showClubModal, setShowClubModal] = useState(false);
   const [searchSnapshotKey, setSearchSnapshotKey] = useState('');
   const [harbingerCreatedForCurrentSearch, setHarbingerCreatedForCurrentSearch] = useState(false);
+
+  // Search mode: 'simple' (text search) or 'advanced' (filter-based)
+  const [searchMode, setSearchMode] = useState(fromDriver ? 'advanced' : 'simple');
+  const [textQuery, setTextQuery] = useState('');
+  const [searchTrigger, setSearchTrigger] = useState(0);
 
   // Filter states
   const [fromCountry, setFromCountry] = useState(initialFilters.fromCountry?.toString() || '');
@@ -60,7 +65,7 @@ export default function SearchPage() {
     if (staticData && initialFilters.vehicleTypeId) {
       const vehicleTypeId = initialFilters.vehicleTypeId;
       const foundVehicleType = staticData.vehicleTypes?.find(v => v.id === vehicleTypeId);
-      
+
       if (foundVehicleType) {
         setVehicleType(foundVehicleType.name);
       }
@@ -84,19 +89,23 @@ export default function SearchPage() {
           setIsInitialLoad(false);
         }
       } else {
-        // Non-driver flow - load immediately
+        // Non-driver flow - load immediately (shows all cargos)
         loadCargos();
         setIsInitialLoad(false);
       }
     }
   }, [staticData, vehicleType, fromDriver, initialFilters.vehicleTypeId, isInitialLoad]);
 
-  // Pagination - only load on page change after initial load (skip page 0)
+  // Pagination + search trigger — har qanday page o'zgarishda (0 ga qaytganda ham) reload
   useEffect(() => {
-    if (!isInitialLoad && page > 0) {
-      loadCargos();
+    if (!isInitialLoad) {
+      if (searchMode === 'simple' && textQuery.trim()) {
+        loadTextSearch();
+      } else {
+        loadCargos();
+      }
     }
-  }, [page, isInitialLoad]);
+  }, [page, searchTrigger]);
 
   const loadCargos = useCallback(async () => {
     setLoading(true);
@@ -130,6 +139,26 @@ export default function SearchPage() {
     }
   }, [fromCountry, fromRegion, fromCity, toCountry, toRegion, toCity, vehicleType, minWeight, maxWeight, page]);
 
+  const loadTextSearch = useCallback(async () => {
+    if (!textQuery.trim()) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await textSearchCargos(textQuery.trim(), page);
+      if (response.code === 200) {
+        setCargos(response.result || []);
+      } else {
+        setError(response.message || 'Yuklar topilmadi');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [textQuery, page]);
+
   const buildSearchKey = (searchState) => {
     return JSON.stringify({
       fromCountry: searchState.fromCountry || '',
@@ -160,7 +189,20 @@ export default function SearchPage() {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadCargos();
+    if (searchMode === 'simple' && textQuery.trim()) {
+      loadTextSearch();
+    } else {
+      loadCargos();
+    }
+  };
+
+  const handleTextSearch = (e) => {
+    e.preventDefault();
+    if (!textQuery.trim() || textQuery.trim().length < 3) return;
+    setPage(0);
+    setHasSearched(false);
+    setIsInitialLoad(false);
+    setSearchTrigger((t) => t + 1);
   };
 
   const handleSearch = (e) => {
@@ -185,8 +227,8 @@ export default function SearchPage() {
     setSearchSnapshotKey(currentSearchKey);
     setPage(0);
     setHasSearched(hasSelectedSearchOptions(currentSearchState));
-    setIsInitialLoad(false); // Ensure we're not in initial load state
-    loadCargos();
+    setIsInitialLoad(false);
+    setSearchTrigger((t) => t + 1);
   };
 
   const handleReset = () => {
@@ -204,7 +246,28 @@ export default function SearchPage() {
     setSearchSnapshotKey('');
     setHarbingerCreatedForCurrentSearch(false);
     setIsInitialLoad(false);
-    loadCargos(); // Load after reset
+    setSearchTrigger((t) => t + 1);
+  };
+
+  const handleClearTextSearch = () => {
+    setTextQuery('');
+    setSearchMode('simple');
+    setPage(0);
+    setCargos([]);
+    setIsInitialLoad(true);
+  };
+
+  const handleSwitchMode = (mode) => {
+    if (mode === searchMode) return;
+    setSearchMode(mode);
+    setPage(0);
+    setCargos([]);
+    setError(null);
+    setHasSearched(false);
+    setHarbingerCreatedForCurrentSearch(false);
+    if (mode === 'simple') {
+      setTextQuery('');
+    }
   };
 
   const handleCreateHarbingerFromFilters = async () => {
@@ -286,7 +349,7 @@ export default function SearchPage() {
       const response = await createHarbinger(harbingerData);
       if (response.code === 200) {
         setHarbingerCreatedForCurrentSearch(true);
-        showSuccess('Tanlangan qidiruv filterlari bo‘yicha xabarchi yaratildi');
+        showSuccess('Tanlangan qidiruv filterlari bo\u2019yicha xabarchi yaratildi');
       } else {
         showError(response.message || 'Xabarchi yaratishda xatolik');
       }
@@ -300,7 +363,7 @@ export default function SearchPage() {
   const filteredFromRegions = staticData?.regions.filter(
     r => r.countryId === parseInt(fromCountry)
   ) || [];
-  
+
   const filteredFromCities = staticData?.cities.filter(
     c => c.regionId === parseInt(fromRegion)
   ) || [];
@@ -308,7 +371,7 @@ export default function SearchPage() {
   const filteredToRegions = staticData?.regions.filter(
     r => r.countryId === parseInt(toCountry)
   ) || [];
-  
+
   const filteredToCities = staticData?.cities.filter(
     c => c.regionId === parseInt(toRegion)
   ) || [];
@@ -346,6 +409,50 @@ export default function SearchPage() {
         </button>
       </div>
 
+      {/* Search Mode Toggle */}
+      <div style={{
+        display: 'flex',
+        gap: '0',
+        marginBottom: '20px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        border: '1px solid #ddd',
+      }}>
+        <button
+          onClick={() => handleSwitchMode('simple')}
+          style={{
+            flex: 1,
+            padding: '10px 16px',
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: '14px',
+            background: searchMode === 'simple' ? '#0088cc' : '#f5f5f5',
+            color: searchMode === 'simple' ? '#fff' : '#555',
+            transition: 'all 0.2s',
+          }}
+        >
+          🔍 Qidirish
+        </button>
+        <button
+          onClick={() => handleSwitchMode('advanced')}
+          style={{
+            flex: 1,
+            padding: '10px 16px',
+            border: 'none',
+            borderLeft: '1px solid #ddd',
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: '14px',
+            background: searchMode === 'advanced' ? '#0088cc' : '#f5f5f5',
+            color: searchMode === 'advanced' ? '#fff' : '#555',
+            transition: 'all 0.2s',
+          }}
+        >
+          ⚙️ Kengaytirilgan qidiruv
+        </button>
+      </div>
+
       {fromDriver && driverName && (
         <div style={{
           padding: '15px',
@@ -361,176 +468,231 @@ export default function SearchPage() {
             </strong>
           </div>
           <p style={{ margin: '10px 0 0', fontSize: '13px', fontStyle: 'italic' }}>
-            Filter'lar haydovchi ma'lumotlariga asosan to'ldirildi. O'zgartirishingiz mumkin.
+            Filter&apos;lar haydovchi ma&apos;lumotlariga asosan to&apos;ldirildi. O&apos;zgartirishingiz mumkin.
           </p>
         </div>
       )}
 
-      {/* Search Filters */}
-      <div className="search-filters">
-        <h3 className="filters-title">Filterlar</h3>
-        <form onSubmit={handleSearch}>
-          {/* From Location */}
-          <div className="form-group">
-            <label className="form-label">Qayerdan</label>
-            <div className="form-row">
-              <select
-                className="form-select"
-                value={fromCountry}
-                onChange={(e) => {
-                  setFromCountry(e.target.value);
-                  setFromRegion('');
-                  setFromCity('');
-                }}
-              >
-                <option value="">Davlat</option>
-                {staticData?.countries.map(country => (
-                  <option key={country.countryId} value={country.countryId}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="form-select"
-                value={fromRegion}
-                onChange={(e) => {
-                  setFromRegion(e.target.value);
-                  setFromCity('');
-                }}
-                disabled={!fromCountry}
-              >
-                <option value="">Viloyat</option>
-                {filteredFromRegions.map(region => (
-                  <option key={region.regionId} value={region.regionId}>
-                    {region.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="form-select"
-                value={fromCity}
-                onChange={(e) => setFromCity(e.target.value)}
-                disabled={!fromRegion}
-              >
-                <option value="">Shahar</option>
-                {filteredFromCities.map(city => (
-                  <option key={city.cityId} value={city.cityId}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* To Location */}
-          <div className="form-group">
-            <label className="form-label">Qayerga</label>
-            <div className="form-row">
-              <select
-                className="form-select"
-                value={toCountry}
-                onChange={(e) => {
-                  setToCountry(e.target.value);
-                  setToRegion('');
-                  setToCity('');
-                }}
-              >
-                <option value="">Davlat</option>
-                {staticData?.countries.map(country => (
-                  <option key={country.countryId} value={country.countryId}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="form-select"
-                value={toRegion}
-                onChange={(e) => {
-                  setToRegion(e.target.value);
-                  setToCity('');
-                }}
-                disabled={!toCountry}
-              >
-                <option value="">Viloyat</option>
-                {filteredToRegions.map(region => (
-                  <option key={region.regionId} value={region.regionId}>
-                    {region.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="form-select"
-                value={toCity}
-                onChange={(e) => setToCity(e.target.value)}
-                disabled={!toRegion}
-              >
-                <option value="">Shahar</option>
-                {filteredToCities.map(city => (
-                  <option key={city.cityId} value={city.cityId}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Vehicle Type and Weight */}
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Transport turi</label>
-              <select
-                className="form-select"
-                value={vehicleType}
-                onChange={(e) => setVehicleType(e.target.value)}
-              >
-                <option value="">Hammasi</option>
-                {staticData?.vehicleTypes.map(vehicle => (
-                  <option key={vehicle.id} value={vehicle.name}>
-                    {vehicle.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Min og'irligi (t)</label>
+      {/* Simple Text Search */}
+      {searchMode === 'simple' && (
+        <div className="search-filters" style={{ marginBottom: '20px' }}>
+          <form onSubmit={handleTextSearch} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ flex: 1, position: 'relative' }}>
               <input
-                type="number"
+                type="text"
                 className="form-input"
-                value={minWeight}
-                onChange={(e) => setMinWeight(e.target.value)}
-                placeholder="0"
+                value={textQuery}
+                onChange={(e) => setTextQuery(e.target.value)}
+                placeholder="Masalan: toshkent farg&apos;ona tent"
+                style={{ width: '100%', paddingRight: textQuery ? '36px' : undefined }}
               />
+              {textQuery && (
+                <button
+                  type="button"
+                  onClick={handleClearTextSearch}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    color: '#999',
+                    padding: '2px 6px',
+                    lineHeight: 1,
+                  }}
+                  title="Tozalash"
+                >
+                  ✕
+                </button>
+              )}
             </div>
-
-            <div className="form-group">
-              <label className="form-label">Max og'irligi (t)</label>
-              <input
-                type="number"
-                className="form-input"
-                value={maxWeight}
-                onChange={(e) => setMaxWeight(e.target.value)}
-                placeholder="10000"
-              />
-            </div>
-          </div>
-
-          <div className="btn-group">
-            <button type="button" className="btn btn-secondary" onClick={handleReset}>
-              Tozalash
-            </button>
-            <button type="submit" className="btn btn-primary">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={!textQuery.trim() || textQuery.trim().length < 3 || loading}
+            >
               Qidirish
             </button>
-          </div>
-        </form>
-      </div>
+          </form>
+          {textQuery.trim().length > 0 && textQuery.trim().length < 3 && (
+            <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+              Kamida 3 ta belgi kiriting
+            </div>
+          )}
+        </div>
+      )}
 
-      {hasSearched && (
+      {/* Advanced Filters */}
+      {searchMode === 'advanced' && (
+        <div className="search-filters">
+          <h3 className="filters-title">Filterlar</h3>
+          <form onSubmit={handleSearch}>
+            {/* From Location */}
+            <div className="form-group">
+              <label className="form-label">Qayerdan</label>
+              <div className="form-row">
+                <select
+                  className="form-select"
+                  value={fromCountry}
+                  onChange={(e) => {
+                    setFromCountry(e.target.value);
+                    setFromRegion('');
+                    setFromCity('');
+                  }}
+                >
+                  <option value="">Davlat</option>
+                  {staticData?.countries.map(country => (
+                    <option key={country.countryId} value={country.countryId}>
+                      {country.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="form-select"
+                  value={fromRegion}
+                  onChange={(e) => {
+                    setFromRegion(e.target.value);
+                    setFromCity('');
+                  }}
+                  disabled={!fromCountry}
+                >
+                  <option value="">Viloyat</option>
+                  {filteredFromRegions.map(region => (
+                    <option key={region.regionId} value={region.regionId}>
+                      {region.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="form-select"
+                  value={fromCity}
+                  onChange={(e) => setFromCity(e.target.value)}
+                  disabled={!fromRegion}
+                >
+                  <option value="">Shahar</option>
+                  {filteredFromCities.map(city => (
+                    <option key={city.cityId} value={city.cityId}>
+                      {city.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* To Location */}
+            <div className="form-group">
+              <label className="form-label">Qayerga</label>
+              <div className="form-row">
+                <select
+                  className="form-select"
+                  value={toCountry}
+                  onChange={(e) => {
+                    setToCountry(e.target.value);
+                    setToRegion('');
+                    setToCity('');
+                  }}
+                >
+                  <option value="">Davlat</option>
+                  {staticData?.countries.map(country => (
+                    <option key={country.countryId} value={country.countryId}>
+                      {country.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="form-select"
+                  value={toRegion}
+                  onChange={(e) => {
+                    setToRegion(e.target.value);
+                    setToCity('');
+                  }}
+                  disabled={!toCountry}
+                >
+                  <option value="">Viloyat</option>
+                  {filteredToRegions.map(region => (
+                    <option key={region.regionId} value={region.regionId}>
+                      {region.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="form-select"
+                  value={toCity}
+                  onChange={(e) => setToCity(e.target.value)}
+                  disabled={!toRegion}
+                >
+                  <option value="">Shahar</option>
+                  {filteredToCities.map(city => (
+                    <option key={city.cityId} value={city.cityId}>
+                      {city.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Vehicle Type and Weight */}
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Transport turi</label>
+                <select
+                  className="form-select"
+                  value={vehicleType}
+                  onChange={(e) => setVehicleType(e.target.value)}
+                >
+                  <option value="">Hammasi</option>
+                  {staticData?.vehicleTypes.map(vehicle => (
+                    <option key={vehicle.id} value={vehicle.name}>
+                      {vehicle.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Min og&apos;irligi (t)</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={minWeight}
+                  onChange={(e) => setMinWeight(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Max og&apos;irligi (t)</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={maxWeight}
+                  onChange={(e) => setMaxWeight(e.target.value)}
+                  placeholder="10000"
+                />
+              </div>
+            </div>
+
+            <div className="btn-group">
+              <button type="button" className="btn btn-secondary" onClick={handleReset}>
+                Tozalash
+              </button>
+              <button type="submit" className="btn btn-primary">
+                Qidirish
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Harbinger card - faqat advanced mode da */}
+      {searchMode === 'advanced' && hasSearched && (
         <div
           className="card"
           style={{
@@ -544,7 +706,7 @@ export default function SearchPage() {
           }}
         >
           <div style={{ color: '#555', lineHeight: '1.5' }}>
-            Shu filterlar bo‘yicha yangi buyurtma tushsa sizga xabar beraylikmi?
+            Shu filterlar bo&apos;yicha yangi buyurtma tushsa sizga xabar beraylikmi?
           </div>
           <button
             type="button"
@@ -567,23 +729,25 @@ export default function SearchPage() {
 
       {/* Results */}
       {loading && <div className="loading">Yuklanmoqda...</div>}
-      
+
       {error && <div className="error-message">{error}</div>}
-      
+
       {!loading && !error && cargos.length === 0 && (
         <div className="empty-state">
-          {vehicleType
-            ? `"${vehicleType}" turi bo\u2019yicha yuk topilmadi. Boshqa turni tanlang yoki filterni tozalang.`
-            : 'Hech qanday yuk topilmadi'}
+          {searchMode === 'simple' && textQuery.trim()
+            ? `"${textQuery}" bo\u2019yicha yuk topilmadi. Boshqa so\u2019z bilan qidirib ko\u2019ring.`
+            : vehicleType
+              ? `"${vehicleType}" turi bo\u2019yicha yuk topilmadi. Boshqa turni tanlang yoki filterni tozalang.`
+              : 'Hech qanday yuk topilmadi'}
         </div>
       )}
-      
+
       {!loading && !error && cargos.length > 0 && (
         <>
           <div className="grid">
             {cargos.map(cargo => (
-              <CargoCard 
-                key={cargo.id} 
+              <CargoCard
+                key={cargo.id}
                 cargo={cargo}
                 showOfferButton={fromDriver}
                 driverId={driverId}

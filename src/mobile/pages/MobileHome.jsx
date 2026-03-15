@@ -1,12 +1,12 @@
 /**
  * Mobile Home Page
- * Content-first cargo feed with collapsed filters
+ * Content-first cargo feed with text search + collapsed advanced filters
  * Pagination matches Desktop SearchPage.jsx pattern exactly
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useStaticData } from '../../context/StaticDataContext';
-import { searchCargos, createHarbinger, getUserMe } from '../../services/api';
+import { searchCargos, textSearchCargos, createHarbinger, getUserMe } from '../../services/api';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
@@ -31,6 +31,10 @@ export default function MobileHome() {
   // Permissions check
   const [permissions, setPermissions] = useState(null);
 
+  // Search mode: 'simple' (text) or 'advanced' (filters)
+  const [searchMode, setSearchMode] = useState(fromDriver ? 'advanced' : 'simple');
+  const [textQuery, setTextQuery] = useState('');
+
   // Filter state - pre-fill from driver filters if available
   const [filters, setFilters] = useState({
     fromCountry: driverFilters.fromCountry?.toString() || '',
@@ -44,6 +48,7 @@ export default function MobileHome() {
     maxWeight: driverFilters.maxWeight?.toString() || '',
   });
   const [activeFilters, setActiveFilters] = useState([]);
+  const [searchTrigger, setSearchTrigger] = useState(0);
 
   // Data state - matches Desktop SearchPage.jsx exactly
   const [cargos, setCargos] = useState([]);
@@ -95,15 +100,15 @@ export default function MobileHome() {
     }
     if (filterObj.toCountry) {
       const country = staticData?.countries?.find((c) => String(c.countryId) === filterObj.toCountry);
-      chips.push({ key: 'toCountry', label: `→ ${country?.name || filterObj.toCountry}` });
+      chips.push({ key: 'toCountry', label: `\u2192 ${country?.name || filterObj.toCountry}` });
     }
     if (filterObj.toRegion) {
       const region = staticData?.regions?.find((r) => String(r.regionId) === filterObj.toRegion || r.code === filterObj.toRegion);
-      chips.push({ key: 'toRegion', label: `→ ${region?.name || filterObj.toRegion}` });
+      chips.push({ key: 'toRegion', label: `\u2192 ${region?.name || filterObj.toRegion}` });
     }
     if (filterObj.toCity) {
       const city = staticData?.cities?.find((c) => String(c.cityId) === filterObj.toCity);
-      chips.push({ key: 'toCity', label: `→ ${city?.name || filterObj.toCity}` });
+      chips.push({ key: 'toCity', label: `\u2192 ${city?.name || filterObj.toCity}` });
     }
     if (filterObj.vehicleType) {
       const vehicle = staticData?.vehicleTypes?.find((v) => v.code === filterObj.vehicleType || v.name === filterObj.vehicleType);
@@ -111,7 +116,7 @@ export default function MobileHome() {
     }
     if (filterObj.minWeight || filterObj.maxWeight) {
       const min = filterObj.minWeight || '0';
-      const max = filterObj.maxWeight || '∞';
+      const max = filterObj.maxWeight || '\u221E';
       chips.push({ key: 'weight', label: `${min}-${max}t` });
     }
     return chips;
@@ -145,23 +150,28 @@ export default function MobileHome() {
     );
   };
 
-  // Load cargos - matches Desktop SearchPage.jsx pattern exactly
+  // Load cargos - branches based on search mode
   const loadCargos = useCallback(async () => {
     setLoading(true);
 
     try {
-      const response = await searchCargos({
-        fromCountry: filters.fromCountry || undefined,
-        fromRegion: filters.fromRegion || undefined,
-        fromCity: filters.fromCity || undefined,
-        toCountry: filters.toCountry || undefined,
-        toRegion: filters.toRegion || undefined,
-        toCity: filters.toCity || undefined,
-        vehicleType: filters.vehicleType || undefined,
-        minWeight: filters.minWeight || undefined,
-        maxWeight: filters.maxWeight || undefined,
-        page,
-      });
+      let response;
+      if (searchMode === 'simple' && textQuery.trim()) {
+        response = await textSearchCargos(textQuery.trim(), page);
+      } else {
+        response = await searchCargos({
+          fromCountry: filters.fromCountry || undefined,
+          fromRegion: filters.fromRegion || undefined,
+          fromCity: filters.fromCity || undefined,
+          toCountry: filters.toCountry || undefined,
+          toRegion: filters.toRegion || undefined,
+          toCity: filters.toCity || undefined,
+          vehicleType: filters.vehicleType || undefined,
+          minWeight: filters.minWeight || undefined,
+          maxWeight: filters.maxWeight || undefined,
+          page,
+        });
+      }
 
       if (response.code === 200) {
         setCargos(response.result || []);
@@ -172,7 +182,7 @@ export default function MobileHome() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, page]);
+  }, [filters, page, searchMode, textQuery]);
 
   // Initial load
   useEffect(() => {
@@ -182,15 +192,39 @@ export default function MobileHome() {
     }
   }, [isInitialLoad, loadCargos]);
 
-  // Pagination - load on page change
+  // Pagination + search trigger — har qanday page o'zgarishda (0 ga qaytganda ham) reload
   useEffect(() => {
-    if (!isInitialLoad && page > 0) {
+    if (!isInitialLoad) {
       loadCargos();
     }
-  }, [page]);
+  }, [page, searchTrigger]);
 
-  // Handle filter apply
+  // Text search handler
+  const handleTextSearch = () => {
+    if (!textQuery.trim() || textQuery.trim().length < 3) return;
+    setSearchMode('simple');
+    setActiveFilters([]);
+    setHasSearched(false);
+    setHarbingerCreatedForCurrentSearch(false);
+    setPage(0);
+    setIsInitialLoad(false);
+    setSearchTrigger((t) => t + 1);
+  };
+
+  // Clear text search — filtrsiz barcha yuklarni ko'rsatish
+  const handleClearTextSearch = () => {
+    setTextQuery('');
+    setSearchMode('simple');
+    setPage(0);
+    setCargos([]);
+    setIsInitialLoad(true);
+  };
+
+  // Handle filter apply from BottomSheet
   const handleApplyFilters = () => {
+    setSearchMode('advanced');
+    setTextQuery('');
+
     const currentSearchKey = buildSearchKey(filters);
     if (currentSearchKey !== searchSnapshotKey) {
       setHarbingerCreatedForCurrentSearch(false);
@@ -201,7 +235,8 @@ export default function MobileHome() {
     setSearchSnapshotKey(currentSearchKey);
     setHasSearched(hasSelectedSearchOptions(filters));
     setPage(0);
-    setIsInitialLoad(true); // Trigger reload via initial load effect
+    setIsInitialLoad(false);
+    setSearchTrigger((t) => t + 1);
   };
 
   // Handle filter reset
@@ -344,7 +379,7 @@ export default function MobileHome() {
       const response = await createHarbinger(harbingerData);
       if (response.code === 200) {
         setHarbingerCreatedForCurrentSearch(true);
-        showSuccess("Tanlangan qidiruv filterlari bo'yicha xabarchi yaratildi");
+        showSuccess("Tanlangan qidiruv filterlari bo\u2019yicha xabarchi yaratildi");
       } else {
         showError(response.message || 'Xabarchi yaratishda xatolik');
       }
@@ -357,16 +392,71 @@ export default function MobileHome() {
 
   return (
     <>
-      <TopBar
-        title="YukBor"
-        rightIcon="🔍"
-        onRightAction={() => setFilterSheetOpen(true)}
-      />
+      <TopBar title="YukBor" />
 
       <main className="m-content">
+        {/* Text search bar */}
+        <div style={{
+          padding: '8px 12px',
+          background: 'var(--m-card-bg)',
+          borderBottom: '1px solid var(--m-border)',
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center',
+        }}>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <input
+              type="text"
+              className="m-form-input"
+              value={textQuery}
+              onChange={(e) => setTextQuery(e.target.value)}
+              placeholder="Qidirish... (masalan: toshkent farg\u2019ona)"
+              onKeyDown={(e) => { if (e.key === 'Enter') handleTextSearch(); }}
+              style={{ width: '100%', margin: 0, paddingRight: textQuery ? '32px' : undefined }}
+            />
+            {textQuery && (
+              <button
+                type="button"
+                onClick={handleClearTextSearch}
+                style={{
+                  position: 'absolute',
+                  right: '6px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  color: '#999',
+                  padding: '2px 4px',
+                  lineHeight: 1,
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <button
+            className="m-btn m-btn-primary"
+            onClick={handleTextSearch}
+            disabled={!textQuery.trim() || textQuery.trim().length < 3 || loading}
+            style={{ padding: '8px 14px', whiteSpace: 'nowrap', fontSize: '13px' }}
+          >
+            🔍
+          </button>
+          <button
+            className="m-btn m-btn-secondary"
+            onClick={() => setFilterSheetOpen(true)}
+            style={{ padding: '8px 12px', whiteSpace: 'nowrap', fontSize: '13px' }}
+            title="Kengaytirilgan qidiruv"
+          >
+            ⚙️
+          </button>
+        </div>
+
         <PullToRefresh onRefresh={handleRefresh} disabled={loading}>
-          {/* Active filter chips */}
-          {activeFilters.length > 0 && (
+          {/* Active filter chips - faqat advanced mode da */}
+          {searchMode === 'advanced' && activeFilters.length > 0 && (
             <div className="m-chips">
               {activeFilters.map((chip) => (
                 <button
@@ -381,6 +471,18 @@ export default function MobileHome() {
             </div>
           )}
 
+          {/* Simple search query chip */}
+          {searchMode === 'simple' && textQuery.trim() && cargos.length > 0 && (
+            <div className="m-chips" style={{ padding: '8px 12px' }}>
+              <span
+                className="m-chip active"
+                style={{ cursor: 'default' }}
+              >
+                🔍 {textQuery}
+              </span>
+            </div>
+          )}
+
           {/* Driver context banner */}
           {fromDriver && driverName && (
             <div style={{ padding: '12px 16px', background: '#d1ecf1', marginBottom: 0, fontSize: 14, color: '#0c5460' }}>
@@ -388,7 +490,8 @@ export default function MobileHome() {
             </div>
           )}
 
-          {hasSearched && (
+          {/* Harbinger card - faqat advanced mode da */}
+          {searchMode === 'advanced' && hasSearched && (
             <div
               className="m-card"
               style={{
@@ -430,13 +533,17 @@ export default function MobileHome() {
               <div className="m-empty-icon">📦</div>
               <h3 className="m-empty-title">Yuklar topilmadi</h3>
               <p className="m-empty-text">
-                {filters.vehicleType
-                  ? `"${filters.vehicleType}" turi bo\u2019yicha yuk topilmadi. Boshqa turni tanlang.`
-                  : 'Filterlarni o\u2019zgartiring yoki keyinroq qaytib keling'}
+                {searchMode === 'simple' && textQuery.trim()
+                  ? `"${textQuery}" bo\u2019yicha yuk topilmadi. Boshqa so\u2019z bilan qidirib ko\u2019ring.`
+                  : filters.vehicleType
+                    ? `"${filters.vehicleType}" turi bo\u2019yicha yuk topilmadi. Boshqa turni tanlang.`
+                    : 'Filterlarni o\u2019zgartiring yoki keyinroq qaytib keling'}
               </p>
-              <button className="m-btn m-btn-primary" onClick={() => setFilterSheetOpen(true)}>
-                Filterlar
-              </button>
+              {searchMode !== 'simple' && (
+                <button className="m-btn m-btn-primary" onClick={() => setFilterSheetOpen(true)}>
+                  Filterlar
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -518,11 +625,11 @@ export default function MobileHome() {
         </PullToRefresh>
       </main>
 
-      {/* Filter Bottom Sheet */}
+      {/* Filter Bottom Sheet (Kengaytirilgan qidiruv) */}
       <BottomSheet
         isOpen={filterSheetOpen}
         onClose={() => setFilterSheetOpen(false)}
-        title="Filterlar"
+        title="Kengaytirilgan qidiruv"
         footer={
           <div style={{ display: 'flex', gap: 12 }}>
             <button

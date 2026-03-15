@@ -273,6 +273,11 @@ export const getUserMe = async () => {
 // SEARCH & BROWSE
 // ============================================
 
+export const textSearchCargos = async (query, page = 0) => {
+  trackSearch('text_search', { query });
+  return cachedGet('/cargos', { query, page }, { skipCache: true });
+};
+
 export const searchCargos = async (filters = {}) => {
   trackSearch('cargo', filters);
   const params = {
