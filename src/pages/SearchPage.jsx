@@ -483,7 +483,7 @@ export default function SearchPage() {
                 className="form-input"
                 value={textQuery}
                 onChange={(e) => setTextQuery(e.target.value)}
-                placeholder="Masalan: toshkent farg&apos;ona tent"
+                placeholder="Masalan: toshkent farg'ona tent"
                 style={{ width: '100%', paddingRight: textQuery ? '36px' : undefined }}
               />
               {textQuery && (

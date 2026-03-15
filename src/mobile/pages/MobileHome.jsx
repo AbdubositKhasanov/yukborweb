@@ -410,7 +410,7 @@ export default function MobileHome() {
               className="m-form-input"
               value={textQuery}
               onChange={(e) => setTextQuery(e.target.value)}
-              placeholder="Qidirish... (masalan: toshkent farg\u2019ona)"
+              placeholder="Qidirish... (masalan: toshkent farg'ona)"
               onKeyDown={(e) => { if (e.key === 'Enter') handleTextSearch(); }}
               style={{ width: '100%', margin: 0, paddingRight: textQuery ? '32px' : undefined }}
             />
