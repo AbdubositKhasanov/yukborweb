@@ -268,6 +268,8 @@ export default function SearchPage() {
     if (mode === 'simple') {
       setTextQuery('');
     }
+    setIsInitialLoad(false);
+    setSearchTrigger((t) => t + 1);
   };
 
   const handleCreateHarbingerFromFilters = async () => {
