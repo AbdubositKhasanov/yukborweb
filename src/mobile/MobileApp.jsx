@@ -10,6 +10,7 @@ import MobileProtectedRoute from './components/MobileProtectedRoute';
 import MobileLoading from './components/MobileLoading';
 import { MobileAuthProvider, useMobileAuth } from './context/MobileAuthContext';
 import { trackPageView } from '../services/analytics';
+import useTelegramBackButton from './hooks/useTelegramBackButton';
 import './styles/mobile.css';
 
 // Lazy load mobile pages
@@ -31,23 +32,30 @@ const MobileMyListings = lazy(() => import('./pages/MobileMyListings'));
 
 // Role-based default page redirect
 function RoleBasedHome() {
-  const { isAuthenticated, userRole } = useMobileAuth();
+  const { isAuthenticated, userRole, loading } = useMobileAuth();
 
   console.log('[RoleBasedHome] isAuthenticated:', isAuthenticated, 'userRole:', userRole);
 
-  // Redirect based on role - MUST match Desktop behavior
-  if (isAuthenticated) {
-    if (userRole === 'driver') {
-      console.log('[RoleBasedHome] Redirecting driver to /mobile/status');
-      return <Navigate to="/mobile/status" replace />;
-    }
-    if (userRole === 'factory') {
-      console.log('[RoleBasedHome] Redirecting factory to /mobile/orders');
-      return <Navigate to="/mobile/orders" replace />;
-    }
+  // Auth hali tekshirilayotgan bo'lsa — loader
+  if (loading) return <MobileLoading fullScreen />;
+
+  // Autentifikatsiya qilinmagan foydalanuvchi — login sahifasiga
+  if (!isAuthenticated) {
+    console.log('[RoleBasedHome] Not authenticated, redirecting to /mobile/login');
+    return <Navigate to="/mobile/login" replace />;
   }
 
-  // Default: show Yuklar (MobileHome)
+  // Redirect based on role - MUST match Desktop behavior
+  if (userRole === 'driver') {
+    console.log('[RoleBasedHome] Redirecting driver to /mobile/status');
+    return <Navigate to="/mobile/status" replace />;
+  }
+  if (userRole === 'factory') {
+    console.log('[RoleBasedHome] Redirecting factory to /mobile/orders');
+    return <Navigate to="/mobile/orders" replace />;
+  }
+
+  // Logist yoki boshqa rollar: Yuklar (MobileHome)
   return <MobileHome />;
 }
 
@@ -55,6 +63,9 @@ function MobileAppContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, userRole, loading } = useMobileAuth();
+
+  // Telegram Mini App back button — navigate(-1) instead of closing app
+  useTelegramBackButton();
 
   // Reset scroll position and track page view when route changes
   useEffect(() => {
@@ -107,7 +118,14 @@ function MobileAppContent() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<RoleBasedHome />} />
-          <Route path="/yuklar" element={<MobileHome />} /> {/* Direct access to Yuklar */}
+          <Route
+            path="/yuklar"
+            element={
+              <MobileProtectedRoute>
+                <MobileHome />
+              </MobileProtectedRoute>
+            }
+          />
           <Route path="/login" element={<MobileLogin />} />
           <Route path="/cargo/:id" element={<MobileCargoDetail />} />
 

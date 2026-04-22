@@ -44,6 +44,9 @@ export default function SearchPage() {
   const [vehicleType, setVehicleType] = useState(initialFilters.vehicleType || '');
   const [minWeight, setMinWeight] = useState('');
   const [maxWeight, setMaxWeight] = useState(initialFilters.maxWeight?.toString() || '');
+  const [cargoOwnerOnly, setCargoOwnerOnly] = useState(
+    localStorage.getItem('cargoOwnerOnly') === 'true'
+  );
 
   useEffect(() => {
     loadUserData();
@@ -122,6 +125,7 @@ export default function SearchPage() {
         vehicleType: vehicleType || undefined,
         minWeight: minWeight || undefined,
         maxWeight: maxWeight || undefined,
+        orderType: cargoOwnerOnly ? 'cargo_owner_only' : undefined,
         page
       };
 
@@ -137,7 +141,7 @@ export default function SearchPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fromCountry, fromRegion, fromCity, toCountry, toRegion, toCity, vehicleType, minWeight, maxWeight, page]);
+  }, [fromCountry, fromRegion, fromCity, toCountry, toRegion, toCity, vehicleType, minWeight, maxWeight, cargoOwnerOnly, page]);
 
   const loadTextSearch = useCallback(async () => {
     if (!textQuery.trim()) return;
@@ -145,7 +149,7 @@ export default function SearchPage() {
     setError(null);
 
     try {
-      const response = await textSearchCargos(textQuery.trim(), page);
+      const response = await textSearchCargos(textQuery.trim(), page, cargoOwnerOnly ? 'cargo_owner_only' : undefined);
       if (response.code === 200) {
         setCargos(response.result || []);
       } else {
@@ -157,7 +161,7 @@ export default function SearchPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [textQuery, page]);
+  }, [textQuery, page, cargoOwnerOnly]);
 
   const buildSearchKey = (searchState) => {
     return JSON.stringify({
@@ -246,6 +250,17 @@ export default function SearchPage() {
     setSearchSnapshotKey('');
     setHarbingerCreatedForCurrentSearch(false);
     setIsInitialLoad(false);
+    setSearchTrigger((t) => t + 1);
+  };
+
+  const handleToggleCargoOwnerOnly = (value) => {
+    setCargoOwnerOnly(value);
+    try {
+      localStorage.setItem('cargoOwnerOnly', value ? 'true' : 'false');
+    } catch (_) {
+      // storage mavjud bo'lmasa — silently o'tkazib yuborish
+    }
+    setPage(0);
     setSearchTrigger((t) => t + 1);
   };
 
@@ -346,6 +361,7 @@ export default function SearchPage() {
         minWeight: Number.isNaN(parsedMinWeight) ? null : parsedMinWeight,
         maxWeight: Number.isNaN(parsedMaxWeight) ? null : parsedMaxWeight,
         vehicleTypeId: selectedVehicleType?.id || null,
+        orderTypePreference: cargoOwnerOnly ? 'cargo_owner_only' : 'any',
       };
 
       const response = await createHarbinger(harbingerData);
@@ -410,6 +426,47 @@ export default function SearchPage() {
           {!refreshing && <span>Yangilash</span>}
         </button>
       </div>
+
+      {/* Login CTA for unauthenticated users */}
+      {!localStorage.getItem('authToken') && (
+        <div style={{
+          background: 'linear-gradient(135deg, #08142c 0%, #1a3a5c 100%)',
+          color: 'white',
+          padding: '20px 24px',
+          borderRadius: '12px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div>
+            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+              YukBor platformasiga xush kelibsiz!
+            </div>
+            <div style={{ fontSize: '13px', opacity: 0.85 }}>
+              E'lon berish va barcha imkoniyatlardan foydalanish uchun tizimga kiring
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/login')}
+            style={{
+              background: 'white',
+              color: '#08142c',
+              border: 'none',
+              padding: '10px 24px',
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '14px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Kirish
+          </button>
+        </div>
+      )}
 
       {/* Search Mode Toggle */}
       <div style={{
@@ -524,6 +581,25 @@ export default function SearchPage() {
               Kamida 3 ta belgi kiriting
             </div>
           )}
+          <div style={{ marginTop: '10px' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                userSelect: 'none',
+                fontSize: '14px',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={cargoOwnerOnly}
+                onChange={(e) => handleToggleCargoOwnerOnly(e.target.checked)}
+              />
+              <span>Faqat yuk egasi buyurtmalari (logistlar yashiriladi)</span>
+            </label>
+          </div>
         </div>
       )}
 
@@ -679,6 +755,25 @@ export default function SearchPage() {
                   placeholder="10000"
                 />
               </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: '8px' }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={cargoOwnerOnly}
+                  onChange={(e) => handleToggleCargoOwnerOnly(e.target.checked)}
+                />
+                <span>Faqat yuk egasi buyurtmalari (logistlar yashiriladi)</span>
+              </label>
             </div>
 
             <div className="btn-group">

@@ -61,6 +61,11 @@ export default function MobileHome() {
   const [creatingHarbinger, setCreatingHarbinger] = useState(false);
   const [harbingerCreatedForCurrentSearch, setHarbingerCreatedForCurrentSearch] = useState(false);
   const [showClubModal, setShowClubModal] = useState(false);
+  const [cargoOwnerOnly, setCargoOwnerOnly] = useState(
+    (() => {
+      try { return localStorage.getItem('cargoOwnerOnly') === 'true'; } catch { return false; }
+    })()
+  );
 
   // UI state
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -156,8 +161,9 @@ export default function MobileHome() {
 
     try {
       let response;
+      const orderTypeParam = cargoOwnerOnly ? 'cargo_owner_only' : undefined;
       if (searchMode === 'simple' && textQuery.trim()) {
-        response = await textSearchCargos(textQuery.trim(), page);
+        response = await textSearchCargos(textQuery.trim(), page, orderTypeParam);
       } else {
         response = await searchCargos({
           fromCountry: filters.fromCountry || undefined,
@@ -169,6 +175,7 @@ export default function MobileHome() {
           vehicleType: filters.vehicleType || undefined,
           minWeight: filters.minWeight || undefined,
           maxWeight: filters.maxWeight || undefined,
+          orderType: orderTypeParam,
           page,
         });
       }
@@ -182,7 +189,7 @@ export default function MobileHome() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, page, searchMode, textQuery]);
+  }, [filters, page, searchMode, textQuery, cargoOwnerOnly]);
 
   // Initial load
   useEffect(() => {
@@ -198,6 +205,18 @@ export default function MobileHome() {
       loadCargos();
     }
   }, [page, searchTrigger]);
+
+  const handleToggleCargoOwnerOnly = (value) => {
+    setCargoOwnerOnly(value);
+    try {
+      localStorage.setItem('cargoOwnerOnly', value ? 'true' : 'false');
+    } catch (_) {
+      // ignore
+    }
+    setPage(0);
+    setIsInitialLoad(false);
+    setSearchTrigger((t) => t + 1);
+  };
 
   // Text search handler
   const handleTextSearch = () => {
@@ -374,6 +393,7 @@ export default function MobileHome() {
         minWeight: Number.isNaN(parsedMinWeight) ? null : parsedMinWeight,
         maxWeight: Number.isNaN(parsedMaxWeight) ? null : parsedMaxWeight,
         vehicleTypeId: selectedVehicleType?.id || null,
+        orderTypePreference: cargoOwnerOnly ? 'cargo_owner_only' : 'any',
       };
 
       const response = await createHarbinger(harbingerData);
@@ -452,6 +472,27 @@ export default function MobileHome() {
           >
             ⚙️
           </button>
+        </div>
+
+        <div style={{ padding: '8px 12px' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              color: 'var(--m-text-secondary)',
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={cargoOwnerOnly}
+              onChange={(e) => handleToggleCargoOwnerOnly(e.target.checked)}
+            />
+            <span>Faqat yuk egasi buyurtmalari</span>
+          </label>
         </div>
 
         <PullToRefresh onRefresh={handleRefresh} disabled={loading}>

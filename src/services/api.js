@@ -273,9 +273,11 @@ export const getUserMe = async () => {
 // SEARCH & BROWSE
 // ============================================
 
-export const textSearchCargos = async (query, page = 0) => {
+export const textSearchCargos = async (query, page = 0, orderType) => {
   trackSearch('text_search', { query });
-  return cachedGet('/cargos', { query, page }, { skipCache: true });
+  const params = { query, page };
+  if (orderType) params.orderType = orderType;
+  return cachedGet('/cargos', params, { skipCache: true });
 };
 
 export const searchCargos = async (filters = {}) => {
@@ -290,6 +292,7 @@ export const searchCargos = async (filters = {}) => {
     ...(filters.vehicleType && { vehicle_type: filters.vehicleType }),
     ...(filters.minWeight && { min_weight: filters.minWeight }),
     ...(filters.maxWeight && { max_weight: filters.maxWeight }),
+    ...(filters.orderType && { orderType: filters.orderType }),
     ...(filters.page !== undefined && { page: filters.page }),
   };
 
@@ -309,6 +312,7 @@ export const searchPlatformCargos = async (filters = {}) => {
     ...(filters.vehicleType && { vehicle_type: filters.vehicleType }),
     ...(filters.minWeight && { min_weight: filters.minWeight }),
     ...(filters.maxWeight && { max_weight: filters.maxWeight }),
+    ...(filters.orderType && { orderType: filters.orderType }),
     ...(filters.page !== undefined && { page: filters.page }),
     source: 'bot',
   };

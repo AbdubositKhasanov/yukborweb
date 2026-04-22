@@ -5,6 +5,7 @@ import { requestCargoPhone, offerForDriver } from '../services/api';
 import ClubMembershipModal from './ClubMembershipModal';
 import OfferToDriverModal from './OfferToDriverModal';
 import PriceInputModal from './PriceInputModal';
+import SenderTypeBadge from './SenderTypeBadge';
 import { formatTimeAgo } from '../utils/formatTime';
 
 export default function CargoCard({
@@ -99,10 +100,11 @@ export default function CargoCard({
   return (
     <>
       <div className="card">
-        <div style={{ marginBottom: '15px' }}>
-          <h3 className="card-title">
+        <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+          <h3 className="card-title" style={{ margin: 0 }}>
             {cargo.cargoName || `${cargo.fromCity || ''} → ${cargo.toCity || ''}`}
           </h3>
+          <SenderTypeBadge senderType={cargo.senderType} />
         </div>
         
         <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.8' }}>

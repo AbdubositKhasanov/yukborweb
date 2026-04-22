@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatTimeAgo } from '../../utils/formatTime';
 import { offerForDriver } from '../../services/api';
 import BottomSheet from './BottomSheet';
+import SenderTypeBadge from '../../components/SenderTypeBadge';
 
 export default function CargoListItem({
   cargo,
@@ -94,9 +95,12 @@ export default function CargoListItem({
     <>
       <div className="m-list-item m-card-tap" onClick={handleClick}>
         <div className="m-list-item-content">
-          <p className="m-list-item-title">
-            {cargo.cargoName || cargo.cargo_name || 'Yuk'}
-            {cargo.weight && ` ${cargo.weight}t`}
+          <p className="m-list-item-title" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span>
+              {cargo.cargoName || cargo.cargo_name || 'Yuk'}
+              {cargo.weight && ` ${cargo.weight}t`}
+            </span>
+            <SenderTypeBadge senderType={cargo.senderType} />
           </p>
           <p className="m-list-item-subtitle">
             {fromLocation} → {toLocation}

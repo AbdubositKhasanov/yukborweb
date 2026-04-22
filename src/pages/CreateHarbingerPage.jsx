@@ -21,6 +21,7 @@ export default function CreateHarbingerPage() {
   const [minWeight, setMinWeight] = useState('');
   const [maxWeight, setMaxWeight] = useState('');
   const [vehicleTypeId, setVehicleTypeId] = useState('');
+  const [orderTypePreference, setOrderTypePreference] = useState('any');
 
   useEffect(() => {
     loadUserData();
@@ -59,6 +60,7 @@ export default function CreateHarbingerPage() {
         minWeight: minWeight ? parseFloat(minWeight) : null,
         maxWeight: maxWeight ? parseFloat(maxWeight) : null,
         vehicleTypeId: vehicleTypeId ? parseInt(vehicleTypeId) : null,
+        orderTypePreference,
       };
 
       const response = await createHarbinger(harbingerData);
@@ -154,6 +156,32 @@ export default function CreateHarbingerPage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Qanday buyurtmalar haqida xabar kelsin?</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '4px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="orderTypePreference"
+                  value="any"
+                  checked={orderTypePreference === 'any'}
+                  onChange={() => setOrderTypePreference('any')}
+                />
+                <span>Barcha buyurtmalar</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="orderTypePreference"
+                  value="cargo_owner_only"
+                  checked={orderTypePreference === 'cargo_owner_only'}
+                  onChange={() => setOrderTypePreference('cargo_owner_only')}
+                />
+                <span>Faqat yuk egasi buyurtmalari (logistlar yashiriladi)</span>
+              </label>
+            </div>
           </div>
 
           {error && <div className="error-message">{error}</div>}
