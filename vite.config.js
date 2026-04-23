@@ -30,7 +30,28 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Yangi service worker darhol chiqariladi va ochiq tab'larni egallaydi
+        // — oddiy refresh'da ham yangi asset'lar ko'rinadi.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        // Navigation (HTML) so'rovlari har doim tarmoqdan olinadi,
+        // shu sababli yangi hashlangan JS nomlarini darhol oladi.
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              networkTimeoutSeconds: 3,
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24,
+              },
+            },
+          },
           {
             urlPattern: /^https:\/\/api\.yukbor\.uz\/.*$/,
             handler: 'NetworkFirst',
