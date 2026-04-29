@@ -29,16 +29,20 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,ico,png,svg}'],
+        // index.html'ni precache'ga qo'shmaymiz — har navigatsiyada NetworkFirst
+        // orqali yangi index.html olinadi va u yangi hashlangan asset nomlariga ishora qiladi.
+        globIgnores: ['**/index.html'],
+        // vite-plugin-pwa default'i `navigateFallback: 'index.html'` —
+        // bu precache-cache-first NavigationRoute generatsiya qilib,
+        // pastdagi NetworkFirst runtime route'ni soya qilib qo'yadi.
+        // Default'ni bekor qilamiz, runtime NetworkFirst navigatsiyani boshqaradi.
+        navigateFallback: null,
         // Yangi service worker darhol chiqariladi va ochiq tab'larni egallaydi
         // — oddiy refresh'da ham yangi asset'lar ko'rinadi.
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
-        // Navigation (HTML) so'rovlari har doim tarmoqdan olinadi,
-        // shu sababli yangi hashlangan JS nomlarini darhol oladi.
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.mode === 'navigate',

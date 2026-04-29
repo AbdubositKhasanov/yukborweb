@@ -12,19 +12,16 @@ import './styles/mobile-responsive.css';
 trackAppOpen();
 trackFirstOpen();
 
-// Register Service Worker for PWA
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then((registration) => {
-        console.log('SW registered:', registration);
-      })
-      .catch((error) => {
-        console.log('SW registration failed:', error);
-      });
-  });
+// Telegram Mini App — to'liq ekranda ochish
+if (window.Telegram?.WebApp) {
+  window.Telegram.WebApp.ready();
+  window.Telegram.WebApp.expand();
 }
+
+// Service Worker registratsiyasi vite-plugin-pwa tomonidan
+// avtomatik qo'shiladigan /registerSW.js skripti orqali boshqariladi
+// (registerType: 'autoUpdate'). Qo'lda register() chaqirmaymiz —
+// aks holda registratsiya ikki marta sodir bo'lib, update flow chalkashadi.
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
