@@ -150,7 +150,14 @@ export default function Navigation({ isAuthenticated, onLogout }) {
 
         {!isAuthenticated && (
           <Link to="/login">
-            <button className="nav-button primary">
+            <button className="nav-button primary" style={{
+              background: 'var(--brand-accent, #4CAF50)',
+              color: 'white',
+              fontWeight: '600',
+              padding: '8px 20px',
+              borderRadius: '6px',
+              animation: 'none'
+            }}>
               Kirish
             </button>
           </Link>

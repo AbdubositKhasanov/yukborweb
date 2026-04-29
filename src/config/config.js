@@ -8,7 +8,7 @@ export const config = {
 };
 
 export const getTelegramLoginUrl = () => {
-  return `tg://resolve?domain=${config.telegramBotUsername}&start=login`;
+  return `https://t.me/${config.telegramBotUsername}?start=login`;
 };
 
 export const getTelegramSupportUrl = () => {

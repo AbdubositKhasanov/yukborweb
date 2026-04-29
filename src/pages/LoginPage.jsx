@@ -20,9 +20,10 @@ export default function LoginPage() {
   }, [navigate]);
 
   const handleTelegramLogin = () => {
-    // Redirect to Telegram bot to get code
+    // Yangi tabda ochish — user sahifani yo'qotmasin
     const telegramUrl = getTelegramLoginUrl();
-    window.location.href = telegramUrl;
+    window.open(telegramUrl, '_blank');
+    setShowCodeInput(true);
   };
 
   const handleCodeSubmit = async (e) => {
@@ -149,7 +150,7 @@ export default function LoginPage() {
                     type="text"
                     className="form-input"
                     value={code}
-                    onChange={(e) => setCode(e.target.value)}
+                    onChange={(e) => { setCode(e.target.value); setError(null); }}
                     placeholder="Masalan: 123456"
                     disabled={loading}
                     autoFocus
@@ -191,22 +192,26 @@ export default function LoginPage() {
                 </div>
               </form>
 
-              <div style={{ 
+              <div style={{
                 marginTop: '20px',
-                padding: '15px',
-                backgroundColor: '#fff3cd',
-                borderRadius: '8px',
-                border: '1px solid #ffc107'
+                textAlign: 'center'
               }}>
-                <p style={{ 
-                  fontSize: '13px', 
-                  color: '#856404',
-                  margin: 0,
-                  lineHeight: '1.5'
-                }}>
-                  ⚠️ Kod olmadingizmi? Yuqoridagi "Ortga" tugmasini bosib, 
-                  avval Telegram botdan kod oling.
-                </p>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleTelegramLogin}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--brand-color)',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    padding: '8px'
+                  }}
+                >
+                  Yangi kod olish
+                </button>
               </div>
             </>
           )}
