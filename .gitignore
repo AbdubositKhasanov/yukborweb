@@ -35,3 +35,6 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code worktrees — sub-task ish katalog'lari, eski parent .git'ga ulangan
+.claude/worktrees/
