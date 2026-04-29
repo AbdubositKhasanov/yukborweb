@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { searchCargos, textSearchCargos, createHarbinger, getUserMe } from '../services/api';
 import { useStaticData } from '../context/StaticDataContext';
 import CargoCard from '../components/CargoCard';
+import CargoOwnerToggle from '../components/CargoOwnerToggle';
 import ClubMembershipModal from '../components/ClubMembershipModal';
 import { showError, showSuccess } from '../utils/toast';
 
@@ -581,24 +582,11 @@ export default function SearchPage() {
               Kamida 3 ta belgi kiriting
             </div>
           )}
-          <div style={{ marginTop: '10px' }}>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                userSelect: 'none',
-                fontSize: '14px',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={cargoOwnerOnly}
-                onChange={(e) => handleToggleCargoOwnerOnly(e.target.checked)}
-              />
-              <span>Faqat yuk egasi buyurtmalari (logistlar yashiriladi)</span>
-            </label>
+          <div style={{ marginTop: '12px' }}>
+            <CargoOwnerToggle
+              checked={cargoOwnerOnly}
+              onChange={handleToggleCargoOwnerOnly}
+            />
           </div>
         </div>
       )}
@@ -757,23 +745,11 @@ export default function SearchPage() {
               </div>
             </div>
 
-            <div className="form-group" style={{ marginTop: '8px' }}>
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={cargoOwnerOnly}
-                  onChange={(e) => handleToggleCargoOwnerOnly(e.target.checked)}
-                />
-                <span>Faqat yuk egasi buyurtmalari (logistlar yashiriladi)</span>
-              </label>
+            <div className="form-group" style={{ marginTop: '12px' }}>
+              <CargoOwnerToggle
+                checked={cargoOwnerOnly}
+                onChange={handleToggleCargoOwnerOnly}
+              />
             </div>
 
             <div className="btn-group">

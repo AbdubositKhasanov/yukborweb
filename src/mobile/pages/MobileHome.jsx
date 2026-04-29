@@ -14,6 +14,7 @@ import CargoListItem from '../components/CargoListItem';
 import { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
 import ClubMembershipModal from '../../components/ClubMembershipModal';
+import CargoOwnerToggle from '../../components/CargoOwnerToggle';
 import { showError, showSuccess } from '../../utils/toast';
 
 export default function MobileHome() {
@@ -474,25 +475,11 @@ export default function MobileHome() {
           </button>
         </div>
 
-        <div style={{ padding: '8px 12px' }}>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px',
-              color: 'var(--m-text-secondary)',
-              cursor: 'pointer',
-              userSelect: 'none',
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={cargoOwnerOnly}
-              onChange={(e) => handleToggleCargoOwnerOnly(e.target.checked)}
-            />
-            <span>Faqat yuk egasi buyurtmalari</span>
-          </label>
+        <div style={{ padding: '10px 12px' }}>
+          <CargoOwnerToggle
+            checked={cargoOwnerOnly}
+            onChange={handleToggleCargoOwnerOnly}
+          />
         </div>
 
         <PullToRefresh onRefresh={handleRefresh} disabled={loading}>
