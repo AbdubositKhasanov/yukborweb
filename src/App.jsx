@@ -26,6 +26,8 @@ const DriverStatusPage = lazy(() => import('./pages/DriverStatusPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const PlatformLoadsPage = lazy(() => import('./pages/PlatformLoadsPage'));
 const UserbotManagementPage = lazy(() => import('./pages/UserbotManagementPage'));
+const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
+const AdminDriverDetailPage = lazy(() => import('./pages/AdminDriverDetailPage'));
 
 function AppContent() {
   const [authToken, setAuthToken] = useState(null);
@@ -176,6 +178,22 @@ function AppContent() {
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
                 <UserbotManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/drivers"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <AdminDriversPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/drivers/:id"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <AdminDriverDetailPage />
               </ProtectedRoute>
             }
           />

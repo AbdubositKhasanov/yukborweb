@@ -88,7 +88,11 @@ export default function Navigation({ isAuthenticated, onLogout }) {
 
     // Add admin tab for admins
     if (isAdmin) {
-      tabs = [...tabs, { path: '/admin/userbots', label: 'Userbotlar', auth: true }];
+      tabs = [
+        ...tabs,
+        { path: '/admin/drivers', label: 'Haydovchilar', auth: true },
+        { path: '/admin/userbots', label: 'Userbotlar', auth: true },
+      ];
     }
 
     return tabs;

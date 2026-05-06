@@ -758,6 +758,62 @@ export const getUserbotHealth = async () => {
 };
 
 // ============================================
+// ADMIN: DRIVERS
+// ============================================
+
+export const adminCreateDriver = async ({ phone, name, language = 'uz' }) => {
+  const response = await apiClient.post('/admin/drivers', { phone, name, language });
+  return response.data;
+};
+
+export const adminListDrivers = async (params = {}) => {
+  const queryParams = {};
+  if (params.filter && params.filter !== 'all') queryParams.filter = params.filter;
+  if (params.phone) queryParams.phone = params.phone;
+  if (params.name) queryParams.name = params.name;
+  if (params.onlyMine) queryParams.onlyMine = 'true';
+  const response = await apiClient.get('/admin/drivers', { params: queryParams });
+  return response.data;
+};
+
+export const adminGetDriver = async (id) => {
+  const response = await apiClient.get(`/admin/drivers/${id}`);
+  return response.data;
+};
+
+export const adminDeleteDriver = async (id) => {
+  const response = await apiClient.delete(`/admin/drivers/${id}`);
+  return response.data;
+};
+
+export const adminCreateHarbingerForDriver = async (driverId, harbinger) => {
+  const response = await apiClient.post(`/admin/drivers/${driverId}/harbingers`, harbinger);
+  return response.data;
+};
+
+export const adminCreateTransportForDriver = async (driverId, transport) => {
+  const response = await apiClient.post(`/admin/drivers/${driverId}/transports`, transport);
+  return response.data;
+};
+
+export const adminGetDriverOffers = async (driverId) => {
+  const response = await apiClient.get(`/admin/drivers/${driverId}/offers`);
+  return response.data;
+};
+
+export const adminGetOrderOffers = async (orderId) => {
+  const response = await apiClient.get(`/admin/orders/${orderId}/offers`);
+  return response.data;
+};
+
+export const adminAcceptOrderForDriver = async (orderId, driverId) => {
+  const response = await apiClient.post(`/admin/orders/${orderId}/accept`, null, {
+    params: { driverId },
+  });
+  return response.data;
+};
+
+// ============================================
 // UTILITY
 // ============================================
 
