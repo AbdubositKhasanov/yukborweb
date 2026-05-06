@@ -230,6 +230,17 @@ export default function MobileProfile() {
                 </button>
               </div>
 
+              {/* Admin tools */}
+              {user?.isAdmin && (
+                <button
+                  className="m-btn m-btn-secondary m-btn-full"
+                  onClick={() => navigate('/mobile/admin/users')}
+                  style={{ marginTop: 16 }}
+                >
+                  🛠 Admin: foydalanuvchilar
+                </button>
+              )}
+
               {/* Logout */}
               <button
                 className="m-btn m-btn-ghost m-btn-full"

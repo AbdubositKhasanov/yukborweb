@@ -90,7 +90,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
     if (isAdmin) {
       tabs = [
         ...tabs,
-        { path: '/admin/drivers', label: 'Haydovchilar', auth: true },
+        { path: '/admin/users', label: 'Foydalanuvchilar', auth: true },
         { path: '/admin/userbots', label: 'Userbotlar', auth: true },
       ];
     }

@@ -772,7 +772,29 @@ export const adminListDrivers = async (params = {}) => {
   if (params.phone) queryParams.phone = params.phone;
   if (params.name) queryParams.name = params.name;
   if (params.onlyMine) queryParams.onlyMine = 'true';
+  if (params.role) queryParams.role = params.role;
   const response = await apiClient.get('/admin/drivers', { params: queryParams });
+  return response.data;
+};
+
+export const adminListUsers = async (params = {}) => {
+  const queryParams = {};
+  if (params.filter && params.filter !== 'all') queryParams.filter = params.filter;
+  if (params.phone) queryParams.phone = params.phone;
+  if (params.name) queryParams.name = params.name;
+  if (params.onlyMine) queryParams.onlyMine = 'true';
+  queryParams.role = params.role || 'any';
+  const response = await apiClient.get('/admin/users', { params: queryParams });
+  return response.data;
+};
+
+export const adminUpdateUser = async (id, payload) => {
+  const response = await apiClient.put(`/admin/users/${id}`, payload);
+  return response.data;
+};
+
+export const adminUpdateUserRole = async (id, type) => {
+  const response = await apiClient.put(`/admin/users/${id}/role`, { type });
   return response.data;
 };
 

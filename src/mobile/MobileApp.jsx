@@ -30,6 +30,10 @@ const MobileMyTransports = lazy(() => import('./pages/MobileMyTransports'));
 const MobileCreateTransport = lazy(() => import('./pages/MobileCreateTransport'));
 const MobileMyListings = lazy(() => import('./pages/MobileMyListings'));
 
+// Admin pages (shared between desktop and mobile — responsive components)
+const AdminUsersPage = lazy(() => import('../pages/AdminDriversPage'));
+const AdminUserDetailPage = lazy(() => import('../pages/AdminDriverDetailPage'));
+
 // Role-based default page redirect
 function RoleBasedHome() {
   const { isAuthenticated, userRole, loading } = useMobileAuth();
@@ -223,6 +227,32 @@ function MobileAppContent() {
             element={
               <MobileProtectedRoute>
                 <MobileProfile />
+              </MobileProtectedRoute>
+            }
+          />
+
+          {/* Admin Routes (mobile-responsive desktop pages) */}
+          <Route
+            path="/admin/users"
+            element={
+              <MobileProtectedRoute>
+                <AdminUsersPage defaultRole="any" mobile />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/drivers"
+            element={
+              <MobileProtectedRoute>
+                <AdminUsersPage defaultRole="driver" mobile />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users/:id"
+            element={
+              <MobileProtectedRoute>
+                <AdminUserDetailPage mobile />
               </MobileProtectedRoute>
             }
           />

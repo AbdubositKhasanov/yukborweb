@@ -7,10 +7,26 @@ import {
   adminCreateTransportForDriver,
   adminDeleteDriver,
   adminAcceptOrderForDriver,
+  adminUpdateUser,
+  adminUpdateUserRole,
   getLocationsAndVehicles,
   getUserMe,
 } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
+
+const ROLE_OPTIONS = [
+  { value: 'driver', label: 'Haydovchi' },
+  { value: 'logist', label: 'Logist' },
+  { value: 'factory', label: 'Yuk egasi' },
+  { value: 'not_selected', label: 'Tanlanmagan' },
+];
+
+const ROLE_LABELS_DETAIL = {
+  driver: 'Haydovchi',
+  logist: 'Logist',
+  factory: 'Yuk egasi',
+  not_selected: 'Tanlanmagan',
+};
 
 function fmtDate(ts) {
   if (!ts) return '—';
@@ -30,7 +46,7 @@ function stateLabel(state) {
   }
 }
 
-export default function AdminDriverDetailPage() {
+export default function AdminDriverDetailPage({ mobile = false }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [driver, setDriver] = useState(null);
@@ -42,6 +58,10 @@ export default function AdminDriverDetailPage() {
 
   const [showHarbingerModal, setShowHarbingerModal] = useState(false);
   const [showTransportModal, setShowTransportModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [savingRole, setSavingRole] = useState(false);
+
+  const backPath = mobile ? '/mobile/admin/users' : '/admin/drivers';
 
   useEffect(() => {
     (async () => {
@@ -95,15 +115,34 @@ export default function AdminDriverDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Bu haydovchini o'chirishga ishonchingiz komilmi?")) return;
+    if (!confirm("Bu foydalanuvchini o'chirishga ishonchingiz komilmi?")) return;
     try {
       const r = await adminDeleteDriver(id);
       if (r.code === 200 && r.result) {
         showSuccess("O'chirildi");
-        navigate('/admin/drivers');
+        navigate(backPath);
       }
     } catch (e) {
       showError(e.response?.data?.message || e.message || 'Xatolik');
+    }
+  };
+
+  const handleChangeRole = async (newRole) => {
+    if (!driver || newRole === driver.type) return;
+    if (!confirm(`Rolni "${ROLE_LABELS_DETAIL[newRole] || newRole}" ga o'zgartirasizmi?`)) return;
+    setSavingRole(true);
+    try {
+      const r = await adminUpdateUserRole(id, newRole);
+      if (r.code === 200) {
+        showSuccess("Rol o'zgartirildi");
+        loadAll();
+      } else {
+        showError(r.message || 'Xatolik');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Xatolik');
+    } finally {
+      setSavingRole(false);
     }
   };
 
@@ -135,7 +174,7 @@ export default function AdminDriverDetailPage() {
 
   return (
     <div style={pageStyle}>
-      <button onClick={() => navigate('/admin/drivers')} style={backBtnStyle}>
+      <button onClick={() => navigate(backPath)} style={backBtnStyle}>
         ← Orqaga
       </button>
 
@@ -150,12 +189,40 @@ export default function AdminDriverDetailPage() {
               </a>
             )}
           </div>
-          <div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
             {driver.isLinked ? (
               <span style={badge('#1ba353')}>✓ Botga ulangan</span>
             ) : (
               <span style={badge('#cc8800')}>⏳ Hali ulanmagan</span>
             )}
+            <button onClick={() => setShowEditModal(true)} style={{ ...smallBtnStyle, fontSize: 12 }}>
+              ✏️ Tahrirlash
+            </button>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 12, padding: 10, background: '#f5f5f5', borderRadius: 6 }}>
+          <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Rol:</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {ROLE_OPTIONS.map((r) => (
+              <button
+                key={r.value}
+                onClick={() => handleChangeRole(r.value)}
+                disabled={savingRole}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 16,
+                  border: '1px solid #ccc',
+                  cursor: savingRole ? 'wait' : 'pointer',
+                  fontSize: 13,
+                  background: driver.type === r.value ? '#1976d2' : '#fff',
+                  color: driver.type === r.value ? '#fff' : '#333',
+                  borderColor: driver.type === r.value ? '#1976d2' : '#ccc',
+                }}
+              >
+                {r.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -277,6 +344,17 @@ export default function AdminDriverDetailPage() {
         </button>
       </div>
 
+      {showEditModal && (
+        <EditUserModal
+          driver={driver}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            setShowEditModal(false);
+            loadAll();
+          }}
+        />
+      )}
+
       {showHarbingerModal && (
         <HarbingerModal
           driverId={id}
@@ -378,18 +456,18 @@ function HarbingerModal({ driverId, staticData, onClose, onSuccess }) {
             <legend>Qayerdan</legend>
             <select value={fromCountry} onChange={(e) => { setFromCountry(e.target.value); setFromRegion(''); setFromCity(''); }} style={selectStyle}>
               <option value="">Mamlakat (ixtiyoriy)</option>
-              {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {countries.map((c) => <option key={c.countryId} value={c.countryId}>{c.name}</option>)}
             </select>
             {fromCountry && (
               <select value={fromRegion} onChange={(e) => { setFromRegion(e.target.value); setFromCity(''); }} style={selectStyle}>
                 <option value="">Viloyat (ixtiyoriy)</option>
-                {regions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                {regions.map((r) => <option key={r.regionId} value={r.regionId}>{r.name}</option>)}
               </select>
             )}
             {fromRegion && (
               <select value={fromCity} onChange={(e) => setFromCity(e.target.value)} style={selectStyle}>
                 <option value="">Shahar (ixtiyoriy)</option>
-                {cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {cities.map((c) => <option key={c.cityId} value={c.cityId}>{c.name}</option>)}
               </select>
             )}
           </fieldset>
@@ -398,18 +476,18 @@ function HarbingerModal({ driverId, staticData, onClose, onSuccess }) {
             <legend>Qayerga</legend>
             <select value={toCountry} onChange={(e) => { setToCountry(e.target.value); setToRegion(''); setToCity(''); }} style={selectStyle}>
               <option value="">Mamlakat (ixtiyoriy)</option>
-              {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {countries.map((c) => <option key={c.countryId} value={c.countryId}>{c.name}</option>)}
             </select>
             {toCountry && (
               <select value={toRegion} onChange={(e) => { setToRegion(e.target.value); setToCity(''); }} style={selectStyle}>
                 <option value="">Viloyat (ixtiyoriy)</option>
-                {toRegions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                {toRegions.map((r) => <option key={r.regionId} value={r.regionId}>{r.name}</option>)}
               </select>
             )}
             {toRegion && (
               <select value={toCity} onChange={(e) => setToCity(e.target.value)} style={selectStyle}>
                 <option value="">Shahar (ixtiyoriy)</option>
-                {toCities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {toCities.map((c) => <option key={c.cityId} value={c.cityId}>{c.name}</option>)}
               </select>
             )}
           </fieldset>
@@ -514,18 +592,18 @@ function TransportModal({ driverId, driver, staticData, onClose, onSuccess }) {
             <legend>Asosiy joylashuv</legend>
             <select value={fromCountry} onChange={(e) => { setFromCountry(e.target.value); setFromRegion(''); setFromCity(''); }} style={selectStyle} required>
               <option value="">Mamlakat tanlang</option>
-              {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {countries.map((c) => <option key={c.countryId} value={c.countryId}>{c.name}</option>)}
             </select>
             {fromCountry && (
               <select value={fromRegion} onChange={(e) => { setFromRegion(e.target.value); setFromCity(''); }} style={selectStyle}>
                 <option value="">Viloyat (ixtiyoriy)</option>
-                {regions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                {regions.map((r) => <option key={r.regionId} value={r.regionId}>{r.name}</option>)}
               </select>
             )}
             {fromRegion && (
               <select value={fromCity} onChange={(e) => setFromCity(e.target.value)} style={selectStyle}>
                 <option value="">Shahar (ixtiyoriy)</option>
-                {cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {cities.map((c) => <option key={c.cityId} value={c.cityId}>{c.name}</option>)}
               </select>
             )}
           </fieldset>
@@ -550,6 +628,75 @@ function TransportModal({ driverId, driver, staticData, onClose, onSuccess }) {
             <input type="tel" value={additionalContact} onChange={(e) => setAdditionalContact(e.target.value)} style={inputStyle} placeholder="+998..." />
           </label>
 
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button type="button" onClick={onClose} style={secondaryBtnStyle} disabled={saving}>
+              Bekor qilish
+            </button>
+            <button type="submit" style={primaryBtnStyle} disabled={saving}>
+              {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditUserModal({ driver, onClose, onSuccess }) {
+  const [name, setName] = useState(driver?.name || '');
+  const [phone, setPhone] = useState(driver?.phone ? `+${driver.phone}` : '');
+  const [language, setLanguage] = useState(driver?.language || 'uz');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const r = await adminUpdateUser(driver.id, { name, phone, language });
+      if (r.code === 200) {
+        showSuccess("Saqlandi");
+        onSuccess();
+      } else {
+        showError(r.message || 'Xatolik');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Xatolik');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      style={modalOverlayStyle}
+      role="presentation"
+      onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+    >
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
+      <div
+        style={modalContentStyle}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 style={{ marginTop: 0 }}>{"Foydalanuvchini tahrirlash"}</h3>
+        <form onSubmit={handleSubmit}>
+          <label style={labelStyle}>
+            Ism
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} required />
+          </label>
+          <label style={labelStyle}>
+            Telefon
+            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} required />
+          </label>
+          <label style={labelStyle}>
+            Til
+            <select value={language} onChange={(e) => setLanguage(e.target.value)} style={selectStyle}>
+              <option value="uz">{"O'zbekcha"}</option>
+              <option value="ru">{"Русский"}</option>
+            </select>
+          </label>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button type="button" onClick={onClose} style={secondaryBtnStyle} disabled={saving}>
               Bekor qilish

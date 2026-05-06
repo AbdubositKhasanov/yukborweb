@@ -185,12 +185,28 @@ function AppContent() {
             path="/admin/drivers"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
-                <AdminDriversPage />
+                <AdminDriversPage defaultRole="driver" />
               </ProtectedRoute>
             }
           />
           <Route
             path="/admin/drivers/:id"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <AdminDriverDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <AdminDriversPage defaultRole="any" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users/:id"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
                 <AdminDriverDetailPage />

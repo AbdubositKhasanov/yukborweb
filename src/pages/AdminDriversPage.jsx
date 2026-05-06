@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  adminListDrivers,
+  adminListUsers,
   adminCreateDriver,
   getUserMe,
 } from '../services/api';
@@ -15,6 +15,21 @@ const FILTERS = [
   { key: 'no_views', label: "Ko'rmagan" },
   { key: 'no_accepts', label: 'Qabul qilmagan' },
 ];
+
+const ROLE_FILTERS = [
+  { key: 'any', label: 'Hammasi' },
+  { key: 'driver', label: 'Haydovchilar' },
+  { key: 'logist', label: 'Logistlar' },
+  { key: 'factory', label: 'Yuk egalari' },
+  { key: 'not_selected', label: 'Tanlanmagan' },
+];
+
+const ROLE_LABELS = {
+  driver: 'Haydovchi',
+  logist: 'Logist',
+  factory: 'Yuk egasi',
+  not_selected: 'Tanlanmagan',
+};
 
 function formatRelativeTime(timestamp) {
   if (!timestamp) return '—';
@@ -30,8 +45,11 @@ function formatRelativeTime(timestamp) {
   return new Date(timestamp).toLocaleDateString('uz-UZ');
 }
 
-export default function AdminDriversPage() {
+export default function AdminDriversPage({ defaultRole = 'driver', mobile = false }) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialRole = searchParams.get('role') || defaultRole;
+  const [role, setRole] = useState(initialRole);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -43,6 +61,7 @@ export default function AdminDriversPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createPhone, setCreatePhone] = useState('');
   const [createName, setCreateName] = useState('');
+  const [createRole, setCreateRole] = useState('driver');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -63,13 +82,13 @@ export default function AdminDriversPage() {
   const loadDrivers = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { filter, onlyMine };
+      const params = { filter, onlyMine, role };
       const trimmed = search.trim();
       if (trimmed) {
         if (/[0-9+]/.test(trimmed)) params.phone = trimmed;
         else params.name = trimmed;
       }
-      const resp = await adminListDrivers(params);
+      const resp = await adminListUsers(params);
       if (resp.code === 200) {
         setDrivers(resp.result || []);
       } else {
@@ -80,11 +99,19 @@ export default function AdminDriversPage() {
     } finally {
       setLoading(false);
     }
-  }, [filter, search, onlyMine]);
+  }, [filter, search, onlyMine, role]);
 
   useEffect(() => {
     if (isAdmin) loadDrivers();
   }, [isAdmin, loadDrivers]);
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (role && role !== defaultRole) next.set('role', role);
+    else next.delete('role');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -99,11 +126,16 @@ export default function AdminDriversPage() {
         name: createName.trim(),
       });
       if (resp.code === 200 && resp.result) {
-        showSuccess("Haydovchi yaratildi");
+        if (createRole && createRole !== 'driver') {
+          await import('../services/api').then((m) => m.adminUpdateUserRole(resp.result.id, createRole));
+        }
+        showSuccess("Foydalanuvchi yaratildi");
         setShowCreateModal(false);
         setCreatePhone('');
         setCreateName('');
-        navigate(`/admin/drivers/${resp.result.id}`);
+        setCreateRole('driver');
+        const detailPath = mobile ? `/mobile/admin/users/${resp.result.id}` : `/admin/drivers/${resp.result.id}`;
+        navigate(detailPath);
       } else {
         showError(resp.message || 'Yaratishda xatolik');
       }
@@ -128,13 +160,31 @@ export default function AdminDriversPage() {
   return (
     <div style={pageStyle}>
       <div style={headerStyle}>
-        <h2 style={{ margin: 0, fontSize: 22 }}>Haydovchilarni boshqarish</h2>
+        <h2 style={{ margin: 0, fontSize: 22 }}>
+          {role === 'driver' ? 'Haydovchilar' : 'Foydalanuvchilar'}
+        </h2>
         <button
           onClick={() => setShowCreateModal(true)}
           style={primaryBtnStyle}
         >
-          + Yangi haydovchi
+          + Yangi foydalanuvchi
         </button>
+      </div>
+
+      <div style={filtersRowStyle}>
+        <span style={{ fontSize: 12, color: '#888', alignSelf: 'center', marginRight: 4 }}>Rol:</span>
+        {ROLE_FILTERS.map((rf) => (
+          <button
+            key={rf.key}
+            onClick={() => setRole(rf.key)}
+            style={{
+              ...chipStyle,
+              ...(role === rf.key ? activeChipStyle : {}),
+            }}
+          >
+            {rf.label}
+          </button>
+        ))}
       </div>
 
       <div style={controlsStyle}>
@@ -179,7 +229,11 @@ export default function AdminDriversPage() {
       ) : (
         <div style={listStyle}>
           {drivers.map((d) => (
-            <DriverCard key={d.id} driver={d} onClick={() => navigate(`/admin/drivers/${d.id}`)} />
+            <DriverCard
+              key={d.id}
+              driver={d}
+              onClick={() => navigate(mobile ? `/mobile/admin/users/${d.id}` : `/admin/drivers/${d.id}`)}
+            />
           ))}
         </div>
       )}
@@ -198,7 +252,7 @@ export default function AdminDriversPage() {
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginTop: 0 }}>Yangi haydovchi</h3>
+            <h3 style={{ marginTop: 0 }}>Yangi foydalanuvchi</h3>
             <form onSubmit={handleCreate}>
               <label style={labelStyle}>
                 Ism
@@ -221,6 +275,19 @@ export default function AdminDriversPage() {
                   placeholder="+998901234567"
                   required
                 />
+              </label>
+              <label style={labelStyle}>
+                Rol
+                <select
+                  value={createRole}
+                  onChange={(e) => setCreateRole(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="driver">Haydovchi</option>
+                  <option value="logist">Logist</option>
+                  <option value="factory">Yuk egasi</option>
+                  <option value="not_selected">Tanlanmagan</option>
+                </select>
               </label>
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 <button
@@ -246,6 +313,7 @@ export default function AdminDriversPage() {
 function DriverCard({ driver, onClick }) {
   const s = driver.stats || {};
   const acceptanceRate = s.sent > 0 ? Math.round((s.accepted / s.sent) * 100) : 0;
+  const userRole = driver.type || 'not_selected';
   return (
     <button type="button" style={cardBtnStyle} onClick={onClick}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
@@ -258,7 +326,8 @@ function DriverCard({ driver, onClick }) {
             <div style={{ color: '#0088cc', fontSize: 13 }}>@{driver.telegramUsername}</div>
           )}
         </div>
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+          <span style={badgeStyle(roleColor(userRole))}>{ROLE_LABELS[userRole] || userRole}</span>
           {driver.isLinked ? (
             <span style={badgeStyle('#1ba353')}>✓ Ulangan</span>
           ) : (
@@ -278,6 +347,15 @@ function DriverCard({ driver, onClick }) {
       </div>
     </button>
   );
+}
+
+function roleColor(role) {
+  switch (role) {
+    case 'driver': return '#1976d2';
+    case 'logist': return '#7b1fa2';
+    case 'factory': return '#558b2f';
+    default: return '#888';
+  }
 }
 
 function Stat({ label, value, highlight }) {
