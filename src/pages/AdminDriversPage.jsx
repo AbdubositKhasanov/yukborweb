@@ -58,6 +58,8 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [totalIsExact, setTotalIsExact] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -119,6 +121,8 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
         const items = result.items || [];
         setDrivers((prev) => (append ? [...prev, ...items] : items));
         setHasMore(result.hasMore === true);
+        setTotal(typeof result.total === 'number' ? result.total : items.length);
+        setTotalIsExact(result.totalIsExact !== false);
         setPage(pageNum);
       } else {
         showError(resp.message || 'Yuklashda xatolik');
@@ -208,9 +212,16 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
   return (
     <div style={pageStyle}>
       <div style={headerStyle}>
-        <h2 style={{ margin: 0, fontSize: 22 }}>
-          {role === 'driver' ? 'Haydovchilar' : 'Foydalanuvchilar'}
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+          <h2 style={{ margin: 0, fontSize: 22 }}>
+            {role === 'driver' ? 'Haydovchilar' : 'Foydalanuvchilar'}
+          </h2>
+          {!loading && (
+            <span style={{ fontSize: 14, color: '#666' }}>
+              {totalIsExact ? `${total} ta` : `${total}+ ta`} natija
+            </span>
+          )}
+        </div>
         <button
           onClick={() => setShowCreateModal(true)}
           style={primaryBtnStyle}

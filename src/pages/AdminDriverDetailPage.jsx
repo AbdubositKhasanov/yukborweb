@@ -307,25 +307,58 @@ export default function AdminDriverDetailPage({ mobile = false }) {
         {offers.length === 0 ? (
           <div style={{ color: '#888' }}>Hozircha hech qanday taklif yuborilmagan.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {offers.map((o) => {
               const lbl = stateLabel(o.state);
+              const ord = o.order;
               return (
                 <div key={o.id} style={offerRowStyle}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'monospace', fontSize: 12, color: '#666' }}>
-                      Order: {o.orderId.substring(0, 8)}…
-                    </div>
-                    <div style={{ fontSize: 13 }}>
+                    {/* Order ma'lumoti yoki "o'chib ketgan" */}
+                    {o.orderDeleted ? (
+                      <div style={{ color: '#999', fontSize: 13, fontStyle: 'italic' }}>
+                        🗑 Buyurtma o&apos;chib ketgan (48+ soat)
+                      </div>
+                    ) : ord ? (
+                      <div style={{ fontSize: 14, marginBottom: 6 }}>
+                        <div style={{ fontWeight: 600 }}>
+                          🛣 {ord.loc1 || '—'} → {ord.loc2 || '—'}
+                        </div>
+                        <div style={{ color: '#555', fontSize: 13 }}>
+                          {ord.weightKg ? `⚖️ ${ord.weightKg} ${ord.weightUnit || 't'} · ` : ''}
+                          {ord.vehicleType ? `🚛 ${ord.vehicleType} · ` : ''}
+                          {ord.priceUzs ? `💰 ${ord.priceUzs.toLocaleString('ru-RU')} so'm · ` : ''}
+                          {ord.ownerPhone ? `📞 +${ord.ownerPhone}` : ''}
+                        </div>
+                        {ord.otherDesc && (
+                          <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
+                            ℹ️ {ord.otherDesc}
+                          </div>
+                        )}
+                        {ord.status && ord.status !== 'new' && (
+                          <div style={{ fontSize: 12, marginTop: 2 }}>
+                            <span style={badge(ord.status === 'appointed' ? '#1ba353' : '#888')}>
+                              {ord.status === 'appointed' ? '✅ Biriktirilgan' : ord.status}
+                            </span>
+                            {ord.driverPhone && ord.driverId !== driver.chatId.toLong && (
+                              <span style={{ color: '#888', marginLeft: 6 }}>
+                                ({ord.driverId === parseInt(driver.chatId) ? 'Shu haydovchi' : `boshqa: +${ord.driverPhone}`})
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                    <div style={{ fontSize: 12, color: '#888' }}>
                       Yuborilgan: {fmtDate(o.sentAt)}
                       {o.viewedAt ? ` · Ko'rgan: ${fmtDate(o.viewedAt)}` : ''}
-                      {o.acceptedAt ? ` · Qabul: ${fmtDate(o.acceptedAt)}${o.acceptedByAdmin ? ' (admin qo\'lda)' : ''}` : ''}
+                      {o.acceptedAt ? ` · Qabul: ${fmtDate(o.acceptedAt)}${o.acceptedByAdmin ? " (admin qo'lda)" : ''}` : ''}
                       {o.rejectedAt ? ` · Rad: ${fmtDate(o.rejectedAt)}` : ''}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
                     <span style={badge(lbl.color)}>{lbl.label}</span>
-                    {o.state !== 'accepted' && o.state !== 'rejected' && (
+                    {!o.orderDeleted && o.state !== 'accepted' && o.state !== 'rejected' && (
                       <button onClick={() => handleManualAccept(o.orderId)} style={tinyBtnStyle}>
                         {"Qo'lda qabul qildirish"}
                       </button>
