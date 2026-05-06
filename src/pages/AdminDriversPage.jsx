@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
 import {
   adminListUsers,
   adminCreateDriver,
   getUserMe,
 } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
+
+const PAGE_SIZE = 20;
 
 const FILTERS = [
   { key: 'all', label: 'Hammasi' },
@@ -52,11 +55,17 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
   const [role, setRole] = useState(initialRole);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [page, setPage] = useState(0);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [onlyMine, setOnlyMine] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+
+  const abortRef = useRef(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createPhone, setCreatePhone] = useState('');
@@ -79,31 +88,63 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
     })();
   }, []);
 
-  const loadDrivers = useCallback(async () => {
-    setLoading(true);
+  const loadPage = useCallback(async (pageNum, append) => {
+    // Avvalgi so'rovni bekor qilish
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    if (append) setLoadingMore(true); else setLoading(true);
+
     try {
-      const params = { filter, onlyMine, role };
-      const trimmed = search.trim();
+      const params = {
+        filter,
+        onlyMine,
+        role,
+        page: pageNum,
+        size: PAGE_SIZE,
+      };
+      const trimmed = debouncedSearch.trim();
       if (trimmed) {
         if (/[0-9+]/.test(trimmed)) params.phone = trimmed;
         else params.name = trimmed;
       }
-      const resp = await adminListUsers(params);
+      const resp = await adminListUsers(params, controller.signal);
+      // Bu so'rov bekor qilingan bo'lsa, response'ni tashlab yuboramiz
+      if (controller.signal.aborted) return;
       if (resp.code === 200) {
-        setDrivers(resp.result || []);
+        const result = resp.result || {};
+        const items = result.items || [];
+        setDrivers((prev) => (append ? [...prev, ...items] : items));
+        setHasMore(result.hasMore === true);
+        setPage(pageNum);
       } else {
         showError(resp.message || 'Yuklashda xatolik');
       }
     } catch (e) {
+      // Bekor qilingan so'rovlar — sukut
+      if (axios.isCancel(e) || e.code === 'ERR_CANCELED' || e.name === 'CanceledError') return;
       showError(e.response?.data?.message || e.message || 'Xatolik');
     } finally {
-      setLoading(false);
+      if (controller === abortRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
-  }, [filter, search, onlyMine, role]);
+  }, [filter, debouncedSearch, onlyMine, role]);
 
+  // Filter o'zgarganda 0-page'dan boshlab yuklaymiz
   useEffect(() => {
-    if (isAdmin) loadDrivers();
-  }, [isAdmin, loadDrivers]);
+    if (isAdmin) loadPage(0, false);
+  }, [isAdmin, loadPage]);
+
+  // Search debounce — har keystroke'da so'rov yubormaslik uchun
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
@@ -112,6 +153,13 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
+
+  // Sahifa unmount bo'lganda ham so'rovni bekor qilamiz
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) loadPage(page + 1, true);
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -227,15 +275,28 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
           Hozircha haydovchilar topilmadi.
         </div>
       ) : (
-        <div style={listStyle}>
-          {drivers.map((d) => (
-            <DriverCard
-              key={d.id}
-              driver={d}
-              onClick={() => navigate(mobile ? `/mobile/admin/users/${d.id}` : `/admin/drivers/${d.id}`)}
-            />
-          ))}
-        </div>
+        <>
+          <div style={listStyle}>
+            {drivers.map((d) => (
+              <DriverCard
+                key={d.id}
+                driver={d}
+                onClick={() => navigate(mobile ? `/mobile/admin/users/${d.id}` : `/admin/drivers/${d.id}`)}
+              />
+            ))}
+          </div>
+          {hasMore && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                style={{ ...primaryBtnStyle, opacity: loadingMore ? 0.7 : 1 }}
+              >
+                {loadingMore ? 'Yuklanmoqda...' : 'Yana yuklash'}
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {showCreateModal && (

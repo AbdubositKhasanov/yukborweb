@@ -128,6 +128,10 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Cancel qilingan so'rovlarda toast ko'rsatmaymiz
+    if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
+      return Promise.reject(error);
+    }
     // Handle specific error cases
     if (error.response) {
       const { status, data } = error.response;
@@ -766,25 +770,29 @@ export const adminCreateDriver = async ({ phone, name, language = 'uz' }) => {
   return response.data;
 };
 
-export const adminListDrivers = async (params = {}) => {
+export const adminListDrivers = async (params = {}, signal) => {
   const queryParams = {};
   if (params.filter && params.filter !== 'all') queryParams.filter = params.filter;
   if (params.phone) queryParams.phone = params.phone;
   if (params.name) queryParams.name = params.name;
   if (params.onlyMine) queryParams.onlyMine = 'true';
   if (params.role) queryParams.role = params.role;
-  const response = await apiClient.get('/admin/drivers', { params: queryParams });
+  if (params.page !== undefined) queryParams.page = params.page;
+  if (params.size !== undefined) queryParams.size = params.size;
+  const response = await apiClient.get('/admin/drivers', { params: queryParams, signal });
   return response.data;
 };
 
-export const adminListUsers = async (params = {}) => {
+export const adminListUsers = async (params = {}, signal) => {
   const queryParams = {};
   if (params.filter && params.filter !== 'all') queryParams.filter = params.filter;
   if (params.phone) queryParams.phone = params.phone;
   if (params.name) queryParams.name = params.name;
   if (params.onlyMine) queryParams.onlyMine = 'true';
   queryParams.role = params.role || 'any';
-  const response = await apiClient.get('/admin/users', { params: queryParams });
+  if (params.page !== undefined) queryParams.page = params.page;
+  if (params.size !== undefined) queryParams.size = params.size;
+  const response = await apiClient.get('/admin/users', { params: queryParams, signal });
   return response.data;
 };
 
