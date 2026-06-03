@@ -14,6 +14,7 @@ import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
+import { buildCompactOrderMessage, formatOrderPrice } from '../../utils/orderText';
 
 export default function MobileMyOrders() {
   const navigate = useNavigate();
@@ -105,7 +106,7 @@ export default function MobileMyOrders() {
     e.stopPropagation();
 
     if (!permissions?.offerToDriver) {
-      // Show club modal or message
+      window.alert('Mashina topish uchun sizga ruxsat kerak. Admin bilan bog\'laning.');
       return;
     }
 
@@ -146,18 +147,7 @@ export default function MobileMyOrders() {
 
   // Build broadcast message - matches Desktop BroadcastModal
   const buildOrderMessage = (o) => {
-    let msg = '';
-    if (o.cargoName) msg += `${o.cargoName}\n`;
-    if (o.fromCity || o.fromRegion) msg += `Qayerdan: ${o.fromCity || o.fromRegion}\n`;
-    if (o.toCity || o.toRegion) msg += `Qayerga: ${o.toCity || o.toRegion}\n`;
-    if (o.weightKg) msg += `Og'irligi: ${o.weightKg} t\n`;
-    if (o.vehicleType) msg += `Transport: ${o.vehicleType}\n`;
-    if (o.priceUzs && o.priceUzs > 0) msg += `Narxi: ${o.priceUzs.toLocaleString('uz-UZ')} so'm\n`;
-    if (o.description && o.description !== 'null' && o.description.trim()) {
-      msg += `\n${o.description}\n`;
-    }
-    if (o.additionalPhone) msg += `\nTel: ${o.additionalPhone}`;
-    return msg.trim();
+    return buildCompactOrderMessage(o);
   };
 
   // Send broadcast
@@ -215,6 +205,27 @@ export default function MobileMyOrders() {
     return `${from} → ${to}`;
   };
 
+  const cleanText = (value) => {
+    if (value === null || value === undefined) return '';
+    const text = String(value).trim();
+    return text && text.toLowerCase() !== 'null' ? text : '';
+  };
+
+  const getOrderRows = (order) => {
+    const weight = order.weightKg || order.weight;
+    return [
+      { label: 'Yo\'nalish', value: formatRoute(order) },
+      { label: 'Yuk', value: cleanText(order.cargoName || order.cargo_name) },
+      { label: 'Og\'irlik', value: weight ? `${weight} tonna` : '' },
+      { label: 'Transport', value: cleanText(order.vehicleType) },
+      { label: 'Narx', value: formatOrderPrice(order.priceUzs) },
+      { label: 'Kontakt', value: cleanText(order.additionalPhone || order.phone) },
+      { label: 'Telegram', value: cleanText(order.telegramUsername) },
+      { label: 'Izoh', value: cleanText(order.description) },
+      { label: 'Manba', value: cleanText(order.source) },
+    ].filter((row) => row.value);
+  };
+
   if (loading) {
     return (
       <>
@@ -231,6 +242,16 @@ export default function MobileMyOrders() {
       <TopBar title="Buyurtmalarim" rightIcon="+" onRightAction={() => navigate('/mobile/create-order')} />
 
       <main className="m-content">
+        <div style={{ padding: '10px 12px', background: 'var(--m-card-bg)', borderBottom: '1px solid var(--m-border)' }}>
+          <button
+            className="m-btn m-btn-primary m-btn-full m-btn-lg"
+            onClick={() => navigate('/mobile/create-order')}
+            style={{ justifyContent: 'center' }}
+          >
+            + Yuk qo'shish
+          </button>
+        </div>
+
         <PullToRefresh onRefresh={() => loadOrders(true)} disabled={loading}>
           {orders.length === 0 ? (
             <div className="m-empty">
@@ -269,12 +290,24 @@ export default function MobileMyOrders() {
                       <p className="m-list-item-title" style={{ marginBottom: 4 }}>
                         {order.cargoName || 'Yuk'}
                       </p>
-                      <p className="m-list-item-subtitle" style={{ marginBottom: 4 }}>
-                        {formatRoute(order)}
-                      </p>
-                      <div style={{ display: 'flex', gap: 12, fontSize: 13, color: 'var(--m-text-secondary)' }}>
-                        {order.weightKg && <span>⚖️ {order.weightKg}t</span>}
-                        {order.priceUzs > 0 && <span>💰 {order.priceUzs.toLocaleString()}</span>}
+                      <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                        {getOrderRows(order).map((row) => (
+                          <div
+                            key={row.label}
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '82px 1fr',
+                              gap: 8,
+                              fontSize: 13,
+                              lineHeight: 1.35,
+                            }}
+                          >
+                            <span style={{ color: 'var(--m-text-muted)' }}>{row.label}</span>
+                            <span style={{ color: 'var(--m-text)', fontWeight: 500, wordBreak: 'break-word' }}>
+                              {row.value}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                       {/* Driver phone if appointed */}
                       {hasAppointedDriver(order.status) && order.driverPhone && (
@@ -432,16 +465,8 @@ export default function MobileMyOrders() {
                 </div>
                 <div style={{ fontSize: 14 }}>
                   <p style={{ margin: '4px 0' }}>
-                    Jami guruhlar: {broadcastStatus.total_groups || 0}
+                    Muvaffaqiyatli yuborildi: {broadcastStatus.groups_sent || 0} ta guruh
                   </p>
-                  <p style={{ margin: '4px 0' }}>
-                    Yuborildi: {broadcastStatus.groups_sent || 0} / {broadcastStatus.total_groups || 0}
-                  </p>
-                  {(broadcastStatus.groups_failed || 0) > 0 && (
-                    <p style={{ margin: '4px 0', color: '#dc3545' }}>
-                      Xatolik: {broadcastStatus.groups_failed} guruh
-                    </p>
-                  )}
                 </div>
 
                 {broadcastStatus.status === 'in_progress' && (
@@ -451,7 +476,7 @@ export default function MobileMyOrders() {
                     <div style={{
                       height: '100%', borderRadius: 3, background: '#6f42c1',
                       width: broadcastStatus.total_groups > 0
-                        ? `${(((broadcastStatus.groups_sent || 0) + (broadcastStatus.groups_failed || 0)) / broadcastStatus.total_groups) * 100}%`
+                        ? `${((broadcastStatus.groups_sent || 0) / broadcastStatus.total_groups) * 100}%`
                         : '0%',
                       transition: 'width 0.3s ease'
                     }} />

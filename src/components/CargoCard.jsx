@@ -7,6 +7,7 @@ import OfferToDriverModal from './OfferToDriverModal';
 import PriceInputModal from './PriceInputModal';
 import SenderTypeBadge from './SenderTypeBadge';
 import { formatTimeAgo } from '../utils/formatTime';
+import { formatOrderPrice } from '../utils/orderText';
 
 export default function CargoCard({
   cargo,
@@ -121,6 +122,18 @@ export default function CargoCard({
           
           {cargo.vehicleType && (
             <p style={{ margin: '8px 0' }}>🚚 Transport turi: {cargo.vehicleType}</p>
+          )}
+
+          {cargo.priceUzs > 0 && (
+            <p style={{ margin: '8px 0', fontWeight: 700, color: '#155724' }}>
+              💰 Narxi: {formatOrderPrice(cargo.priceUzs)}
+            </p>
+          )}
+
+          {cargo.additionalPhone && (
+            <p style={{ margin: '8px 0', fontWeight: 600 }}>
+              📞 Telefon: {cargo.additionalPhone}
+            </p>
           )}
           
           {cargo.description && (

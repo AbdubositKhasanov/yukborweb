@@ -7,12 +7,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getMyOrder, deleteOrder, getUserMe, broadcastMessage as sendBroadcast, getBroadcastStatus } from '../../services/api';
 import { formatTimeAgo } from '../../utils/formatTime';
+import { buildCompactOrderMessage } from '../../utils/orderText';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading from '../components/MobileLoading';
 
 const STATUS_CONFIG = {
+  new: { badge: 'm-badge-new', label: 'YANGI' },
   created: { badge: 'm-badge-new', label: 'YANGI' },
   searching: { badge: 'm-badge-searching', label: 'QIDIRILMOQDA' },
   appointed: { badge: 'm-badge-appointed', label: 'BIRIKTIRILDI' },
@@ -105,7 +107,7 @@ export default function MobileOrderDetail() {
   const handleFindTransport = () => {
     // MUST match Desktop MyOrdersPage.jsx handleFindTransport EXACTLY
     if (!permissions?.offerToDriver) {
-      // Permission check - matches Desktop
+      window.alert('Mashina topish uchun sizga ruxsat kerak. Admin bilan bog\'laning.');
       return;
     }
 
@@ -161,18 +163,7 @@ export default function MobileOrderDetail() {
 
   // Build broadcast message from order
   const buildOrderMessage = (o) => {
-    let msg = '';
-    if (o.cargoName || o.cargo_name) msg += `${o.cargoName || o.cargo_name}\n`;
-    if (o.fromCity || o.fromRegion) msg += `Qayerdan: ${o.fromCity || o.fromRegion}\n`;
-    if (o.toCity || o.toRegion) msg += `Qayerga: ${o.toCity || o.toRegion}\n`;
-    if (o.weight || o.weightKg) msg += `Og'irligi: ${o.weight || o.weightKg} t\n`;
-    if (o.vehicleType) msg += `Transport: ${o.vehicleType}\n`;
-    if (o.priceUzs && o.priceUzs > 0) msg += `Narxi: ${o.priceUzs.toLocaleString('uz-UZ')} so'm\n`;
-    if (o.description && o.description !== 'null' && o.description.trim()) {
-      msg += `\n${o.description}\n`;
-    }
-    if (o.additionalPhone) msg += `\nTel: ${o.additionalPhone}`;
-    return msg.trim();
+    return buildCompactOrderMessage(o);
   };
 
   const handleOpenBroadcast = () => {
@@ -270,7 +261,7 @@ export default function MobileOrderDetail() {
   }
 
   const statusConfig = getStatusConfig(order.status);
-  const isActive = ['created', 'searching'].includes(order.status);
+  const isActive = !['appointed', 'completed', 'cancelled'].includes(order.status);
   const isAppointed = order.status === 'appointed';
 
   return (
@@ -287,9 +278,9 @@ export default function MobileOrderDetail() {
             {order.cargoName || order.cargo_name || 'Yuk'}
           </h1>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            {order.weight && (
+            {(order.weightKg || order.weight) && (
               <span style={{ fontSize: 14, color: 'var(--m-text-secondary)' }}>
-                ⚖️ {order.weight} tonna
+                ⚖️ {order.weightKg || order.weight} tonna
               </span>
             )}
             {order.vehicleType && (
@@ -344,6 +335,19 @@ export default function MobileOrderDetail() {
           </div>
         )}
 
+        {(order.additionalPhone || order.phone) && (
+          <div className="m-detail-section">
+            <h2 className="m-detail-section-title">📱 Kontakt</h2>
+            <div className="m-inline-edit" onClick={handleShowPhone}>
+              <div className="m-inline-edit-content">
+                <div className="m-inline-edit-label">Telefon</div>
+                <div className="m-inline-edit-value">{order.additionalPhone || order.phone}</div>
+              </div>
+              <span className="m-inline-edit-icon">📞</span>
+            </div>
+          </div>
+        )}
+
         {/* Description */}
         {order.description && (
           <div className="m-detail-section">
@@ -357,7 +361,7 @@ export default function MobileOrderDetail() {
         {/* Time */}
         <div className="m-detail-section">
           <div style={{ fontSize: 14, color: 'var(--m-text-muted)' }}>
-            📅 {formatTimeAgo(order.createdAt || order.created_at)} yaratilgan
+            📅 {formatTimeAgo(order.createdTime || order.createdAt || order.created_at)} yaratilgan
           </div>
         </div>
       </main>
@@ -519,16 +523,8 @@ export default function MobileOrderDetail() {
                 </div>
                 <div style={{ fontSize: 14 }}>
                   <p style={{ margin: '4px 0' }}>
-                    Jami guruhlar: {broadcastStatus.total_groups || 0}
+                    Muvaffaqiyatli yuborildi: {broadcastStatus.groups_sent || 0} ta guruh
                   </p>
-                  <p style={{ margin: '4px 0' }}>
-                    Yuborildi: {broadcastStatus.groups_sent || 0} / {broadcastStatus.total_groups || 0}
-                  </p>
-                  {(broadcastStatus.groups_failed || 0) > 0 && (
-                    <p style={{ margin: '4px 0', color: '#dc3545' }}>
-                      Xatolik: {broadcastStatus.groups_failed} guruh
-                    </p>
-                  )}
                 </div>
 
                 {broadcastStatus.status === 'in_progress' && (
@@ -538,7 +534,7 @@ export default function MobileOrderDetail() {
                     <div style={{
                       height: '100%', borderRadius: 3, background: '#6f42c1',
                       width: broadcastStatus.total_groups > 0
-                        ? `${(((broadcastStatus.groups_sent || 0) + (broadcastStatus.groups_failed || 0)) / broadcastStatus.total_groups) * 100}%`
+                        ? `${((broadcastStatus.groups_sent || 0) / broadcastStatus.total_groups) * 100}%`
                         : '0%',
                       transition: 'width 0.3s ease'
                     }} />

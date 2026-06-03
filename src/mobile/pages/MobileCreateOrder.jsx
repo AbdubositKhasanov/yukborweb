@@ -6,7 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStaticData } from '../../context/StaticDataContext';
-import { createOrder, getLocationsAndVehicles } from '../../services/api';
+import { createOrder, getBroadcastStatus, getLocationsAndVehicles } from '../../services/api';
+import { isBroadcastFinished, normalizeBroadcastStatus } from '../../utils/orderText';
 import TopBar from '../components/TopBar';
 
 const STEPS = [
@@ -24,6 +25,8 @@ export default function MobileCreateOrder() {
   const [loadingData, setLoadingData] = useState(true);
   const [errors, setErrors] = useState({});
   const [staticData, setStaticData] = useState(null);
+  const [createdOrder, setCreatedOrder] = useState(null);
+  const [broadcastStatus, setBroadcastStatus] = useState(null);
 
   // Form data - MUST match Desktop CreateOrderPage.jsx structure
   const [formData, setFormData] = useState({
@@ -48,6 +51,31 @@ export default function MobileCreateOrder() {
   useEffect(() => {
     loadStaticData();
   }, []);
+
+  useEffect(() => {
+    const broadcastId = broadcastStatus?.broadcastId;
+    if (!broadcastId || isBroadcastFinished(broadcastStatus)) return;
+
+    let cancelled = false;
+    const pollStatus = async () => {
+      try {
+        const response = await getBroadcastStatus(broadcastId);
+        if (!cancelled) {
+          setBroadcastStatus(normalizeBroadcastStatus(response));
+        }
+      } catch (_) {
+        // Polling xatosi yaratish oqimiga ta'sir qilmasin.
+      }
+    };
+
+    const interval = setInterval(pollStatus, 2500);
+    pollStatus();
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [broadcastStatus?.broadcastId, broadcastStatus?.status]);
 
   const loadStaticData = async () => {
     setLoadingData(true);
@@ -144,7 +172,8 @@ export default function MobileCreateOrder() {
       const response = await createOrder(orderData);
 
       if (response.code === 200) {
-        navigate('/mobile/orders', { replace: true });
+        setCreatedOrder(response.result?.order || orderData);
+        setBroadcastStatus(normalizeBroadcastStatus(response.result?.broadcast));
       } else {
         setErrors({ submit: response.message || 'Buyurtma yaratishda xatolik' });
       }
@@ -154,6 +183,54 @@ export default function MobileCreateOrder() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCreateAnother = () => {
+    setStep(1);
+    setFormData({
+      cargoName: '',
+      weight: '',
+      vehicleTypeId: '',
+      fromCountry: '',
+      fromRegion: '',
+      fromCity: '',
+      toCountry: '',
+      toRegion: '',
+      toCity: '',
+      priceUzs: '',
+      additionalPhone: '',
+      description: '',
+    });
+    setErrors({});
+    setCreatedOrder(null);
+    setBroadcastStatus(null);
+  };
+
+  const renderBroadcastStatus = () => {
+    if (!broadcastStatus) return null;
+
+    const isFailed = broadcastStatus.status === 'failed';
+    const isCompleted = broadcastStatus.status === 'completed';
+
+    return (
+      <div style={{
+        padding: 14,
+        borderRadius: 8,
+        background: isFailed ? '#fff3cd' : '#d4edda',
+        color: isFailed ? '#856404' : '#155724',
+        textAlign: 'left',
+        marginTop: 16,
+      }}>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>
+          {isFailed ? '📡 Guruhlarga tarqatish boshlanmadi' : `✅ ${broadcastStatus.groupsSent} ta guruhga yuborildi`}
+        </div>
+        {!isFailed && (
+          <div style={{ fontSize: 13 }}>
+            {isCompleted ? 'Tarqatish yakunlandi.' : 'Tarqatish davom etyapti. Faqat success hisoblanadi.'}
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Get regions for selected country - matches Desktop
@@ -201,6 +278,32 @@ export default function MobileCreateOrder() {
         <TopBar title="Yangi buyurtma" showBack onBack={handleBack} />
         <main className="m-content m-content-padded" style={{ display: 'flex', justifyContent: 'center', paddingTop: 60 }}>
           <div className="m-spinner" style={{ width: 32, height: 32 }} />
+        </main>
+      </>
+    );
+  }
+
+  if (createdOrder) {
+    return (
+      <>
+        <TopBar title="Yangi buyurtma" showBack onBack={() => navigate('/mobile/orders')} />
+        <main className="m-content m-content-padded">
+          <div className="m-card" style={{ textAlign: 'center', padding: 24 }}>
+            <div style={{ fontSize: 56, color: 'var(--m-success)', marginBottom: 12 }}>✓</div>
+            <h1 className="m-detail-title" style={{ marginBottom: 8 }}>Yuk yaratildi</h1>
+            <p style={{ color: 'var(--m-text-secondary)', margin: 0, lineHeight: 1.5 }}>
+              Buyurtma saqlandi va tarqatish holati quyida ko'rinadi.
+            </p>
+            {renderBroadcastStatus()}
+            <div style={{ display: 'grid', gap: 10, marginTop: 20 }}>
+              <button className="m-btn m-btn-primary m-btn-lg m-btn-full" onClick={() => navigate('/mobile/orders', { replace: true })}>
+                Buyurtmalarim
+              </button>
+              <button className="m-btn m-btn-secondary m-btn-lg m-btn-full" onClick={handleCreateAnother}>
+                Yana yuk qo'shish
+              </button>
+            </div>
+          </div>
         </main>
       </>
     );

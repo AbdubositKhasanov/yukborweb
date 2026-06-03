@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { broadcastMessage, getBroadcastStatus } from '../services/api';
+import { buildCompactOrderMessage } from '../utils/orderText';
 
 export default function BroadcastModal({ isOpen, onClose, order }) {
   const [message, setMessage] = useState('');
@@ -47,18 +48,7 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
   }, []);
 
   const buildOrderMessage = (o) => {
-    let msg = '';
-    if (o.cargoName) msg += `${o.cargoName}\n`;
-    if (o.fromCity) msg += `Qayerdan: ${o.fromCity}\n`;
-    if (o.toCity) msg += `Qayerga: ${o.toCity}\n`;
-    if (o.weightKg) msg += `Og'irligi: ${o.weightKg} t\n`;
-    if (o.vehicleType) msg += `Transport: ${o.vehicleType}\n`;
-    if (o.priceUzs && o.priceUzs > 0) msg += `Narxi: ${o.priceUzs.toLocaleString('uz-UZ')} so'm\n`;
-    if (o.description && o.description !== 'null' && o.description.trim()) {
-      msg += `\n${o.description}\n`;
-    }
-    if (o.additionalPhone) msg += `\nTel: ${o.additionalPhone}`;
-    return msg.trim();
+    return buildCompactOrderMessage(o);
   };
 
   const handleBroadcast = async () => {
@@ -185,18 +175,10 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
                 {status.status === 'completed' && 'Tarqatish yakunlandi!'}
                 {status.status === 'failed' && 'Tarqatishda xatolik!'}
               </div>
-              <div style={{ fontSize: '14px' }}>
-                <p style={{ margin: '4px 0' }}>
-                  Jami guruhlar: {status.total_groups || 0}
-                </p>
-                <p style={{ margin: '4px 0' }}>
-                  Yuborildi: {status.groups_sent || 0} / {status.total_groups || 0}
-                </p>
-                {(status.groups_failed || 0) > 0 && (
-                  <p style={{ margin: '4px 0', color: '#dc3545' }}>
-                    Xatolik: {status.groups_failed} guruh
+                <div style={{ fontSize: '14px' }}>
+                  <p style={{ margin: '4px 0' }}>
+                  Muvaffaqiyatli yuborildi: {status.groups_sent || 0} ta guruh
                   </p>
-                )}
                 <p style={{ margin: '4px 0', fontSize: '12px', color: '#6c757d' }}>
                   Userbotlar: {status.total_userbots} ta
                 </p>
@@ -209,7 +191,7 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
                   <div style={{
                     height: '100%', borderRadius: '3px', backgroundColor: '#007bff',
                     width: status.total_groups > 0
-                      ? `${(((status.groups_sent || 0) + (status.groups_failed || 0)) / status.total_groups) * 100}%`
+                      ? `${((status.groups_sent || 0) / status.total_groups) * 100}%`
                       : '0%',
                     transition: 'width 0.3s ease'
                   }} />
@@ -218,10 +200,10 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
             </div>
 
             {/* Details per userbot */}
-            {status.details && status.details.length > 0 && (
+            {status.details?.some((detail) => (detail.groups_sent || 0) > 0) && (
               <div style={{ marginBottom: '16px' }}>
-                <h4 style={{ margin: '0 0 8px', fontSize: '14px' }}>Tafsilotlar:</h4>
-                {status.details.map((detail, i) => (
+                <h4 style={{ margin: '0 0 8px', fontSize: '14px' }}>Userbotlar:</h4>
+                {status.details.filter((detail) => (detail.groups_sent || 0) > 0).map((detail, i) => (
                   <div key={i} style={{
                     padding: '8px 12px', marginBottom: '6px',
                     backgroundColor: detail.status === 'success' ? '#f0fff0' :
@@ -232,22 +214,6 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
                       <span style={{ fontWeight: '500' }}>{detail.phone}</span>
                       <span>{detail.groups_sent} guruh</span>
                     </div>
-                    {detail.errors && detail.errors.length > 0 && (
-                      <div style={{ marginTop: '4px', fontSize: '12px' }}>
-                        {detail.errors.map((err, j) => (
-                          <div key={j} style={{
-                            color: err.includes('bloklangan') || err.includes('banned')
-                              ? '#dc3545'
-                              : err.includes('kutish') || err.includes('FloodWait')
-                                ? '#856404'
-                                : '#dc3545',
-                            marginBottom: '2px'
-                          }}>
-                            {err}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>

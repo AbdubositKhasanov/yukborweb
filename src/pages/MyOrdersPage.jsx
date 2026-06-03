@@ -245,6 +245,12 @@ export default function MyOrdersPage() {
                   </p>
                 )}
 
+                {order.additionalPhone && order.additionalPhone.trim() && (
+                  <p style={{ margin: '8px 0', fontWeight: 600 }}>
+                    📞 Kontakt: {order.additionalPhone}
+                  </p>
+                )}
+
                 {hasAppointedDriver(order.status) && order.driverPhone && order.driverPhone.trim() && (
                   <p style={{ 
                     margin: '12px 0', 

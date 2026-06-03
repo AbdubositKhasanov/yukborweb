@@ -21,7 +21,7 @@ export default function MobileHome() {
   const navigate = useNavigate();
   const location = useLocation();
   const { staticData } = useStaticData();
-  const { isAuthenticated } = useMobileAuth();
+  const { isAuthenticated, userRole } = useMobileAuth();
 
   // Check for driver context - MUST use same keys as Desktop SearchPage.jsx
   const fromDriver = location.state?.fromDriver === true;
@@ -78,6 +78,17 @@ export default function MobileHome() {
     }
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (!staticData?.vehicleTypes || !driverFilters.vehicleTypeId) return;
+    setFilters((prev) => {
+      if (prev.vehicleType !== driverFilters.vehicleTypeId.toString()) return prev;
+      const vehicle = staticData.vehicleTypes.find(
+        (item) => String(item.id) === driverFilters.vehicleTypeId.toString()
+      );
+      return vehicle ? { ...prev, vehicleType: vehicle.name } : prev;
+    });
+  }, [staticData, driverFilters.vehicleTypeId]);
+
   const loadUserData = async () => {
     try {
       const response = await getUserMe();
@@ -117,7 +128,12 @@ export default function MobileHome() {
       chips.push({ key: 'toCity', label: `\u2192 ${city?.name || filterObj.toCity}` });
     }
     if (filterObj.vehicleType) {
-      const vehicle = staticData?.vehicleTypes?.find((v) => v.code === filterObj.vehicleType || v.name === filterObj.vehicleType);
+      const vehicle = staticData?.vehicleTypes?.find(
+        (v) =>
+          v.code === filterObj.vehicleType ||
+          v.name === filterObj.vehicleType ||
+          String(v.id) === String(filterObj.vehicleType)
+      );
       chips.push({ key: 'vehicleType', label: vehicle?.name || filterObj.vehicleType });
     }
     if (filterObj.minWeight || filterObj.maxWeight) {
@@ -410,12 +426,25 @@ export default function MobileHome() {
       setCreatingHarbinger(false);
     }
   };
+  const canCreateOrder = isAuthenticated && ['logist', 'factory'].includes(userRole);
 
   return (
     <>
       <TopBar title="YukBor" />
 
       <main className="m-content">
+        {canCreateOrder && (
+          <div style={{ padding: '10px 12px', background: 'var(--m-card-bg)', borderBottom: '1px solid var(--m-border)' }}>
+            <button
+              className="m-btn m-btn-primary m-btn-full m-btn-lg"
+              onClick={() => navigate('/mobile/create-order')}
+              style={{ justifyContent: 'center' }}
+            >
+              + Yuk qo'shish
+            </button>
+          </div>
+        )}
+
         {/* Text search bar */}
         <div style={{
           padding: '8px 12px',

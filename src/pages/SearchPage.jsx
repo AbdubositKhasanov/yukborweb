@@ -23,6 +23,7 @@ export default function SearchPage() {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [permissions, setPermissions] = useState(null);
+  const [userRole, setUserRole] = useState(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
   const [creatingHarbinger, setCreatingHarbinger] = useState(false);
@@ -54,10 +55,14 @@ export default function SearchPage() {
   }, []);
 
   const loadUserData = async () => {
+    if (!localStorage.getItem('authToken')) return;
+
     try {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
         setPermissions(response.result.permissions || null);
+        const normalizedRole = String(response.result.type || '').toLowerCase();
+        setUserRole(normalizedRole === 'zavod' ? 'factory' : normalizedRole);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -394,6 +399,9 @@ export default function SearchPage() {
   const filteredToCities = staticData?.cities.filter(
     c => c.regionId === parseInt(toRegion)
   ) || [];
+  const canCreateOrder = Boolean(
+    localStorage.getItem('authToken') && ['logist', 'factory'].includes(userRole)
+  );
 
   return (
     <div className="container">
@@ -406,26 +414,45 @@ export default function SearchPage() {
         gap: '10px'
       }}>
         <h1 className="page-title" style={{ margin: 0 }}>Yuklar qidirish</h1>
-        <button
-          className="btn btn-secondary"
-          onClick={handleRefresh}
-          disabled={loading || refreshing}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 12px',
-            fontSize: '14px',
-            minWidth: 'auto'
-          }}
-          title="Yangilash"
-        >
-          <span style={{
-            display: 'inline-block',
-            animation: refreshing ? 'spin 1s linear infinite' : 'none'
-          }}>🔄</span>
-          {!refreshing && <span>Yangilash</span>}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {canCreateOrder && (
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate('/create-order')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                fontSize: '14px',
+                fontWeight: 700,
+              }}
+            >
+              <span style={{ fontSize: 18, lineHeight: 1 }}>+</span>
+              Yuk qo'shish
+            </button>
+          )}
+          <button
+            className="btn btn-secondary"
+            onClick={handleRefresh}
+            disabled={loading || refreshing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              fontSize: '14px',
+              minWidth: 'auto'
+            }}
+            title="Yangilash"
+          >
+            <span style={{
+              display: 'inline-block',
+              animation: refreshing ? 'spin 1s linear infinite' : 'none'
+            }}>🔄</span>
+            {!refreshing && <span>Yangilash</span>}
+          </button>
+        </div>
       </div>
 
       {/* Login CTA for unauthenticated users */}

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createOrder, getLocationsAndVehicles } from '../services/api';
+import { createOrder, getBroadcastStatus, getLocationsAndVehicles } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
 import LocationSelector from '../components/LocationSelector';
+import { isBroadcastFinished, normalizeBroadcastStatus } from '../utils/orderText';
 
 export default function CreateOrderPage() {
   const navigate = useNavigate();
@@ -30,10 +31,37 @@ export default function CreateOrderPage() {
   const [staticData, setStaticData] = useState(null);
   const [loadingData, setLoadingData] = useState(true);
   const [errors, setErrors] = useState({});
+  const [createdOrder, setCreatedOrder] = useState(null);
+  const [broadcastStatus, setBroadcastStatus] = useState(null);
 
   useEffect(() => {
     loadStaticData();
   }, []);
+
+  useEffect(() => {
+    const broadcastId = broadcastStatus?.broadcastId;
+    if (!broadcastId || isBroadcastFinished(broadcastStatus)) return;
+
+    let cancelled = false;
+    const pollStatus = async () => {
+      try {
+        const response = await getBroadcastStatus(broadcastId);
+        if (!cancelled) {
+          setBroadcastStatus(normalizeBroadcastStatus(response));
+        }
+      } catch (_) {
+        // Status polling order yaratish oqimini buzmasin.
+      }
+    };
+
+    const interval = setInterval(pollStatus, 2500);
+    pollStatus();
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [broadcastStatus?.broadcastId, broadcastStatus?.status]);
 
   const loadStaticData = async () => {
     setLoadingData(true);
@@ -116,12 +144,14 @@ export default function CreateOrderPage() {
       const response = await createOrder(orderData);
 
       if (response.code === 200) {
-        showSuccess('Buyurtma muvaffaqiyatli yaratildi!');
-
-        // Navigate to My Orders page
-        setTimeout(() => {
-          navigate('/my-orders');
-        }, 1000);
+        const nextBroadcastStatus = normalizeBroadcastStatus(response.result?.broadcast);
+        setCreatedOrder(response.result?.order || orderData);
+        setBroadcastStatus(nextBroadcastStatus);
+        showSuccess(
+          nextBroadcastStatus
+            ? `Buyurtma yaratildi. ${nextBroadcastStatus.groupsSent} ta guruhga yuborildi`
+            : 'Buyurtma muvaffaqiyatli yaratildi!'
+        );
       } else {
         showError(response.message || 'Buyurtma yaratishda xatolik');
       }
@@ -137,10 +167,80 @@ export default function CreateOrderPage() {
     navigate('/my-orders');
   };
 
+  const handleCreateAnother = () => {
+    setCargoName('');
+    setAdditionalPhone('');
+    setDescription('');
+    setWeight('');
+    setVehicleTypeId('');
+    setPriceUzs('');
+    setFromCountry('');
+    setFromRegion('');
+    setFromCity('');
+    setToCountry('');
+    setToRegion('');
+    setToCity('');
+    setErrors({});
+    setCreatedOrder(null);
+    setBroadcastStatus(null);
+  };
+
+  const renderBroadcastStatus = () => {
+    if (!broadcastStatus) return null;
+
+    const isFailed = broadcastStatus.status === 'failed';
+    const isCompleted = broadcastStatus.status === 'completed';
+
+    return (
+      <div style={{
+        marginTop: 16,
+        padding: 16,
+        borderRadius: 8,
+        backgroundColor: isFailed ? '#fff3cd' : '#d4edda',
+        color: isFailed ? '#856404' : '#155724',
+        border: `1px solid ${isFailed ? '#ffeeba' : '#c3e6cb'}`
+      }}>
+        <div style={{ fontWeight: 700, marginBottom: 6 }}>
+          {isFailed ? '📡 Guruhlarga tarqatish boshlanmadi' : `✅ ${broadcastStatus.groupsSent} ta guruhga yuborildi`}
+        </div>
+        {!isFailed && (
+          <div style={{ fontSize: 14 }}>
+            {isCompleted ? 'Tarqatish yakunlandi.' : 'Tarqatish davom etyapti, faqat muvaffaqiyatli yuborilganlar sanaladi.'}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (loadingData) {
     return (
       <div className="container">
         <div className="loading">Yuklanmoqda...</div>
+      </div>
+    );
+  }
+
+  if (createdOrder) {
+    return (
+      <div className="container">
+        <div className="card" style={{ maxWidth: 720, margin: '40px auto', textAlign: 'center', padding: 32 }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>✓</div>
+          <h1 className="page-title" style={{ marginBottom: 10 }}>Yuk yaratildi</h1>
+          <p style={{ color: '#666', margin: 0 }}>
+            E'lon saqlandi. Endi uni buyurtmalaringizdan kuzatishingiz mumkin.
+          </p>
+
+          {renderBroadcastStatus()}
+
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24, flexWrap: 'wrap' }}>
+            <button className="btn btn-primary" onClick={() => navigate('/my-orders')}>
+              Buyurtmalarim
+            </button>
+            <button className="btn btn-secondary" onClick={handleCreateAnother}>
+              Yana yuk qo'shish
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

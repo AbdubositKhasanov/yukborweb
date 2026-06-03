@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getCargoDetails, requestCargoPhone, getUserMe, getMyInvitedUsers, offerForDriver } from '../../services/api';
 import { formatTimeAgo } from '../../utils/formatTime';
+import { formatOrderPrice } from '../../utils/orderText';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
@@ -168,11 +169,6 @@ export default function MobileCargoDetail() {
   };
 
   // Format price
-  const formatPrice = (price) => {
-    if (!price) return '';
-    return Number(price).toLocaleString('uz-UZ').replace(/,/g, ' ') + ' so\'m';
-  };
-
   if (loading) {
     return (
       <>
@@ -208,8 +204,8 @@ export default function MobileCargoDetail() {
         <div className="m-detail-header">
           <h1 className="m-detail-title">{cargo.cargoName || cargo.cargo_name || 'Yuk'}</h1>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-            {cargo.weight && (
-              <span className="m-badge m-badge-new">{cargo.weight} tonna</span>
+            {(cargo.weightKg || cargo.weight) && (
+              <span className="m-badge m-badge-new">{cargo.weightKg || cargo.weight} tonna</span>
             )}
             {cargo.vehicleType && (
               <span className="m-badge" style={{ background: '#e3f2fd', color: '#1565c0' }}>
@@ -244,10 +240,21 @@ export default function MobileCargoDetail() {
           <div className="m-detail-section">
             <h2 className="m-detail-section-title">💰 Narx</h2>
             <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--m-success)' }}>
-              {formatPrice(cargo.priceUzs)}
+              {formatOrderPrice(cargo.priceUzs)}
             </div>
           </div>
         )}
+
+        <div className="m-detail-section">
+          <h2 className="m-detail-section-title">📦 Ma'lumotlar</h2>
+          <div style={{ display: 'grid', gap: 10, fontSize: 15, color: 'var(--m-text)' }}>
+            {(cargo.weightKg || cargo.weight) && <div>⚖️ {cargo.weightKg || cargo.weight} tonna</div>}
+            {cargo.vehicleType && <div>🚚 {cargo.vehicleType}</div>}
+            {cargo.status && <div>📌 {cargo.status}</div>}
+            {cargo.source && <div>🔎 {cargo.source}</div>}
+            {cargo.telegramUsername && <div>💬 @{cargo.telegramUsername}</div>}
+          </div>
+        </div>
 
         {/* Description */}
         {cargo.description && (
@@ -262,7 +269,7 @@ export default function MobileCargoDetail() {
         {/* Time */}
         <div className="m-detail-section">
           <div style={{ fontSize: 14, color: 'var(--m-text-muted)' }}>
-            ⏱️ {formatTimeAgo(cargo.createdAt || cargo.created_at)}
+            ⏱️ {formatTimeAgo(cargo.createdTime || cargo.createdAt || cargo.created_at)}
           </div>
         </div>
 
@@ -303,6 +310,9 @@ export default function MobileCargoDetail() {
         {contactLoaded && contactPhone && (
           <div className="m-detail-section">
             <h2 className="m-detail-section-title">📱 Bog'lanish</h2>
+            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>
+              {contactPhone}
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <a href={`tel:${contactPhone}`} className="m-btn m-btn-success m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
                 📞 Qo'ng'iroq

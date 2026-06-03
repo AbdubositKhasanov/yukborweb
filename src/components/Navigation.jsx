@@ -21,7 +21,7 @@ const TAB_CONFIG = {
     { path: '/my-harbingers', label: 'Xabarchilarim', auth: true },
     { path: '/profile', label: 'Profil', auth: true },
   ],
-  shipper: [
+  factory: [
     { path: '/', label: 'Yuklar', auth: false },
     { path: '/transports', label: 'Transportlar', auth: false },
     { path: '/my-orders', label: 'Buyurtmalarim', auth: true },
@@ -34,6 +34,13 @@ const DEFAULT_TABS = [
   { path: '/', label: 'Yuklar', auth: false },
   { path: '/transports', label: 'Transportlar', auth: false },
 ];
+
+const normalizeRole = (role) => {
+  const normalized = String(role || '').toLowerCase();
+  if (normalized === 'haydovchi') return 'driver';
+  if (normalized === 'zavod') return 'factory';
+  return normalized;
+};
 
 export default function Navigation({ isAuthenticated, onLogout }) {
   const location = useLocation();
@@ -49,7 +56,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
         try {
           const response = await getUserMe();
           if (response.code === 200 && response.result) {
-            setUserRole(response.result.type);
+            setUserRole(normalizeRole(response.result.type));
             setIsInternalDispatcher(response.result.isInternalDispatcher === true);
             setPermissions(response.result.permissions || null);
             setIsAdmin(response.result.isAdmin === true);
