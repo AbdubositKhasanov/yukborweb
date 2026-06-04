@@ -141,10 +141,12 @@ apiClient.interceptors.response.use(
           // Unauthorized - clear token and redirect to login
           localStorage.removeItem('authToken');
           localStorage.removeItem('userData');
-          if (!window.location.pathname.includes('/login')) {
-            // Redirect to mobile login if on mobile path, else desktop login
-            const isMobile = window.location.pathname.startsWith('/mobile');
-            window.location.href = isMobile ? '/mobile/login' : '/login';
+          if (window.location.pathname.startsWith('/mobile')) {
+            const isMiniAppLoginRequest = error.config?.url?.includes('/login/telegram-mini-app');
+            if (isMiniAppLoginRequest) break;
+            window.dispatchEvent(new Event('mobile-auth-token-cleared'));
+          } else if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
           }
           break;
 
@@ -259,6 +261,16 @@ export const login = async (code) => {
     // Backend returns { result: { token: "..." } } - extract token properly
     const token = response.data.result.token || response.data.result;
     setAuthToken(token);
+  }
+
+  return response.data;
+};
+
+export const loginTelegramMiniApp = async (initData) => {
+  const response = await apiClient.post('/login/telegram-mini-app', { initData });
+
+  if (response.data.code === 200 && response.data.result?.token) {
+    setAuthToken(response.data.result.token);
   }
 
   return response.data;

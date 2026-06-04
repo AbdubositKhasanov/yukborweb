@@ -120,7 +120,7 @@ export default function MobileProfile() {
 
   const handleLogout = () => {
     logout();
-    navigate('/mobile/login');
+    navigate('/mobile', { replace: true });
   };
 
   const handleTopUp = () => {

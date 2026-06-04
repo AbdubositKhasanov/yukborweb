@@ -293,7 +293,7 @@ export default function MobileCargoDetail() {
           <div className="m-detail-section">
             <button
               className="m-btn m-btn-primary m-btn-lg"
-              onClick={() => navigate('/mobile/login', { state: { from: { pathname: `/mobile/cargo/${id}` } } })}
+              onClick={() => navigate('/mobile', { replace: true })}
               style={{ width: '100%' }}
             >
               🔑 Kirish (kontakt ko'rish uchun)

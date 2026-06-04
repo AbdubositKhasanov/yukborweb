@@ -181,7 +181,7 @@ export default function MobileTransportDetail() {
           <div className="m-detail-section">
             <button
               className="m-btn m-btn-primary m-btn-lg"
-              onClick={() => navigate('/mobile/login', { state: { from: { pathname: `/mobile/transport/${id}` } } })}
+              onClick={() => navigate('/mobile', { replace: true })}
               style={{ width: '100%' }}
             >
               🔑 Kirish (kontakt ko'rish uchun)

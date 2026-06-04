@@ -338,7 +338,7 @@ export default function MobileHome() {
 
   const handleCreateHarbingerFromFilters = async () => {
     if (!isAuthenticated) {
-      navigate('/mobile/login', { state: { from: { pathname: location.pathname } } });
+      navigate('/mobile', { replace: true });
       return;
     }
 

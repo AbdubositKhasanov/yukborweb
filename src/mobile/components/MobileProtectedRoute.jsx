@@ -1,23 +1,21 @@
 /**
  * Mobile Protected Route
- * Redirects to login if not authenticated
+ * Redirects to mini app root if auth or role is not ready
  */
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import MobileLoading from './MobileLoading';
 
 export default function MobileProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useMobileAuth();
-  const location = useLocation();
+  const { isAuthenticated, loading, needsRoleSelection } = useMobileAuth();
 
   if (loading) {
     return <MobileLoading fullScreen />;
   }
 
-  if (!isAuthenticated) {
-    // Save the attempted URL for redirecting after login
-    return <Navigate to="/mobile/login" state={{ from: location }} replace />;
+  if (!isAuthenticated || needsRoleSelection) {
+    return <Navigate to="/mobile" replace />;
   }
 
   return children;

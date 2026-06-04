@@ -4,18 +4,18 @@
  * Route: /mobile/*
  */
 import React, { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
 import MobileProtectedRoute from './components/MobileProtectedRoute';
 import MobileLoading from './components/MobileLoading';
 import { MobileAuthProvider, useMobileAuth } from './context/MobileAuthContext';
+import MobileRoleSelect from './pages/MobileRoleSelect';
 import { trackPageView } from '../services/analytics';
 import useTelegramBackButton from './hooks/useTelegramBackButton';
 import './styles/mobile.css';
 
 // Lazy load mobile pages
 const MobileHome = lazy(() => import('./pages/MobileHome'));
-const MobileLogin = lazy(() => import('./pages/MobileLogin'));
 const MobileCargoDetail = lazy(() => import('./pages/MobileCargoDetail'));
 const MobileTransportSearch = lazy(() => import('./pages/MobileTransportSearch'));
 const MobileTransportDetail = lazy(() => import('./pages/MobileTransportDetail'));
@@ -43,10 +43,13 @@ function RoleBasedHome() {
   // Auth hali tekshirilayotgan bo'lsa — loader
   if (loading) return <MobileLoading fullScreen />;
 
-  // Autentifikatsiya qilinmagan foydalanuvchi — login sahifasiga
+  // Autentifikatsiya qilinmagan foydalanuvchi — app auth gate ko'rsatadi
   if (!isAuthenticated) {
-    console.log('[RoleBasedHome] Not authenticated, redirecting to /mobile/login');
-    return <Navigate to="/mobile/login" replace />;
+    return <MiniAppUnavailable />;
+  }
+
+  if (userRole === 'not_selected') {
+    return <MobileRoleSelect />;
   }
 
   // Redirect based on role - MUST match Desktop behavior
@@ -63,10 +66,30 @@ function RoleBasedHome() {
   return <MobileHome />;
 }
 
+function MiniAppUnavailable() {
+  const { authError } = useMobileAuth();
+
+  return (
+    <main className="m-role-screen">
+      <section className="m-role-panel" aria-labelledby="mini-app-unavailable-title">
+        <div className="m-role-user">
+          <div className="m-role-avatar">Y</div>
+          <div>
+            <p className="m-role-kicker">YukBor Mini App</p>
+            <h1 id="mini-app-unavailable-title">Telegram orqali oching</h1>
+          </div>
+        </div>
+        <p className="m-role-lead">
+          {authError || 'Mini app foydalanuvchini Telegramdan avtomatik taniydi.'}
+        </p>
+      </section>
+    </main>
+  );
+}
+
 function MobileAppContent() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { isAuthenticated, userRole, loading } = useMobileAuth();
+  const { isAuthenticated, userRole, loading, needsRoleSelection } = useMobileAuth();
 
   // Telegram Mini App back button — navigate(-1) instead of closing app
   useTelegramBackButton();
@@ -81,7 +104,7 @@ function MobileAppContent() {
   // Android hardware back button works with browser history by default.
 
   // Determine if bottom nav should be shown
-  const showBottomNav = isAuthenticated && !location.pathname.includes('/login');
+  const showBottomNav = isAuthenticated && !needsRoleSelection;
 
   // Determine active tab based on route and role
   const getActiveTab = () => {
@@ -116,6 +139,22 @@ function MobileAppContent() {
     return <MobileLoading fullScreen />;
   }
 
+  if (!isAuthenticated) {
+    return (
+      <div className="m-app">
+        <MiniAppUnavailable />
+      </div>
+    );
+  }
+
+  if (needsRoleSelection) {
+    return (
+      <div className="m-app">
+        <MobileRoleSelect />
+      </div>
+    );
+  }
+
   return (
     <div className="m-app">
       <Suspense fallback={<MobileLoading fullScreen />}>
@@ -130,7 +169,7 @@ function MobileAppContent() {
               </MobileProtectedRoute>
             }
           />
-          <Route path="/login" element={<MobileLogin />} />
+          <Route path="/login" element={<Navigate to="/mobile" replace />} />
           <Route path="/cargo/:id" element={<MobileCargoDetail />} />
 
           {/* Protected Routes */}
