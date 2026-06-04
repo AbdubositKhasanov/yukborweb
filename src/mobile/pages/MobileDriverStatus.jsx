@@ -221,13 +221,17 @@ export default function MobileDriverStatus() {
         <div
           className="m-inline-edit"
           onClick={() => {
+            if (!transport) {
+              setEditTransportSheet(true);
+              return;
+            }
             setEditLocationSheet(true);
           }}
         >
           <div className="m-inline-edit-content">
             <div className="m-inline-edit-label">📍 Joylashuv</div>
             <div className="m-inline-edit-value">
-              {location || 'Belgilanmagan'}
+              {transport ? (location || 'Belgilanmagan') : 'Avval transport qo\'shing'}
             </div>
           </div>
           <span className="m-inline-edit-icon">✎</span>
@@ -248,7 +252,7 @@ export default function MobileDriverStatus() {
         {!transport && (
           <div style={{ padding: 16, background: '#fff3e0', borderRadius: 8, marginTop: 16 }}>
             <p style={{ margin: 0, fontSize: 14, color: '#e65100' }}>
-              ⚠️ Faollashtirish uchun avval transport qo'shing
+              ⚠️ Faollashtirish uchun avval transport qo'shing. Transport bo'limini bosing va ma'lumotlarni kiriting.
             </p>
           </div>
         )}
