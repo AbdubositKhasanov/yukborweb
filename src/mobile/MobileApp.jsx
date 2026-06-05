@@ -67,7 +67,7 @@ function RoleBasedHome() {
 }
 
 function MiniAppUnavailable() {
-  const { authError } = useMobileAuth();
+  const { authError, refreshUser, loading } = useMobileAuth();
 
   return (
     <main className="m-role-screen">
@@ -82,6 +82,16 @@ function MiniAppUnavailable() {
         <p className="m-role-lead">
           {authError || 'Mini app foydalanuvchini Telegramdan avtomatik taniydi.'}
         </p>
+        {authError && (
+          <button
+            type="button"
+            className="m-btn m-btn-primary m-btn-lg m-btn-full"
+            onClick={refreshUser}
+            disabled={loading}
+          >
+            {loading ? 'Tekshirilmoqda...' : 'Qayta urinish'}
+          </button>
+        )}
       </section>
     </main>
   );

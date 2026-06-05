@@ -8,6 +8,18 @@ import { trackLogout, setAnalyticsUserProperties } from '../../services/analytic
 
 const MobileAuthContext = createContext(null);
 const MOBILE_AUTH_CLEARED_EVENT = 'mobile-auth-token-cleared';
+const MOBILE_AUTH_TIMEOUT_MS = 15_000;
+
+const withMobileAuthTimeout = (promise, message) => {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), MOBILE_AUTH_TIMEOUT_MS);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  });
+};
 
 const getTelegramWebApp = () => {
   if (typeof window === 'undefined') return null;
@@ -93,7 +105,10 @@ export function MobileAuthProvider({ children }) {
       return false;
     }
 
-    const response = await loginTelegramMiniApp(initData);
+    const response = await withMobileAuthTimeout(
+      loginTelegramMiniApp(initData),
+      'Telegram Mini App login javob bermadi. Internet yoki serverni tekshiring.'
+    );
     if (response.code === 200 && response.result) {
       applyUserState(response.result);
       return true;
@@ -113,13 +128,18 @@ export function MobileAuthProvider({ children }) {
     const token = localStorage.getItem('authToken');
 
     try {
-      if (getTelegramInitData()) {
+      const hasTelegramInitData = Boolean(getTelegramInitData());
+
+      if (hasTelegramInitData) {
         await authenticateWithTelegram();
         return;
       }
 
       if (token) {
-        const response = await getUserMe();
+        const response = await withMobileAuthTimeout(
+          getUserMe(),
+          'Profil maʼlumotlari javob bermadi. Qayta urinib ko‘ring.'
+        );
         if (response.code === 200 && response.result) {
           applyUserState(response.result);
           return;
@@ -131,6 +151,12 @@ export function MobileAuthProvider({ children }) {
       console.error('Failed to load user:', error);
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');
+
+      if (getTelegramInitData()) {
+        setAuthError(error.message || 'Telegram orqali kirishda xatolik yuz berdi');
+        clearUserState();
+        return;
+      }
 
       try {
         await authenticateWithTelegram();
