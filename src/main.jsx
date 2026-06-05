@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
 import App from './App';
 import './services/firebase';
+import { setupServiceWorkerUpdates } from './services/serviceWorkerUpdates';
 import { trackAppOpen, trackFirstOpen } from './services/analytics';
 import './styles/yukbor-design-system.css';
 import './styles/main.css';
@@ -18,10 +19,10 @@ if (window.Telegram?.WebApp) {
   window.Telegram.WebApp.expand();
 }
 
-// Service Worker registratsiyasi vite-plugin-pwa tomonidan
-// avtomatik qo'shiladigan /registerSW.js skripti orqali boshqariladi
-// (registerType: 'autoUpdate'). Qo'lda register() chaqirmaymiz —
-// aks holda registratsiya ikki marta sodir bo'lib, update flow chalkashadi.
+// Mini App ochilganda va WebView yana aktiv bo'lganda yangi build borligini
+// tekshiramiz. VitePWA autoUpdate yangi SW'ni aktiv qilib, kerak bo'lsa
+// oynani avtomatik yangilaydi.
+setupServiceWorkerUpdates();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
