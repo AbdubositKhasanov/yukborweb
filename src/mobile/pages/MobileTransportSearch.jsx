@@ -12,6 +12,7 @@ import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
+import LocationSelector from '../../components/LocationSelector';
 
 export default function MobileTransportSearch() {
   const navigate = useNavigate();
@@ -468,21 +469,17 @@ export default function MobileTransportSearch() {
           </div>
         }
       >
-        <div className="m-form-group">
-          <label className="m-form-label">Joylashuv</label>
-          <select
-            className="m-form-select"
-            value={filters.fromRegion}
-            onChange={(e) => setFilters({ ...filters, fromRegion: e.target.value })}
-          >
-            <option value="">Barchasi</option>
-            {staticData?.regions?.map((region) => (
-              <option key={region.regionId} value={region.regionId}>
-                {region.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <LocationSelector
+          label="Joylashuv"
+          countryValue={filters.fromCountry}
+          regionValue={filters.fromRegion}
+          cityValue={filters.fromCity}
+          onCountryChange={(value) => setFilters((prev) => ({ ...prev, fromCountry: value }))}
+          onRegionChange={(value) => setFilters((prev) => ({ ...prev, fromRegion: value }))}
+          onCityChange={(value) => setFilters((prev) => ({ ...prev, fromCity: value }))}
+          staticData={staticData}
+          variant="mobile"
+        />
 
         <div className="m-form-group">
           <label className="m-form-label">Transport turi</label>

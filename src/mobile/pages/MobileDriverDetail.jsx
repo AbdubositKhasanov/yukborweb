@@ -10,6 +10,7 @@ import { formatBalance, getBalanceColor } from '../../utils/formatBalance';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading from '../components/MobileLoading';
+import LocationSelector from '../../components/LocationSelector';
 
 export default function MobileDriverDetail() {
   const { id } = useParams();
@@ -24,7 +25,9 @@ export default function MobileDriverDetail() {
   // Transport sheet
   const [transportSheet, setTransportSheet] = useState(false);
   const [transportData, setTransportData] = useState({
+    fromCountry: '',
     fromRegion: '',
+    fromCity: '',
     vehicleType: '',
     maxWeight: '',
     stateNumber: '',
@@ -122,7 +125,9 @@ export default function MobileDriverDetail() {
 
     if (transportForm) {
       setTransportData({
+        fromCountry: transportForm.fromLocation?.countryId?.toString() || '',
         fromRegion: transportForm.fromLocation?.regionId?.toString() || transportForm.fromRegion || '',
+        fromCity: transportForm.fromLocation?.cityId?.toString() || '',
         vehicleType: transportForm.vehicleType || '',
         maxWeight: transportForm.maxWeight?.toString() || '',
         stateNumber: transportForm.stateNumber || '',
@@ -131,7 +136,9 @@ export default function MobileDriverDetail() {
       });
     } else {
       setTransportData({
+        fromCountry: '',
         fromRegion: '',
+        fromCity: '',
         vehicleType: '',
         maxWeight: '',
         stateNumber: '',
@@ -158,8 +165,8 @@ export default function MobileDriverDetail() {
       const payload = {
         fromLocation: {
           regionId: transportData.fromRegion ? parseInt(transportData.fromRegion) : null,
-          countryId: null,
-          cityId: null,
+          countryId: transportData.fromCountry ? parseInt(transportData.fromCountry) : null,
+          cityId: transportData.fromCity ? parseInt(transportData.fromCity) : null,
         },
         maxWeight: transportData.maxWeight ? parseFloat(transportData.maxWeight) : null,
         vehicleTypeId: vehicleType ? vehicleType.id : null,
@@ -369,21 +376,17 @@ export default function MobileDriverDetail() {
           </div>
         )}
 
-        <div className="m-form-group">
-          <label className="m-form-label">Joylashuv</label>
-          <select
-            className="m-form-select"
-            value={transportData.fromRegion}
-            onChange={(e) => setTransportData({ ...transportData, fromRegion: e.target.value })}
-          >
-            <option value="">Tanlang</option>
-            {staticData?.regions?.map((region) => (
-              <option key={region.regionId} value={region.regionId}>
-                {region.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <LocationSelector
+          label="Joylashuv"
+          countryValue={transportData.fromCountry}
+          regionValue={transportData.fromRegion}
+          cityValue={transportData.fromCity}
+          onCountryChange={(value) => setTransportData((prev) => ({ ...prev, fromCountry: value }))}
+          onRegionChange={(value) => setTransportData((prev) => ({ ...prev, fromRegion: value }))}
+          onCityChange={(value) => setTransportData((prev) => ({ ...prev, fromCity: value }))}
+          staticData={staticData}
+          variant="mobile"
+        />
 
         <div className="m-form-group">
           <label className="m-form-label">Transport turi</label>

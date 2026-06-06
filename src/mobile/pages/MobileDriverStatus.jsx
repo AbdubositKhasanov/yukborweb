@@ -9,6 +9,7 @@ import { useStaticData } from '../../context/StaticDataContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading from '../components/MobileLoading';
+import LocationSelector from '../../components/LocationSelector';
 
 export default function MobileDriverStatus() {
   const navigate = useNavigate();
@@ -273,65 +274,17 @@ export default function MobileDriverStatus() {
           </button>
         }
       >
-        {/* Country */}
-        <div className="m-form-group">
-          <label className="m-form-label">Davlat</label>
-          <select
-            className="m-form-select"
-            value={fromCountry}
-            onChange={(e) => {
-              setFromCountry(e.target.value);
-              setFromRegion('');
-              setFromCity('');
-            }}
-          >
-            <option value="">Tanlang</option>
-            {staticData?.countries?.map((country) => (
-              <option key={country.countryId} value={country.countryId}>
-                {country.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Region */}
-        <div className="m-form-group">
-          <label className="m-form-label">Viloyat</label>
-          <select
-            className="m-form-select"
-            value={fromRegion}
-            onChange={(e) => {
-              setFromRegion(e.target.value);
-              setFromCity('');
-            }}
-            disabled={!fromCountry}
-          >
-            <option value="">Tanlang</option>
-            {filteredRegions.map((region) => (
-              <option key={region.regionId} value={region.regionId}>
-                {region.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* City */}
-        <div className="m-form-group">
-          <label className="m-form-label">Shahar</label>
-          <select
-            className="m-form-select"
-            value={fromCity}
-            onChange={(e) => setFromCity(e.target.value)}
-            disabled={!fromRegion}
-          >
-            <option value="">Tanlang</option>
-            {filteredCities.map((city) => (
-              <option key={city.cityId} value={city.cityId}>
-                {city.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <LocationSelector
+          label="Joylashuv"
+          countryValue={fromCountry}
+          regionValue={fromRegion}
+          cityValue={fromCity}
+          onCountryChange={setFromCountry}
+          onRegionChange={setFromRegion}
+          onCityChange={setFromCity}
+          staticData={staticData}
+          variant="mobile"
+        />
       </BottomSheet>
 
       {/* Edit Transport Sheet */}
@@ -351,65 +304,17 @@ export default function MobileDriverStatus() {
       >
         {transport ? (
           <>
-            {/* Country */}
-            <div className="m-form-group">
-              <label className="m-form-label">Davlat</label>
-              <select
-                className="m-form-select"
-                value={fromCountry}
-                onChange={(e) => {
-                  setFromCountry(e.target.value);
-                  setFromRegion('');
-                  setFromCity('');
-                }}
-              >
-                <option value="">Tanlang</option>
-                {staticData?.countries?.map((country) => (
-                  <option key={country.countryId} value={country.countryId}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Region */}
-            <div className="m-form-group">
-              <label className="m-form-label">Viloyat</label>
-              <select
-                className="m-form-select"
-                value={fromRegion}
-                onChange={(e) => {
-                  setFromRegion(e.target.value);
-                  setFromCity('');
-                }}
-                disabled={!fromCountry}
-              >
-                <option value="">Tanlang</option>
-                {filteredRegions.map((region) => (
-                  <option key={region.regionId} value={region.regionId}>
-                    {region.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* City */}
-            <div className="m-form-group">
-              <label className="m-form-label">Shahar</label>
-              <select
-                className="m-form-select"
-                value={fromCity}
-                onChange={(e) => setFromCity(e.target.value)}
-                disabled={!fromRegion}
-              >
-                <option value="">Tanlang</option>
-                {filteredCities.map((city) => (
-                  <option key={city.cityId} value={city.cityId}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <LocationSelector
+              label="Joylashuv"
+              countryValue={fromCountry}
+              regionValue={fromRegion}
+              cityValue={fromCity}
+              onCountryChange={setFromCountry}
+              onRegionChange={setFromRegion}
+              onCityChange={setFromCity}
+              staticData={staticData}
+              variant="mobile"
+            />
 
             {/* Vehicle type */}
             <div className="m-form-group">

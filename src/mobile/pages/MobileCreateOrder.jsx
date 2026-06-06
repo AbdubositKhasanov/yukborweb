@@ -9,6 +9,7 @@ import { useStaticData } from '../../context/StaticDataContext';
 import { createOrder, getBroadcastStatus, getLocationsAndVehicles } from '../../services/api';
 import { isBroadcastFinished, normalizeBroadcastStatus } from '../../utils/orderText';
 import TopBar from '../components/TopBar';
+import LocationSelector from '../../components/LocationSelector';
 
 const STEPS = [
   { id: 1, title: 'Yuk ma\'lumotlari' },
@@ -372,130 +373,36 @@ export default function MobileCreateOrder() {
         {/* Step 2: Route - matches Desktop LocationSelector */}
         {step === 2 && (
           <div>
-            <h3 style={{ fontSize: 14, color: 'var(--m-text-muted)', marginBottom: 16 }}>
-              📍 Qayerdan
-            </h3>
-
-            <div className="m-form-group">
-              <label className="m-form-label required">Davlat</label>
-              <select
-                className={`m-form-select ${errors.fromLocation ? 'error' : ''}`}
-                value={formData.fromCountry}
-                onChange={(e) => {
-                  updateField('fromCountry', e.target.value);
-                  updateField('fromRegion', '');
-                  updateField('fromCity', '');
-                }}
-              >
-                <option value="">Davlat</option>
-                {staticData?.countries?.map((country) => (
-                  <option key={country.countryId} value={country.countryId}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="m-form-group">
-              <label className="m-form-label required">Viloyat</label>
-              <select
-                className={`m-form-select ${errors.fromLocation ? 'error' : ''}`}
-                value={formData.fromRegion}
-                onChange={(e) => {
-                  updateField('fromRegion', e.target.value);
-                  updateField('fromCity', '');
-                }}
-                disabled={!formData.fromCountry}
-              >
-                <option value="">Viloyat</option>
-                {getFromRegions().map((region) => (
-                  <option key={region.regionId} value={region.regionId}>
-                    {region.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="m-form-group">
-              <label className="m-form-label">Shahar</label>
-              <select
-                className="m-form-select"
-                value={formData.fromCity}
-                onChange={(e) => updateField('fromCity', e.target.value)}
-                disabled={!formData.fromRegion}
-              >
-                <option value="">Shahar</option>
-                {getFromCities().map((city) => (
-                  <option key={city.cityId} value={city.cityId}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <LocationSelector
+              label="Qayerdan"
+              countryValue={formData.fromCountry}
+              regionValue={formData.fromRegion}
+              cityValue={formData.fromCity}
+              onCountryChange={(value) => updateField('fromCountry', value)}
+              onRegionChange={(value) => updateField('fromRegion', value)}
+              onCityChange={(value) => updateField('fromCity', value)}
+              staticData={staticData}
+              variant="mobile"
+              required
+              error={Boolean(errors.fromLocation)}
+            />
             {errors.fromLocation && <p className="m-form-error">{errors.fromLocation}</p>}
 
             <div className="m-divider" />
 
-            <h3 style={{ fontSize: 14, color: 'var(--m-text-muted)', marginBottom: 16 }}>
-              📍 Qayerga
-            </h3>
-
-            <div className="m-form-group">
-              <label className="m-form-label required">Davlat</label>
-              <select
-                className={`m-form-select ${errors.toLocation ? 'error' : ''}`}
-                value={formData.toCountry}
-                onChange={(e) => {
-                  updateField('toCountry', e.target.value);
-                  updateField('toRegion', '');
-                  updateField('toCity', '');
-                }}
-              >
-                <option value="">Davlat</option>
-                {staticData?.countries?.map((country) => (
-                  <option key={country.countryId} value={country.countryId}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="m-form-group">
-              <label className="m-form-label required">Viloyat</label>
-              <select
-                className={`m-form-select ${errors.toLocation ? 'error' : ''}`}
-                value={formData.toRegion}
-                onChange={(e) => {
-                  updateField('toRegion', e.target.value);
-                  updateField('toCity', '');
-                }}
-                disabled={!formData.toCountry}
-              >
-                <option value="">Viloyat</option>
-                {getToRegions().map((region) => (
-                  <option key={region.regionId} value={region.regionId}>
-                    {region.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="m-form-group">
-              <label className="m-form-label">Shahar</label>
-              <select
-                className="m-form-select"
-                value={formData.toCity}
-                onChange={(e) => updateField('toCity', e.target.value)}
-                disabled={!formData.toRegion}
-              >
-                <option value="">Shahar</option>
-                {getToCities().map((city) => (
-                  <option key={city.cityId} value={city.cityId}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <LocationSelector
+              label="Qayerga"
+              countryValue={formData.toCountry}
+              regionValue={formData.toRegion}
+              cityValue={formData.toCity}
+              onCountryChange={(value) => updateField('toCountry', value)}
+              onRegionChange={(value) => updateField('toRegion', value)}
+              onCityChange={(value) => updateField('toCity', value)}
+              staticData={staticData}
+              variant="mobile"
+              required
+              error={Boolean(errors.toLocation)}
+            />
             {errors.toLocation && <p className="m-form-error">{errors.toLocation}</p>}
           </div>
         )}

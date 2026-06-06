@@ -5,6 +5,7 @@ import { useStaticData } from '../context/StaticDataContext';
 import CargoCard from '../components/CargoCard';
 import CargoOwnerToggle from '../components/CargoOwnerToggle';
 import ClubMembershipModal from '../components/ClubMembershipModal';
+import LocationSelector from '../components/LocationSelector';
 import { showError, showSuccess } from '../utils/toast';
 
 export default function SearchPage() {
@@ -180,6 +181,7 @@ export default function SearchPage() {
       vehicleType: searchState.vehicleType || '',
       minWeight: searchState.minWeight || '',
       maxWeight: searchState.maxWeight || '',
+      cargoOwnerOnly: Boolean(searchState.cargoOwnerOnly),
     });
   };
 
@@ -193,9 +195,25 @@ export default function SearchPage() {
         searchState.toCity ||
         searchState.vehicleType ||
         searchState.minWeight ||
-        searchState.maxWeight
+        searchState.maxWeight ||
+        searchState.cargoOwnerOnly
     );
   };
+
+  useEffect(() => {
+    setHarbingerCreatedForCurrentSearch(false);
+  }, [
+    fromCountry,
+    fromRegion,
+    fromCity,
+    toCountry,
+    toRegion,
+    toCity,
+    vehicleType,
+    minWeight,
+    maxWeight,
+    cargoOwnerOnly,
+  ]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -227,6 +245,7 @@ export default function SearchPage() {
       vehicleType,
       minWeight,
       maxWeight,
+      cargoOwnerOnly,
     };
     const currentSearchKey = buildSearchKey(currentSearchState);
 
@@ -623,113 +642,27 @@ export default function SearchPage() {
         <div className="search-filters">
           <h3 className="filters-title">Filterlar</h3>
           <form onSubmit={handleSearch}>
-            {/* From Location */}
-            <div className="form-group">
-              <label className="form-label">Qayerdan</label>
-              <div className="form-row">
-                <select
-                  className="form-select"
-                  value={fromCountry}
-                  onChange={(e) => {
-                    setFromCountry(e.target.value);
-                    setFromRegion('');
-                    setFromCity('');
-                  }}
-                >
-                  <option value="">Davlat</option>
-                  {staticData?.countries.map(country => (
-                    <option key={country.countryId} value={country.countryId}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
+            <LocationSelector
+              label="Qayerdan"
+              countryValue={fromCountry}
+              regionValue={fromRegion}
+              cityValue={fromCity}
+              onCountryChange={setFromCountry}
+              onRegionChange={setFromRegion}
+              onCityChange={setFromCity}
+              staticData={staticData}
+            />
 
-                <select
-                  className="form-select"
-                  value={fromRegion}
-                  onChange={(e) => {
-                    setFromRegion(e.target.value);
-                    setFromCity('');
-                  }}
-                  disabled={!fromCountry}
-                >
-                  <option value="">Viloyat</option>
-                  {filteredFromRegions.map(region => (
-                    <option key={region.regionId} value={region.regionId}>
-                      {region.name}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="form-select"
-                  value={fromCity}
-                  onChange={(e) => setFromCity(e.target.value)}
-                  disabled={!fromRegion}
-                >
-                  <option value="">Shahar</option>
-                  {filteredFromCities.map(city => (
-                    <option key={city.cityId} value={city.cityId}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* To Location */}
-            <div className="form-group">
-              <label className="form-label">Qayerga</label>
-              <div className="form-row">
-                <select
-                  className="form-select"
-                  value={toCountry}
-                  onChange={(e) => {
-                    setToCountry(e.target.value);
-                    setToRegion('');
-                    setToCity('');
-                  }}
-                >
-                  <option value="">Davlat</option>
-                  {staticData?.countries.map(country => (
-                    <option key={country.countryId} value={country.countryId}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="form-select"
-                  value={toRegion}
-                  onChange={(e) => {
-                    setToRegion(e.target.value);
-                    setToCity('');
-                  }}
-                  disabled={!toCountry}
-                >
-                  <option value="">Viloyat</option>
-                  {filteredToRegions.map(region => (
-                    <option key={region.regionId} value={region.regionId}>
-                      {region.name}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="form-select"
-                  value={toCity}
-                  onChange={(e) => setToCity(e.target.value)}
-                  disabled={!toRegion}
-                >
-                  <option value="">Shahar</option>
-                  {filteredToCities.map(city => (
-                    <option key={city.cityId} value={city.cityId}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <LocationSelector
+              label="Qayerga"
+              countryValue={toCountry}
+              regionValue={toRegion}
+              cityValue={toCity}
+              onCountryChange={setToCountry}
+              onRegionChange={setToRegion}
+              onCityChange={setToCity}
+              staticData={staticData}
+            />
 
             {/* Vehicle Type and Weight */}
             <div className="form-row">

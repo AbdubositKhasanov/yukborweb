@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStaticData } from '../../context/StaticDataContext';
 import { createTransport } from '../../services/api';
 import TopBar from '../components/TopBar';
+import LocationSelector from '../../components/LocationSelector';
 
 export default function MobileCreateTransport() {
   const navigate = useNavigate();
@@ -91,62 +92,17 @@ export default function MobileCreateTransport() {
               <h3 className="m-card-title">Joylashuv</h3>
             </div>
             <div style={{ padding: 16 }}>
-              <div className="m-form-group">
-                <label className="m-form-label">Davlat</label>
-                <select
-                  className="m-form-select"
-                  value={fromCountry}
-                  onChange={(e) => {
-                    setFromCountry(e.target.value);
-                    setFromRegion('');
-                    setFromCity('');
-                  }}
-                >
-                  <option value="">Tanlang</option>
-                  {staticData?.countries?.map((country) => (
-                    <option key={country.countryId} value={country.countryId}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="m-form-group">
-                <label className="m-form-label">Viloyat</label>
-                <select
-                  className="m-form-select"
-                  value={fromRegion}
-                  onChange={(e) => {
-                    setFromRegion(e.target.value);
-                    setFromCity('');
-                  }}
-                  disabled={!fromCountry}
-                >
-                  <option value="">Tanlang</option>
-                  {filteredFromRegions.map((region) => (
-                    <option key={region.regionId} value={region.regionId}>
-                      {region.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="m-form-group" style={{ marginBottom: 0 }}>
-                <label className="m-form-label">Shahar</label>
-                <select
-                  className="m-form-select"
-                  value={fromCity}
-                  onChange={(e) => setFromCity(e.target.value)}
-                  disabled={!fromRegion}
-                >
-                  <option value="">Tanlang</option>
-                  {filteredFromCities.map((city) => (
-                    <option key={city.cityId} value={city.cityId}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <LocationSelector
+                label=""
+                countryValue={fromCountry}
+                regionValue={fromRegion}
+                cityValue={fromCity}
+                onCountryChange={setFromCountry}
+                onRegionChange={setFromRegion}
+                onCityChange={setFromCity}
+                staticData={staticData}
+                variant="mobile"
+              />
             </div>
           </div>
 

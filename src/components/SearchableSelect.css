@@ -1,0 +1,99 @@
+.searchable-select {
+  position: relative;
+  width: 100%;
+}
+
+.searchable-select__control {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  min-height: 42px;
+  text-align: left;
+  width: 100%;
+}
+
+.searchable-select__control:disabled {
+  cursor: not-allowed;
+}
+
+.searchable-select__placeholder {
+  color: #777;
+}
+
+.searchable-select__chevron {
+  color: #777;
+  flex: 0 0 auto;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.searchable-select__menu {
+  background: #fff;
+  border: 1px solid #d7dde8;
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(8, 20, 44, 0.18);
+  left: 0;
+  margin-top: 6px;
+  overflow: hidden;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 1200;
+}
+
+.searchable-select__search-wrap {
+  border-bottom: 1px solid #edf0f5;
+  padding: 8px;
+}
+
+.searchable-select__search {
+  border: 1px solid #d7dde8;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  padding: 9px 10px;
+  width: 100%;
+}
+
+.searchable-select__search:focus {
+  border-color: #0088cc;
+  box-shadow: 0 0 0 3px rgba(0, 136, 204, 0.12);
+}
+
+.searchable-select__options {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.searchable-select__option {
+  background: #fff;
+  border: 0;
+  color: #172033;
+  cursor: pointer;
+  display: block;
+  font-size: 14px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.searchable-select__option:hover,
+.searchable-select__option.selected {
+  background: #eef7ff;
+}
+
+.searchable-select__empty {
+  color: #777;
+  font-size: 14px;
+  padding: 12px;
+}
+
+.m-form-select.searchable-select__control {
+  background: var(--m-card-bg);
+  color: var(--m-text);
+}
+
+.m-sheet-content .searchable-select__menu {
+  position: relative;
+}

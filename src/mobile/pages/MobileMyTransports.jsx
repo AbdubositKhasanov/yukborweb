@@ -10,6 +10,7 @@ import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
+import LocationSelector from '../../components/LocationSelector';
 
 export default function MobileMyTransports() {
   const navigate = useNavigate();
@@ -21,7 +22,9 @@ export default function MobileMyTransports() {
   // Create sheet
   const [createSheet, setCreateSheet] = useState(false);
   const [createData, setCreateData] = useState({
+    fromCountry: '',
     fromRegion: '',
+    fromCity: '',
     vehicleType: '',
     maxWeight: '',
     stateNumber: '',
@@ -67,8 +70,8 @@ export default function MobileMyTransports() {
       const response = await createTransport({
         fromLocation: {
           regionId: createData.fromRegion ? parseInt(createData.fromRegion) : null,
-          countryId: null,
-          cityId: null,
+          countryId: createData.fromCountry ? parseInt(createData.fromCountry) : null,
+          cityId: createData.fromCity ? parseInt(createData.fromCity) : null,
         },
         vehicleTypeId: createData.vehicleType
           ? (staticData?.vehicleTypes?.find(v => v.name === createData.vehicleType)?.id || null)
@@ -82,7 +85,9 @@ export default function MobileMyTransports() {
       if (response.code === 200) {
         setCreateSheet(false);
         setCreateData({
+          fromCountry: '',
           fromRegion: '',
+          fromCity: '',
           vehicleType: '',
           maxWeight: '',
           stateNumber: '',
@@ -218,21 +223,17 @@ export default function MobileMyTransports() {
           {createError && <p className="m-form-error">{createError}</p>}
         </div>
 
-        <div className="m-form-group">
-          <label className="m-form-label">Joylashuv</label>
-          <select
-            className="m-form-select"
-            value={createData.fromRegion}
-            onChange={(e) => setCreateData({ ...createData, fromRegion: e.target.value })}
-          >
-            <option value="">Tanlang</option>
-            {staticData?.regions?.map((region) => (
-              <option key={region.regionId} value={region.regionId}>
-                {region.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <LocationSelector
+          label="Joylashuv"
+          countryValue={createData.fromCountry}
+          regionValue={createData.fromRegion}
+          cityValue={createData.fromCity}
+          onCountryChange={(value) => setCreateData((prev) => ({ ...prev, fromCountry: value }))}
+          onRegionChange={(value) => setCreateData((prev) => ({ ...prev, fromRegion: value }))}
+          onCityChange={(value) => setCreateData((prev) => ({ ...prev, fromCity: value }))}
+          staticData={staticData}
+          variant="mobile"
+        />
 
         <div className="m-form-group">
           <label className="m-form-label">Transport turi</label>

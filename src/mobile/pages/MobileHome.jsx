@@ -15,6 +15,7 @@ import { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
 import ClubMembershipModal from '../../components/ClubMembershipModal';
 import CargoOwnerToggle from '../../components/CargoOwnerToggle';
+import LocationSelector from '../../components/LocationSelector';
 import { showError, showSuccess } from '../../utils/toast';
 
 export default function MobileHome() {
@@ -155,6 +156,7 @@ export default function MobileHome() {
       vehicleType: searchState.vehicleType || '',
       minWeight: searchState.minWeight || '',
       maxWeight: searchState.maxWeight || '',
+      cargoOwnerOnly: Boolean(searchState.cargoOwnerOnly),
     });
   };
 
@@ -168,9 +170,14 @@ export default function MobileHome() {
         searchState.toCity ||
         searchState.vehicleType ||
         searchState.minWeight ||
-        searchState.maxWeight
+        searchState.maxWeight ||
+        searchState.cargoOwnerOnly
     );
   };
+
+  useEffect(() => {
+    setHarbingerCreatedForCurrentSearch(false);
+  }, [filters, cargoOwnerOnly]);
 
   // Load cargos - branches based on search mode
   const loadCargos = useCallback(async () => {
@@ -261,7 +268,8 @@ export default function MobileHome() {
     setSearchMode('advanced');
     setTextQuery('');
 
-    const currentSearchKey = buildSearchKey(filters);
+    const currentSearchState = { ...filters, cargoOwnerOnly };
+    const currentSearchKey = buildSearchKey(currentSearchState);
     if (currentSearchKey !== searchSnapshotKey) {
       setHarbingerCreatedForCurrentSearch(false);
     }
@@ -269,7 +277,7 @@ export default function MobileHome() {
     setActiveFilters(buildActiveFilters(filters));
     setFilterSheetOpen(false);
     setSearchSnapshotKey(currentSearchKey);
-    setHasSearched(hasSelectedSearchOptions(filters));
+    setHasSearched(hasSelectedSearchOptions(currentSearchState));
     setPage(0);
     setIsInitialLoad(false);
     setSearchTrigger((t) => t + 1);
@@ -706,37 +714,29 @@ export default function MobileHome() {
           </div>
         }
       >
-        <div className="m-form-group">
-          <label className="m-form-label">Qayerdan</label>
-          <select
-            className="m-form-select"
-            value={filters.fromRegion}
-            onChange={(e) => setFilters({ ...filters, fromRegion: e.target.value })}
-          >
-            <option value="">Viloyatni tanlang</option>
-            {staticData?.regions?.map((region) => (
-              <option key={region.regionId} value={region.regionId}>
-                {region.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <LocationSelector
+          label="Qayerdan"
+          countryValue={filters.fromCountry}
+          regionValue={filters.fromRegion}
+          cityValue={filters.fromCity}
+          onCountryChange={(value) => setFilters((prev) => ({ ...prev, fromCountry: value }))}
+          onRegionChange={(value) => setFilters((prev) => ({ ...prev, fromRegion: value }))}
+          onCityChange={(value) => setFilters((prev) => ({ ...prev, fromCity: value }))}
+          staticData={staticData}
+          variant="mobile"
+        />
 
-        <div className="m-form-group">
-          <label className="m-form-label">Qayerga</label>
-          <select
-            className="m-form-select"
-            value={filters.toRegion}
-            onChange={(e) => setFilters({ ...filters, toRegion: e.target.value })}
-          >
-            <option value="">Viloyatni tanlang</option>
-            {staticData?.regions?.map((region) => (
-              <option key={region.regionId} value={region.regionId}>
-                {region.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <LocationSelector
+          label="Qayerga"
+          countryValue={filters.toCountry}
+          regionValue={filters.toRegion}
+          cityValue={filters.toCity}
+          onCountryChange={(value) => setFilters((prev) => ({ ...prev, toCountry: value }))}
+          onRegionChange={(value) => setFilters((prev) => ({ ...prev, toRegion: value }))}
+          onCityChange={(value) => setFilters((prev) => ({ ...prev, toCity: value }))}
+          staticData={staticData}
+          variant="mobile"
+        />
 
         <div className="m-form-group">
           <label className="m-form-label">Transport turi</label>

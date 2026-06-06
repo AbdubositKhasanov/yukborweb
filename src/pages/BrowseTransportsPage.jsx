@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { searchTransports, getLocationsAndVehicles, getTransportDetails, offerForDriver } from '../services/api';
 import { formatTimeAgo } from '../utils/formatTime';
+import LocationSelector from '../components/LocationSelector';
 
 export default function BrowseTransportsPage() {
   const location = useLocation();
@@ -185,59 +186,16 @@ export default function BrowseTransportsPage() {
       <div className="search-filters">
         <h3 className="filters-title">Filterlar</h3>
         <form onSubmit={handleSearch}>
-          {/* From Location */}
-          <div className="form-group">
-            <label className="form-label">Qayerdan</label>
-            <div className="form-row">
-              <select
-                className="form-select"
-                value={fromCountry}
-                onChange={(e) => {
-                  setFromCountry(e.target.value);
-                  setFromRegion('');
-                  setFromCity('');
-                }}
-              >
-                <option value="">Davlat</option>
-                {staticData?.countries.map(country => (
-                  <option key={country.countryId} value={country.countryId}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="form-select"
-                value={fromRegion}
-                onChange={(e) => {
-                  setFromRegion(e.target.value);
-                  setFromCity('');
-                }}
-                disabled={!fromCountry}
-              >
-                <option value="">Viloyat</option>
-                {filteredFromRegions.map(region => (
-                  <option key={region.regionId} value={region.regionId}>
-                    {region.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="form-select"
-                value={fromCity}
-                onChange={(e) => setFromCity(e.target.value)}
-                disabled={!fromRegion}
-              >
-                <option value="">Shahar</option>
-                {filteredFromCities.map(city => (
-                  <option key={city.cityId} value={city.cityId}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <LocationSelector
+            label="Qayerdan"
+            countryValue={fromCountry}
+            regionValue={fromRegion}
+            cityValue={fromCity}
+            onCountryChange={setFromCountry}
+            onRegionChange={setFromRegion}
+            onCityChange={setFromCity}
+            staticData={staticData}
+          />
 
           {/* Vehicle Type and Max Weight */}
           <div className="form-row">

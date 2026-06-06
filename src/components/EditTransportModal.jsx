@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getDriverTransportForm, updateTransportForm } from '../services/api';
 import { showSuccess, showError as showToastError } from '../utils/toast';
+import LocationSelector from './LocationSelector';
 
 export default function EditTransportModal({ isOpen, onClose, onSuccess, staticData }) {
   const [loading, setLoading] = useState(false);
@@ -146,58 +147,16 @@ export default function EditTransportModal({ isOpen, onClose, onSuccess, staticD
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label">Qayerdan</label>
-              <div className="form-row">
-                <select
-                  className="form-select"
-                  value={fromCountry}
-                  onChange={(e) => {
-                    setFromCountry(e.target.value);
-                    setFromRegion('');
-                    setFromCity('');
-                  }}
-                >
-                  <option value="">Davlat</option>
-                  {staticData?.countries.map(country => (
-                    <option key={country.countryId} value={country.countryId}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="form-select"
-                  value={fromRegion}
-                  onChange={(e) => {
-                    setFromRegion(e.target.value);
-                    setFromCity('');
-                  }}
-                  disabled={!fromCountry}
-                >
-                  <option value="">Viloyat</option>
-                  {filteredFromRegions.map(region => (
-                    <option key={region.regionId} value={region.regionId}>
-                      {region.name}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="form-select"
-                  value={fromCity}
-                  onChange={(e) => setFromCity(e.target.value)}
-                  disabled={!fromRegion}
-                >
-                  <option value="">Shahar</option>
-                  {filteredFromCities.map(city => (
-                    <option key={city.cityId} value={city.cityId}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <LocationSelector
+              label="Qayerdan"
+              countryValue={fromCountry}
+              regionValue={fromRegion}
+              cityValue={fromCity}
+              onCountryChange={setFromCountry}
+              onRegionChange={setFromRegion}
+              onCityChange={setFromCity}
+              staticData={staticData}
+            />
 
             <div className="form-group">
               <label className="form-label">Max og'irligi (t)</label>
