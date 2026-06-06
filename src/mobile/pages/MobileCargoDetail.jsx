@@ -283,8 +283,13 @@ export default function MobileCargoDetail() {
               className="m-btn m-btn-lg"
               style={{ width: '100%', textDecoration: 'none', textAlign: 'center', background: '#0088cc', color: 'white' }}
             >
-              💬 Telegramdagi xabarga o&apos;tish
+              {cargo.messageIsPrivateGroup ? '💬 Original xabarni ko‘rish' : '💬 Telegramdagi xabarga o‘tish'}
             </a>
+            {cargo.messageIsPrivateGroup && (
+              <div style={{ marginTop: 8, fontSize: 13, color: 'var(--m-text-muted)', textAlign: 'center' }}>
+                Private guruhdan olingan
+              </div>
+            )}
           </div>
         )}
 

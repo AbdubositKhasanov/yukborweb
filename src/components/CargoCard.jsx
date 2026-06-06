@@ -155,20 +155,26 @@ export default function CargoCard({
           )}
 
           {cargo.messageUrl && (
-            <a
-              href={cargo.messageUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-block',
-                marginTop: '8px',
-                fontSize: '13px',
-                color: '#0088cc',
-                textDecoration: 'none',
-              }}
-            >
-              💬 Xabarga o&apos;tish
-            </a>
+            <div style={{ marginTop: '8px' }}>
+              <a
+                href={cargo.messageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-block',
+                  fontSize: '13px',
+                  color: '#0088cc',
+                  textDecoration: 'none',
+                }}
+              >
+                {cargo.messageIsPrivateGroup ? '💬 Original xabarni ko‘rish' : '💬 Xabarga o‘tish'}
+              </a>
+              {cargo.messageIsPrivateGroup && (
+                <div style={{ marginTop: '4px', fontSize: '12px', color: '#6c757d' }}>
+                  Private guruhdan olingan
+                </div>
+              )}
+            </div>
           )}
         </div>
 

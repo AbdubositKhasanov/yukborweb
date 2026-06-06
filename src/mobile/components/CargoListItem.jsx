@@ -119,8 +119,9 @@ export default function CargoListItem({
                   onClick={(e) => e.stopPropagation()}
                   style={{ color: '#0088cc', textDecoration: 'none' }}
                 >
-                  💬 Xabar
+                  {cargo.messageIsPrivateGroup ? '💬 Original xabar' : '💬 Xabar'}
                 </a>
+                {cargo.messageIsPrivateGroup && <span>Private guruh</span>}
               </>
             )}
           </div>
