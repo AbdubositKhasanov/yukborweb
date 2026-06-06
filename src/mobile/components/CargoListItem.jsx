@@ -9,6 +9,7 @@ import { formatTimeAgo } from '../../utils/formatTime';
 import { offerForDriver } from '../../services/api';
 import BottomSheet from './BottomSheet';
 import SenderTypeBadge from '../../components/SenderTypeBadge';
+import { buildOriginalCargoMessage, PRIVATE_GROUP_MESSAGE_NOTE } from '../../utils/originalMessage';
 
 export default function CargoListItem({
   cargo,
@@ -23,6 +24,7 @@ export default function CargoListItem({
   const [offering, setOffering] = useState(false);
   const [offerSuccess, setOfferSuccess] = useState(false);
   const [offerError, setOfferError] = useState('');
+  const [messageSheet, setMessageSheet] = useState(false);
 
   const handleClick = () => {
     if (onClick) {
@@ -36,6 +38,14 @@ export default function CargoListItem({
     e.stopPropagation();
     setOfferSheet(true);
     setOfferError('');
+  };
+
+  const handleMessageClick = (e) => {
+    e.stopPropagation();
+    if (cargo.messageIsPrivateGroup) {
+      e.preventDefault();
+      setMessageSheet(true);
+    }
   };
 
   const handleSendOffer = async () => {
@@ -90,6 +100,8 @@ export default function CargoListItem({
   // Time display
   const timeAgo = formatTimeAgo(cargo.createdAt || cargo.created_at);
   const isNew = timeAgo === 'Hozirgina tushdi';
+  const hasMessageAction = Boolean(cargo.messageUrl || cargo.messageIsPrivateGroup);
+  const hasLeadingMeta = Boolean(cargo.vehicleType || cargo.priceUzs);
 
   return (
     <>
@@ -109,18 +121,35 @@ export default function CargoListItem({
             {cargo.vehicleType && <span>{cargo.vehicleType}</span>}
             {cargo.vehicleType && cargo.priceUzs && <span>•</span>}
             {cargo.priceUzs && <span>{formatPrice(cargo.priceUzs)} so'm</span>}
-            {cargo.messageUrl && (
+            {hasMessageAction && (
               <>
-                <span>•</span>
-                <a
-                  href={cargo.messageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  style={{ color: '#0088cc', textDecoration: 'none' }}
-                >
-                  {cargo.messageIsPrivateGroup ? '💬 Original xabar' : '💬 Xabar'}
-                </a>
+                {hasLeadingMeta && <span>•</span>}
+                {cargo.messageIsPrivateGroup ? (
+                  <button
+                    type="button"
+                    onClick={handleMessageClick}
+                    style={{
+                      padding: 0,
+                      border: 0,
+                      background: 'transparent',
+                      color: '#0088cc',
+                      font: 'inherit',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    💬 Original xabar
+                  </button>
+                ) : (
+                  <a
+                    href={cargo.messageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleMessageClick}
+                    style={{ color: '#0088cc', textDecoration: 'none' }}
+                  >
+                    💬 Xabar
+                  </a>
+                )}
                 {cargo.messageIsPrivateGroup && <span>Private guruh</span>}
               </>
             )}
@@ -195,6 +224,41 @@ export default function CargoListItem({
               ✓ Taklif muvaffaqiyatli yuborildi!
             </div>
           )}
+        </div>
+      </BottomSheet>
+
+      <BottomSheet
+        isOpen={messageSheet}
+        onClose={() => setMessageSheet(false)}
+        title="💬 Original xabar"
+        height="full"
+        footer={
+          <button className="m-btn m-btn-primary m-btn-full m-btn-lg" onClick={() => setMessageSheet(false)}>
+            Yopish
+          </button>
+        }
+      >
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ padding: 12, borderRadius: 8, background: '#fff3cd', color: '#664d03', fontSize: 14, lineHeight: 1.45 }}>
+            {PRIVATE_GROUP_MESSAGE_NOTE}
+          </div>
+          <pre
+            style={{
+              margin: 0,
+              padding: 14,
+              borderRadius: 8,
+              background: 'var(--m-bg)',
+              border: '1px solid var(--m-border)',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontFamily: 'inherit',
+              fontSize: 15,
+              lineHeight: 1.55,
+              color: 'var(--m-text)',
+            }}
+          >
+            {buildOriginalCargoMessage(cargo)}
+          </pre>
         </div>
       </BottomSheet>
     </>

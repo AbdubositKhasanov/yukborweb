@@ -8,6 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getCargoDetails, requestCargoPhone, getUserMe, getMyInvitedUsers, offerForDriver } from '../../services/api';
 import { formatTimeAgo } from '../../utils/formatTime';
 import { formatOrderPrice } from '../../utils/orderText';
+import { buildOriginalCargoMessage, PRIVATE_GROUP_MESSAGE_NOTE } from '../../utils/originalMessage';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
@@ -47,6 +48,8 @@ export default function MobileCargoDetail() {
   const [offering, setOffering] = useState(false);
   const [offerSuccess, setOfferSuccess] = useState(false);
   const [offerError, setOfferError] = useState('');
+  const [messageSheet, setMessageSheet] = useState(false);
+  const hasMessageAction = Boolean(cargo?.messageUrl || cargo?.messageIsPrivateGroup);
 
   // Load user data
   useEffect(() => {
@@ -274,17 +277,28 @@ export default function MobileCargoDetail() {
         </div>
 
         {/* Message link */}
-        {cargo.messageUrl && (
+        {hasMessageAction && (
           <div className="m-detail-section">
-            <a
-              href={cargo.messageUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="m-btn m-btn-lg"
-              style={{ width: '100%', textDecoration: 'none', textAlign: 'center', background: '#0088cc', color: 'white' }}
-            >
-              {cargo.messageIsPrivateGroup ? '💬 Original xabarni ko‘rish' : '💬 Telegramdagi xabarga o‘tish'}
-            </a>
+            {cargo.messageIsPrivateGroup ? (
+              <button
+                type="button"
+                className="m-btn m-btn-lg"
+                onClick={() => setMessageSheet(true)}
+                style={{ width: '100%', textAlign: 'center', background: '#0088cc', color: 'white' }}
+              >
+                💬 Original xabarni ko‘rish
+              </button>
+            ) : (
+              <a
+                href={cargo.messageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="m-btn m-btn-lg"
+                style={{ width: '100%', textDecoration: 'none', textAlign: 'center', background: '#0088cc', color: 'white' }}
+              >
+                💬 Telegramdagi xabarga o‘tish
+              </a>
+            )}
             {cargo.messageIsPrivateGroup && (
               <div style={{ marginTop: 8, fontSize: 13, color: 'var(--m-text-muted)', textAlign: 'center' }}>
                 Private guruhdan olingan
@@ -456,6 +470,41 @@ export default function MobileCargoDetail() {
               Taklif muvaffaqiyatli yuborildi!
             </div>
           )}
+        </div>
+      </BottomSheet>
+
+      <BottomSheet
+        isOpen={messageSheet}
+        onClose={() => setMessageSheet(false)}
+        title="💬 Original xabar"
+        height="full"
+        footer={
+          <button className="m-btn m-btn-primary m-btn-full m-btn-lg" onClick={() => setMessageSheet(false)}>
+            Yopish
+          </button>
+        }
+      >
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ padding: 12, borderRadius: 8, background: '#fff3cd', color: '#664d03', fontSize: 14, lineHeight: 1.45 }}>
+            {PRIVATE_GROUP_MESSAGE_NOTE}
+          </div>
+          <pre
+            style={{
+              margin: 0,
+              padding: 14,
+              borderRadius: 8,
+              background: 'var(--m-bg)',
+              border: '1px solid var(--m-border)',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontFamily: 'inherit',
+              fontSize: 15,
+              lineHeight: 1.55,
+              color: 'var(--m-text)',
+            }}
+          >
+            {buildOriginalCargoMessage(cargo)}
+          </pre>
         </div>
       </BottomSheet>
     </>

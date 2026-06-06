@@ -8,6 +8,7 @@ import PriceInputModal from './PriceInputModal';
 import SenderTypeBadge from './SenderTypeBadge';
 import { formatTimeAgo } from '../utils/formatTime';
 import { formatOrderPrice } from '../utils/orderText';
+import { buildOriginalCargoMessage, PRIVATE_GROUP_MESSAGE_NOTE } from '../utils/originalMessage';
 
 export default function CargoCard({
   cargo,
@@ -29,6 +30,8 @@ export default function CargoCard({
   const [showClubModal, setShowClubModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
+  const [showOriginalMessage, setShowOriginalMessage] = useState(false);
+  const hasMessageAction = Boolean(cargo.messageUrl || cargo.messageIsPrivateGroup);
 
   const handleRequestPhone = async () => {
     setLoading(true);
@@ -154,21 +157,40 @@ export default function CargoCard({
             </p>
           )}
 
-          {cargo.messageUrl && (
+          {hasMessageAction && (
             <div style={{ marginTop: '8px' }}>
-              <a
-                href={cargo.messageUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-block',
-                  fontSize: '13px',
-                  color: '#0088cc',
-                  textDecoration: 'none',
-                }}
-              >
-                {cargo.messageIsPrivateGroup ? '💬 Original xabarni ko‘rish' : '💬 Xabarga o‘tish'}
-              </a>
+              {cargo.messageIsPrivateGroup ? (
+                <button
+                  type="button"
+                  onClick={() => setShowOriginalMessage(true)}
+                  style={{
+                    display: 'inline-block',
+                    padding: 0,
+                    border: 0,
+                    background: 'transparent',
+                    fontSize: '13px',
+                    color: '#0088cc',
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  💬 Original xabarni ko‘rish
+                </button>
+              ) : (
+                <a
+                  href={cargo.messageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-block',
+                    fontSize: '13px',
+                    color: '#0088cc',
+                    textDecoration: 'none',
+                  }}
+                >
+                  💬 Xabarga o‘tish
+                </a>
+              )}
               {cargo.messageIsPrivateGroup && (
                 <div style={{ marginTop: '4px', fontSize: '12px', color: '#6c757d' }}>
                   Private guruhdan olingan
@@ -268,6 +290,66 @@ export default function CargoCard({
         offering={offering}
         offerError={offerError}
       />
+
+      {showOriginalMessage && (
+        <div className="modal-overlay" onClick={() => setShowOriginalMessage(false)}>
+          <div
+            className="modal-content"
+            onClick={(event) => event.stopPropagation()}
+            style={{ maxWidth: 620, padding: 0, overflow: 'hidden' }}
+          >
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e9ecef' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 20 }}>Original xabar</h3>
+                  <div style={{ marginTop: 6, fontSize: 13, color: '#6c757d' }}>
+                    Private guruhdan olingan
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowOriginalMessage(false)}
+                  aria-label="Yopish"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    border: '1px solid #dee2e6',
+                    borderRadius: 8,
+                    background: '#fff',
+                    cursor: 'pointer',
+                    fontSize: 18,
+                    lineHeight: 1,
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div style={{ padding: 24 }}>
+              <div style={{ padding: 12, borderRadius: 8, background: '#fff3cd', color: '#664d03', fontSize: 14, lineHeight: 1.45, marginBottom: 16 }}>
+                {PRIVATE_GROUP_MESSAGE_NOTE}
+              </div>
+              <pre
+                style={{
+                  margin: 0,
+                  padding: 16,
+                  borderRadius: 8,
+                  background: '#f8f9fa',
+                  border: '1px solid #e9ecef',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  fontFamily: 'inherit',
+                  fontSize: 15,
+                  lineHeight: 1.55,
+                  color: '#212529',
+                }}
+              >
+                {buildOriginalCargoMessage(cargo)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
