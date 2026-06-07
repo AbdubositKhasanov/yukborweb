@@ -1,10 +1,6 @@
 import React, { useEffect } from 'react';
 import { trackPhoneView, trackPhoneRequest } from '../services/analytics';
-
-function getTelegramLink(telegramUsername) {
-  if (telegramUsername) return `https://t.me/${telegramUsername}`;
-  return null;
-}
+import { getTelegramProfileLink } from '../utils/telegramLinks';
 
 export default function PhoneAccessModal({ isOpen, onClose, type, message, phone, telegramUsername, chatId, ownerName }) {
   useEffect(() => {
@@ -58,7 +54,7 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
         );
 
       case 'success':
-        const tgLink = getTelegramLink(telegramUsername);
+        const tgLink = getTelegramProfileLink(telegramUsername);
         const showInlineTelegramNotice = !telegramUsername;
         return (
           <div style={{ textAlign: 'center' }}>

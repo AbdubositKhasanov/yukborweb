@@ -10,6 +10,7 @@ import { offerForDriver } from '../../services/api';
 import BottomSheet from './BottomSheet';
 import SenderTypeBadge from '../../components/SenderTypeBadge';
 import { buildOriginalCargoMessage, PRIVATE_GROUP_MESSAGE_NOTE } from '../../utils/originalMessage';
+import { canOpenTelegramMessageLink, CONTACT_FALLBACK_MESSAGE } from '../../utils/telegramLinks';
 
 export default function CargoListItem({
   cargo,
@@ -42,7 +43,7 @@ export default function CargoListItem({
 
   const handleMessageClick = (e) => {
     e.stopPropagation();
-    if (cargo.messageIsPrivateGroup) {
+    if (cargo.messageIsPrivateGroup || !canOpenTelegramMessageLink(cargo.messageUrl)) {
       e.preventDefault();
       setMessageSheet(true);
     }
@@ -101,6 +102,7 @@ export default function CargoListItem({
   const timeAgo = formatTimeAgo(cargo.createdAt || cargo.created_at);
   const isNew = timeAgo === 'Hozirgina tushdi';
   const hasMessageAction = Boolean(cargo.messageUrl || cargo.messageIsPrivateGroup);
+  const canOpenMessageLink = canOpenTelegramMessageLink(cargo.messageUrl);
   const hasLeadingMeta = Boolean(cargo.vehicleType || cargo.priceUzs);
 
   return (
@@ -124,7 +126,7 @@ export default function CargoListItem({
             {hasMessageAction && (
               <>
                 {hasLeadingMeta && <span>•</span>}
-                {cargo.messageIsPrivateGroup ? (
+                {cargo.messageIsPrivateGroup || !canOpenMessageLink ? (
                   <button
                     type="button"
                     onClick={handleMessageClick}
@@ -150,7 +152,7 @@ export default function CargoListItem({
                     💬 Xabar
                   </a>
                 )}
-                {cargo.messageIsPrivateGroup && <span>Private guruh</span>}
+                {(cargo.messageIsPrivateGroup || !canOpenMessageLink) && <span>Saytda ko'rish</span>}
               </>
             )}
           </div>
@@ -240,7 +242,7 @@ export default function CargoListItem({
       >
         <div style={{ display: 'grid', gap: 12 }}>
           <div style={{ padding: 12, borderRadius: 8, background: '#fff3cd', color: '#664d03', fontSize: 14, lineHeight: 1.45 }}>
-            {PRIVATE_GROUP_MESSAGE_NOTE}
+            {cargo.messageIsPrivateGroup ? PRIVATE_GROUP_MESSAGE_NOTE : CONTACT_FALLBACK_MESSAGE}
           </div>
           <pre
             style={{

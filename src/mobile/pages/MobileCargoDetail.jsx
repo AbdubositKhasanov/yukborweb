@@ -9,15 +9,11 @@ import { getCargoDetails, requestCargoPhone, getUserMe, getMyInvitedUsers, offer
 import { formatTimeAgo } from '../../utils/formatTime';
 import { formatOrderPrice } from '../../utils/orderText';
 import { buildOriginalCargoMessage, PRIVATE_GROUP_MESSAGE_NOTE } from '../../utils/originalMessage';
+import { canOpenTelegramMessageLink, CONTACT_FALLBACK_MESSAGE, getTelegramProfileLink } from '../../utils/telegramLinks';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading from '../components/MobileLoading';
-
-function getTelegramLink(telegramUsername) {
-  if (telegramUsername) return `https://t.me/${telegramUsername}`;
-  return null;
-}
 
 export default function MobileCargoDetail() {
   const { id } = useParams();
@@ -49,6 +45,8 @@ export default function MobileCargoDetail() {
   const [offerSuccess, setOfferSuccess] = useState(false);
   const [offerError, setOfferError] = useState('');
   const [messageSheet, setMessageSheet] = useState(false);
+  const messageLink = cargo?.messageUrl || '';
+  const canOpenMessageLink = canOpenTelegramMessageLink(messageLink);
   const hasMessageAction = Boolean(cargo?.messageUrl || cargo?.messageIsPrivateGroup);
 
   // Load user data
@@ -280,7 +278,7 @@ export default function MobileCargoDetail() {
         {/* Message link */}
         {hasMessageAction && (
           <div className="m-detail-section">
-            {cargo.messageIsPrivateGroup ? (
+            {cargo.messageIsPrivateGroup || !canOpenMessageLink ? (
               <button
                 type="button"
                 className="m-btn m-btn-lg"
@@ -291,7 +289,7 @@ export default function MobileCargoDetail() {
               </button>
             ) : (
               <a
-                href={cargo.messageUrl}
+                href={messageLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="m-btn m-btn-lg"
@@ -300,9 +298,9 @@ export default function MobileCargoDetail() {
                 💬 Telegramdagi xabarga o‘tish
               </a>
             )}
-            {cargo.messageIsPrivateGroup && (
+            {(cargo.messageIsPrivateGroup || !canOpenMessageLink) && (
               <div style={{ marginTop: 8, fontSize: 13, color: 'var(--m-text-muted)', textAlign: 'center' }}>
-                Private guruhdan olingan
+                Telegramga o'tib bo'lmasa, xabar shu yerda ko'rsatiladi
               </div>
             )}
           </div>
@@ -355,8 +353,8 @@ export default function MobileCargoDetail() {
               <a href={`tel:${contactPhone}`} className="m-btn m-btn-success m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
                 📞 Qo'ng'iroq
               </a>
-              {getTelegramLink(contactTelegramUsername) && (
-                <a href={getTelegramLink(contactTelegramUsername)} target="_blank" rel="noopener noreferrer" className="m-btn m-btn-primary m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
+              {getTelegramProfileLink(contactTelegramUsername) && (
+                <a href={getTelegramProfileLink(contactTelegramUsername)} target="_blank" rel="noopener noreferrer" className="m-btn m-btn-primary m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
                   💬 Telegram
                 </a>
               )}
@@ -505,7 +503,7 @@ export default function MobileCargoDetail() {
       >
         <div style={{ display: 'grid', gap: 12 }}>
           <div style={{ padding: 12, borderRadius: 8, background: '#fff3cd', color: '#664d03', fontSize: 14, lineHeight: 1.45 }}>
-            {PRIVATE_GROUP_MESSAGE_NOTE}
+            {cargo?.messageIsPrivateGroup ? PRIVATE_GROUP_MESSAGE_NOTE : CONTACT_FALLBACK_MESSAGE}
           </div>
           <pre
             style={{

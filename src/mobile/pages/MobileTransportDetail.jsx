@@ -6,14 +6,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getTransportDetails } from '../../services/api';
 import { formatTimeAgo } from '../../utils/formatTime';
+import { getTelegramProfileLink } from '../../utils/telegramLinks';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import MobileLoading from '../components/MobileLoading';
-
-function getTelegramLink(telegramUsername) {
-  if (telegramUsername) return `https://t.me/${telegramUsername}`;
-  return null;
-}
 
 export default function MobileTransportDetail() {
   const { id } = useParams();
@@ -224,8 +220,8 @@ export default function MobileTransportDetail() {
               <a href={`tel:${contactPhone}`} className="m-btn m-btn-success m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
                 📞 Qo'ng'iroq
               </a>
-              {getTelegramLink(contactTelegramUsername) && (
-                <a href={getTelegramLink(contactTelegramUsername)} target="_blank" rel="noopener noreferrer" className="m-btn m-btn-primary m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
+              {getTelegramProfileLink(contactTelegramUsername) && (
+                <a href={getTelegramProfileLink(contactTelegramUsername)} target="_blank" rel="noopener noreferrer" className="m-btn m-btn-primary m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
                   💬 Telegram
                 </a>
               )}
