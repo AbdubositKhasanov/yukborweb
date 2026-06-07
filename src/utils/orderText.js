@@ -43,12 +43,24 @@ export const buildCompactOrderMessage = (order, { includeContact = true } = {}) 
 
 export const normalizeBroadcastStatus = (broadcast) => {
   if (!broadcast) return null;
+  const normalizeGroup = (group) => ({
+    phone: clean(group?.phone || group?.userbotPhone),
+    groupId: group?.groupId ?? group?.group_id ?? null,
+    title: clean(group?.title || group?.name || group?.groupName || group?.group_name),
+    username: clean(group?.username),
+    status: clean(group?.status),
+    error: clean(group?.error),
+  });
+
   return {
     broadcastId: broadcast.broadcastId || broadcast.broadcast_id || null,
     status: broadcast.status || 'not_started',
     totalUserbots: broadcast.totalUserbots ?? broadcast.total_userbots ?? 0,
     totalGroups: broadcast.totalGroups ?? broadcast.total_groups ?? 0,
     groupsSent: broadcast.groupsSent ?? broadcast.groups_sent ?? 0,
+    groupsFailed: broadcast.groupsFailed ?? broadcast.groups_failed ?? 0,
+    sentGroups: (broadcast.sentGroups || broadcast.sent_groups || []).map(normalizeGroup),
+    failedGroups: (broadcast.failedGroups || broadcast.failed_groups || []).map(normalizeGroup),
     message: broadcast.message || '',
   };
 };

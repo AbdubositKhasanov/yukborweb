@@ -1,13 +1,12 @@
 import React, { useEffect } from 'react';
 import { trackPhoneView, trackPhoneRequest } from '../services/analytics';
 
-function getTelegramLink(telegramUsername, chatId) {
+function getTelegramLink(telegramUsername) {
   if (telegramUsername) return `https://t.me/${telegramUsername}`;
-  if (chatId && chatId > 0) return `https://t.me/yukbor_global_bot?start=contact_${chatId}`;
   return null;
 }
 
-export default function PhoneAccessModal({ isOpen, onClose, type, message, phone, telegramUsername, chatId }) {
+export default function PhoneAccessModal({ isOpen, onClose, type, message, phone, telegramUsername, chatId, ownerName }) {
   useEffect(() => {
     if (!isOpen) return;
     if (type === 'success') trackPhoneView();
@@ -59,11 +58,25 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
         );
 
       case 'success':
-        const tgLink = getTelegramLink(telegramUsername, chatId);
+        const tgLink = getTelegramLink(telegramUsername);
+        const showInlineTelegramNotice = !telegramUsername;
         return (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📞</div>
             <h3 className="card-title">Telefon raqam</h3>
+            {ownerName && (
+              <div style={{
+                padding: '12px 14px',
+                backgroundColor: '#eef4ff',
+                borderRadius: '8px',
+                marginBottom: '12px',
+                color: '#1f3f6d',
+                fontWeight: 600,
+                textAlign: 'left'
+              }}>
+                👤 {ownerName}
+              </div>
+            )}
             <div style={{
               padding: '20px',
               backgroundColor: '#f8f9fa',
@@ -83,6 +96,20 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
                 {phone}
               </a>
             </div>
+            {showInlineTelegramNotice && (
+              <div style={{
+                padding: '12px 14px',
+                backgroundColor: '#fff8e1',
+                borderRadius: '8px',
+                color: '#856404',
+                marginBottom: '16px',
+                fontSize: '14px',
+                lineHeight: 1.5,
+                textAlign: 'left'
+              }}>
+                Telegram orqali yozish e'lon egasining sozlamalari sabab ochilmayapti. Telefon orqali bog'laning yoki e'londagi boshqa kontaktlardan foydalaning.
+              </div>
+            )}
             <div className="btn-group">
               {tgLink && (
                 <a

@@ -10,6 +10,7 @@ export default function TransportCard({ transport }) {
   const [phone, setPhone] = useState(null);
   const [telegramUsername, setTelegramUsername] = useState(null);
   const [contactChatId, setContactChatId] = useState(null);
+  const [contactOwnerName, setContactOwnerName] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleRequestPhone = async () => {
@@ -22,6 +23,7 @@ export default function TransportCard({ transport }) {
       setPhone(result.phone || null);
       setTelegramUsername(result.telegramUsername || null);
       setContactChatId(result.chatId || null);
+      setContactOwnerName(result.ownerName || null);
       setShowModal(true);
     } catch (error) {
       setModalType('error');
@@ -93,6 +95,7 @@ export default function TransportCard({ transport }) {
         phone={phone}
         telegramUsername={telegramUsername}
         chatId={contactChatId}
+        ownerName={contactOwnerName}
       />
     </>
   );

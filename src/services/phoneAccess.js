@@ -14,6 +14,7 @@ export const handlePhoneAccess = async (apiFunc, id) => {
       const phone = response.result?.additionalPhone || response.result?.phone;
       const telegramUsername = response.result?.telegramUsername || null;
       const chatId = response.result?.chatId || null;
+      const ownerName = response.result?.ownerName || response.result?.owner_name || null;
 
       if (phone) {
         return {
@@ -22,6 +23,7 @@ export const handlePhoneAccess = async (apiFunc, id) => {
           phone,
           telegramUsername,
           chatId,
+          ownerName,
           message: 'Telefon raqam:',
         };
       } else {

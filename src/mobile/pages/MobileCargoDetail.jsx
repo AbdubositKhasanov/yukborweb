@@ -14,9 +14,8 @@ import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading from '../components/MobileLoading';
 
-function getTelegramLink(telegramUsername, chatId) {
+function getTelegramLink(telegramUsername) {
   if (telegramUsername) return `https://t.me/${telegramUsername}`;
-  if (chatId && chatId > 0) return `https://t.me/yukbor_global_bot?start=contact_${chatId}`;
   return null;
 }
 
@@ -33,6 +32,7 @@ export default function MobileCargoDetail() {
   const [contactPhone, setContactPhone] = useState(null);
   const [contactTelegramUsername, setContactTelegramUsername] = useState(null);
   const [contactChatId, setContactChatId] = useState(null);
+  const [contactOwnerName, setContactOwnerName] = useState(null);
   const [contactLoaded, setContactLoaded] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
 
@@ -105,6 +105,7 @@ export default function MobileCargoDetail() {
         setContactPhone(phone || null);
         setContactTelegramUsername(response.result.telegramUsername || null);
         setContactChatId(response.result.chatId || null);
+        setContactOwnerName(response.result.ownerName || response.result.owner_name || null);
       }
     } catch (err) {
       // silently fail — contact section won't show
@@ -329,15 +330,33 @@ export default function MobileCargoDetail() {
         {contactLoaded && contactPhone && (
           <div className="m-detail-section">
             <h2 className="m-detail-section-title">📱 Bog'lanish</h2>
-            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>
-              {contactPhone}
+            <div style={{
+              padding: 12,
+              borderRadius: 8,
+              background: 'var(--m-bg-card)',
+              border: '1px solid var(--m-border)',
+              marginBottom: 12,
+            }}>
+              {contactOwnerName && (
+                <div style={{ fontSize: 14, color: 'var(--m-text-secondary)', marginBottom: 4 }}>
+                  👤 {contactOwnerName}
+                </div>
+              )}
+              <div style={{ fontSize: 20, fontWeight: 700 }}>
+                {contactPhone}
+              </div>
+              {!contactTelegramUsername && (
+                <div style={{ fontSize: 13, color: 'var(--m-text-secondary)', marginTop: 8, lineHeight: 1.4 }}>
+                  Telegram orqali yozish e'lon egasining sozlamalari sabab ochilmayapti. Telefon orqali bog'laning yoki e'londagi boshqa kontaktlardan foydalaning.
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <a href={`tel:${contactPhone}`} className="m-btn m-btn-success m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
                 📞 Qo'ng'iroq
               </a>
-              {getTelegramLink(contactTelegramUsername, contactChatId) && (
-                <a href={getTelegramLink(contactTelegramUsername, contactChatId)} target="_blank" rel="noopener noreferrer" className="m-btn m-btn-primary m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
+              {getTelegramLink(contactTelegramUsername) && (
+                <a href={getTelegramLink(contactTelegramUsername)} target="_blank" rel="noopener noreferrer" className="m-btn m-btn-primary m-btn-lg" style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}>
                   💬 Telegram
                 </a>
               )}
