@@ -420,6 +420,12 @@ export const updateOrder = async (id, orderData) => {
   return response.data;
 };
 
+export const updateOrderOwnerStatusPrompt = async (id, enabled) => {
+  const response = await apiClient.post(`/orders/${id}/owner-status-prompt`, { enabled });
+  apiCache.invalidate('orders');
+  return response.data;
+};
+
 export const deleteOrder = async (id) => {
   const response = await apiClient.delete(`/order/${id}`);
   apiCache.invalidate('orders');

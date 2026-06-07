@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStaticData } from '../../context/StaticDataContext';
-import { createOrder, getBroadcastStatus, getLocationsAndVehicles } from '../../services/api';
+import { createOrder, getBroadcastStatus, getLocationsAndVehicles, updateOrderOwnerStatusPrompt } from '../../services/api';
 import { isBroadcastFinished, normalizeBroadcastStatus } from '../../utils/orderText';
 import TopBar from '../components/TopBar';
 import LocationSelector from '../../components/LocationSelector';
@@ -28,6 +28,10 @@ export default function MobileCreateOrder() {
   const [staticData, setStaticData] = useState(null);
   const [createdOrder, setCreatedOrder] = useState(null);
   const [broadcastStatus, setBroadcastStatus] = useState(null);
+  const [ownerPromptAvailable, setOwnerPromptAvailable] = useState(false);
+  const [ownerPromptSaving, setOwnerPromptSaving] = useState(false);
+  const [ownerPromptChoice, setOwnerPromptChoice] = useState(null);
+  const [ownerPromptError, setOwnerPromptError] = useState('');
 
   // Form data - MUST match Desktop CreateOrderPage.jsx structure
   const [formData, setFormData] = useState({
@@ -175,6 +179,9 @@ export default function MobileCreateOrder() {
       if (response.code === 200) {
         setCreatedOrder(response.result?.order || orderData);
         setBroadcastStatus(normalizeBroadcastStatus(response.result?.broadcast));
+        setOwnerPromptAvailable(Boolean(response.result?.ownerStatusPromptAvailable));
+        setOwnerPromptChoice(null);
+        setOwnerPromptError('');
       } else {
         setErrors({ submit: response.message || 'Buyurtma yaratishda xatolik' });
       }
@@ -205,6 +212,95 @@ export default function MobileCreateOrder() {
     setErrors({});
     setCreatedOrder(null);
     setBroadcastStatus(null);
+    setOwnerPromptAvailable(false);
+    setOwnerPromptSaving(false);
+    setOwnerPromptChoice(null);
+    setOwnerPromptError('');
+  };
+
+  const handleOwnerPromptChoice = async (enabled) => {
+    const orderId = createdOrder?.id;
+    if (!orderId || ownerPromptSaving || ownerPromptChoice !== null) return;
+
+    setOwnerPromptSaving(true);
+    setOwnerPromptError('');
+    try {
+      const response = await updateOrderOwnerStatusPrompt(orderId, enabled);
+      if (response.code === 200) {
+        const savedEnabled = Boolean(response.result?.ownerStatusPromptEnabled);
+        setCreatedOrder((prev) => response.result || prev);
+        setOwnerPromptChoice(savedEnabled ? 'enabled' : 'disabled');
+        if (enabled && !savedEnabled && response.message) {
+          setOwnerPromptError(response.message);
+        }
+      } else {
+        setOwnerPromptError(response.message || 'Sozlamani saqlab bo‘lmadi');
+      }
+    } catch (error) {
+      setOwnerPromptError(error.response?.data?.message || 'Sozlamani saqlab bo‘lmadi');
+    } finally {
+      setOwnerPromptSaving(false);
+    }
+  };
+
+  const renderOwnerStatusPrompt = () => {
+    if (!ownerPromptAvailable || !createdOrder?.id) return null;
+
+    const enabled = ownerPromptChoice === 'enabled';
+    const disabled = ownerPromptChoice === 'disabled';
+
+    return (
+      <div style={{
+        marginTop: 16,
+        padding: 14,
+        borderRadius: 8,
+        background: enabled ? '#eef7f0' : disabled ? '#f7f8fa' : '#f4f8ff',
+        border: '1px solid rgba(25, 118, 210, 0.16)',
+        textAlign: 'left',
+      }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--m-text)', marginBottom: 6 }}>
+          Yuk holatini har soatda so‘raylikmi?
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--m-text-secondary)', lineHeight: 1.45 }}>
+          Bot sizdan yuk yopilganmi yoki hali ochiqmi deb so‘raydi. Shu joydan qayta tarqatish yoki yopishni tanlaysiz.
+        </div>
+
+        {ownerPromptChoice === null ? (
+          <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+            <button
+              className="m-btn m-btn-primary m-btn-full"
+              disabled={ownerPromptSaving}
+              onClick={() => handleOwnerPromptChoice(true)}
+            >
+              Ha, so‘rab turing
+            </button>
+            <button
+              className="m-btn m-btn-secondary m-btn-full"
+              disabled={ownerPromptSaving}
+              onClick={() => handleOwnerPromptChoice(false)}
+            >
+              Yo‘q, kerak emas
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            marginTop: 10,
+            fontSize: 13,
+            fontWeight: 700,
+            color: enabled ? '#137333' : 'var(--m-text-secondary)',
+            lineHeight: 1.4,
+          }}>
+            {enabled ? '✅ Eslatma yoqildi. Bir soatdan keyin bot holatini so‘raydi.' : '⛔️ Eslatma yuborilmaydi.'}
+          </div>
+        )}
+
+        {ownerPromptError && (
+          <div style={{ marginTop: 10, color: 'var(--m-danger)', fontSize: 13, lineHeight: 1.4 }}>
+            {ownerPromptError}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderBroadcastStatus = () => {
@@ -402,6 +498,7 @@ export default function MobileCreateOrder() {
               Buyurtma saqlandi va tarqatish holati quyida ko'rinadi.
             </p>
             {renderBroadcastStatus()}
+            {renderOwnerStatusPrompt()}
             <div style={{ display: 'grid', gap: 10, marginTop: 20 }}>
               <button className="m-btn m-btn-primary m-btn-lg m-btn-full" onClick={() => navigate('/mobile/orders', { replace: true })}>
                 Buyurtmalarim

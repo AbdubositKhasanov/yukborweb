@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createOrder, getBroadcastStatus, getLocationsAndVehicles } from '../services/api';
+import { createOrder, getBroadcastStatus, getLocationsAndVehicles, updateOrderOwnerStatusPrompt } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
 import LocationSelector from '../components/LocationSelector';
 import { isBroadcastFinished, normalizeBroadcastStatus } from '../utils/orderText';
@@ -33,6 +33,10 @@ export default function CreateOrderPage() {
   const [errors, setErrors] = useState({});
   const [createdOrder, setCreatedOrder] = useState(null);
   const [broadcastStatus, setBroadcastStatus] = useState(null);
+  const [ownerPromptAvailable, setOwnerPromptAvailable] = useState(false);
+  const [ownerPromptSaving, setOwnerPromptSaving] = useState(false);
+  const [ownerPromptChoice, setOwnerPromptChoice] = useState(null);
+  const [ownerPromptError, setOwnerPromptError] = useState('');
 
   useEffect(() => {
     loadStaticData();
@@ -147,6 +151,9 @@ export default function CreateOrderPage() {
         const nextBroadcastStatus = normalizeBroadcastStatus(response.result?.broadcast);
         setCreatedOrder(response.result?.order || orderData);
         setBroadcastStatus(nextBroadcastStatus);
+        setOwnerPromptAvailable(Boolean(response.result?.ownerStatusPromptAvailable));
+        setOwnerPromptChoice(null);
+        setOwnerPromptError('');
         showSuccess(
           nextBroadcastStatus
             ? `Buyurtma yaratildi. ${nextBroadcastStatus.groupsSent} ta guruhga yuborildi`
@@ -183,6 +190,94 @@ export default function CreateOrderPage() {
     setErrors({});
     setCreatedOrder(null);
     setBroadcastStatus(null);
+    setOwnerPromptAvailable(false);
+    setOwnerPromptSaving(false);
+    setOwnerPromptChoice(null);
+    setOwnerPromptError('');
+  };
+
+  const handleOwnerPromptChoice = async (enabled) => {
+    const orderId = createdOrder?.id;
+    if (!orderId || ownerPromptSaving || ownerPromptChoice !== null) return;
+
+    setOwnerPromptSaving(true);
+    setOwnerPromptError('');
+    try {
+      const response = await updateOrderOwnerStatusPrompt(orderId, enabled);
+      if (response.code === 200) {
+        const savedEnabled = Boolean(response.result?.ownerStatusPromptEnabled);
+        setCreatedOrder((prev) => response.result || prev);
+        setOwnerPromptChoice(savedEnabled ? 'enabled' : 'disabled');
+        if (enabled && !savedEnabled && response.message) {
+          setOwnerPromptError(response.message);
+        }
+      } else {
+        setOwnerPromptError(response.message || 'Sozlamani saqlab bo‘lmadi');
+      }
+    } catch (error) {
+      setOwnerPromptError(error.response?.data?.message || 'Sozlamani saqlab bo‘lmadi');
+    } finally {
+      setOwnerPromptSaving(false);
+    }
+  };
+
+  const renderOwnerStatusPrompt = () => {
+    if (!ownerPromptAvailable || !createdOrder?.id) return null;
+
+    const enabled = ownerPromptChoice === 'enabled';
+    const disabled = ownerPromptChoice === 'disabled';
+
+    return (
+      <div style={{
+        marginTop: 16,
+        padding: 16,
+        borderRadius: 8,
+        background: enabled ? '#eef7f0' : disabled ? '#f8f9fa' : '#f4f8ff',
+        border: '1px solid rgba(25, 118, 210, 0.18)',
+        textAlign: 'left',
+      }}>
+        <div style={{ fontWeight: 700, marginBottom: 6 }}>
+          Yuk holatini har soatda so‘raylikmi?
+        </div>
+        <div style={{ color: '#666', fontSize: 14, lineHeight: 1.45 }}>
+          Bot sizdan yuk yopilganmi yoki hali ochiqmi deb so‘raydi. Shu joydan qayta tarqatish yoki yopishni tanlaysiz.
+        </div>
+
+        {ownerPromptChoice === null ? (
+          <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-primary"
+              disabled={ownerPromptSaving}
+              onClick={() => handleOwnerPromptChoice(true)}
+            >
+              Ha, so‘rab turing
+            </button>
+            <button
+              className="btn btn-secondary"
+              disabled={ownerPromptSaving}
+              onClick={() => handleOwnerPromptChoice(false)}
+            >
+              Yo‘q, kerak emas
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            marginTop: 12,
+            color: enabled ? '#137333' : '#666',
+            fontWeight: 700,
+            fontSize: 14,
+          }}>
+            {enabled ? '✅ Eslatma yoqildi. Bir soatdan keyin bot holatini so‘raydi.' : '⛔️ Eslatma yuborilmaydi.'}
+          </div>
+        )}
+
+        {ownerPromptError && (
+          <div style={{ marginTop: 10, color: '#c00', fontSize: 14 }}>
+            {ownerPromptError}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderBroadcastStatus = () => {
@@ -231,6 +326,7 @@ export default function CreateOrderPage() {
           </p>
 
           {renderBroadcastStatus()}
+          {renderOwnerStatusPrompt()}
 
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24, flexWrap: 'wrap' }}>
             <button className="btn btn-primary" onClick={() => navigate('/my-orders')}>
