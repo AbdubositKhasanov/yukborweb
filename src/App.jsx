@@ -240,6 +240,22 @@ function AppContent() {
             }
           />
           <Route
+            path="/admin/cargo-owners"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <AdminDriversPage defaultRole="factory" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/cargo-owners/:id"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <AdminDriverDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/users"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>

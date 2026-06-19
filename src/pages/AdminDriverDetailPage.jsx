@@ -5,6 +5,7 @@ import {
   adminGetDriverOffers,
   adminCreateHarbingerForDriver,
   adminCreateTransportForDriver,
+  adminCreateOrderForOwner,
   adminDeleteDriver,
   adminAcceptOrderForDriver,
   adminUpdateUser,
@@ -13,6 +14,7 @@ import {
   adminListTariffs,
   adminAssignUserTariff,
   adminCancelUserTariff,
+  deleteOrder,
   getLocationsAndVehicles,
   getUserMe,
 } from '../services/api';
@@ -50,6 +52,47 @@ function stateLabel(state) {
   }
 }
 
+function roleLabel(role) {
+  switch (role) {
+    case 'driver':
+      return 'Haydovchi';
+    case 'factory':
+      return 'Yuk egasi';
+    case 'logist':
+      return 'Logist';
+    default:
+      return 'Foydalanuvchi';
+  }
+}
+
+function backPathForRole(role, mobile) {
+  if (mobile) return '/mobile/admin/users';
+  if (role === 'driver') return '/admin/drivers';
+  if (role === 'factory') return '/admin/cargo-owners';
+  return '/admin/users';
+}
+
+function shareTextForUser(user) {
+  const label = roleLabel(user?.type).toLowerCase();
+  if (user?.type === 'driver') {
+    return `Salom ${user.name}!\nSizni YukBor platformasiga haydovchi sifatida ro'yxatga oldim.\n` +
+      `Quyidagi linkni bosing — bot avtomatik tanib oladi:\n\n${user.deepLink}\n\n` +
+      `Botda hech narsa qilmasangiz ham bo'ladi — sizga mos yuklar avtomatik kelaveradi.`;
+  }
+  if (user?.type === 'factory') {
+    return `Salom ${user.name}!\nSizni YukBor platformasiga yuk egasi sifatida ro'yxatga oldim.\n` +
+      `Quyidagi linkni bosing — bot avtomatik tanib oladi:\n\n${user.deepLink}\n\n` +
+      `Keyin yuklaringizni platforma orqali boshqaramiz.`;
+  }
+  return `Salom ${user?.name || ''}!\nSizni YukBor platformasiga ${label} sifatida ro'yxatga oldim.\n` +
+    `Quyidagi linkni bosing:\n\n${user?.deepLink || ''}`;
+}
+
+function formatMoney(value) {
+  const amount = Number(value || 0);
+  return amount > 0 ? `${amount.toLocaleString('ru-RU')} so'm` : 'Kelishiladi';
+}
+
 export default function AdminDriverDetailPage({ mobile = false }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -64,11 +107,10 @@ export default function AdminDriverDetailPage({ mobile = false }) {
 
   const [showHarbingerModal, setShowHarbingerModal] = useState(false);
   const [showTransportModal, setShowTransportModal] = useState(false);
+  const [showOwnerOrderModal, setShowOwnerOrderModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [savingRole, setSavingRole] = useState(false);
-
-  const backPath = mobile ? '/mobile/admin/users' : '/admin/drivers';
 
   useEffect(() => {
     (async () => {
@@ -117,11 +159,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
 
   const handleShareTextCopy = () => {
     if (!driver) return;
-    const txt =
-      `Salom ${driver.name}!\nSizni YukBor platformasiga haydovchi sifatida ro'yxatga oldim.\n` +
-      `Quyidagi linkni bosing — bot avtomatik tanib oladi:\n\n${driver.deepLink}\n\n` +
-      `Botda hech narsa qilmasangiz ham bo'ladi — sizga mos yuklar avtomatik kelaveradi.`;
-    navigator.clipboard.writeText(txt);
+    navigator.clipboard.writeText(shareTextForUser(driver));
     showSuccess("Tayyor habar nusxalandi");
   };
 
@@ -131,7 +169,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
       const r = await adminDeleteDriver(id);
       if (r.code === 200 && r.result) {
         showSuccess("O'chirildi");
-        navigate(backPath);
+        navigate(backPathForRole(driver?.type, mobile));
       }
     } catch (e) {
       showError(e.response?.data?.message || e.message || 'Xatolik');
@@ -173,6 +211,22 @@ export default function AdminDriverDetailPage({ mobile = false }) {
     }
   };
 
+  const handleDeleteOwnerOrder = async (orderId) => {
+    if (!orderId) return;
+    if (!confirm("Bu yukni o'chirasizmi?")) return;
+    try {
+      const r = await deleteOrder(orderId);
+      if (r.code === 200) {
+        showSuccess("Yuk o'chirildi");
+        loadAll();
+      } else {
+        showError(r.message || 'Xatolik');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Xatolik');
+    }
+  };
+
   const handleCancelSubscription = async () => {
     if (!driver?.subscription) return;
     if (!confirm("Foydalanuvchining tarifini bekor qilasizmi?")) return;
@@ -194,10 +248,16 @@ export default function AdminDriverDetailPage({ mobile = false }) {
     return <div style={{ padding: 24, color: '#c00' }}>Bu sahifa faqat adminlar uchun.</div>;
   }
   if (loading) return <div style={{ padding: 24 }}>Yuklanmoqda...</div>;
-  if (!driver) return <div style={{ padding: 24 }}>Haydovchi topilmadi.</div>;
+  if (!driver) return <div style={{ padding: 24 }}>Foydalanuvchi topilmadi.</div>;
 
   const s = driver.stats || {};
   const acceptanceRate = s.sent > 0 ? Math.round((s.accepted / s.sent) * 100) : 0;
+  const isDriver = driver.type === 'driver';
+  const isCargoOwner = driver.type === 'factory';
+  const backPath = backPathForRole(driver.type, mobile);
+  const ownerOrders = driver.ownerOrders || [];
+  const activeOwnerOrders = ownerOrders.filter((order) => !['closed', 'cancelled', 'appointed'].includes(order.status)).length;
+  const appointedOwnerOrders = ownerOrders.filter((order) => order.status === 'appointed').length;
 
   return (
     <div style={pageStyle}>
@@ -210,6 +270,11 @@ export default function AdminDriverDetailPage({ mobile = false }) {
           <div>
             <h2 style={{ margin: 0 }}>{driver.name || '(ismsiz)'}</h2>
             <div style={{ color: '#666' }}>+{driver.phone}</div>
+            <div style={{ marginTop: 6 }}>
+              <span style={badge(driver.type === 'factory' ? '#558b2f' : driver.type === 'driver' ? '#1976d2' : '#7b1fa2')}>
+                {roleLabel(driver.type)}
+              </span>
+            </div>
             {driver.telegramUsername && (
               <a href={`https://t.me/${driver.telegramUsername}`} target="_blank" rel="noreferrer" style={{ color: '#0088cc' }}>
                 @{driver.telegramUsername}
@@ -264,7 +329,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
         {!driver.isLinked && driver.deepLink && (
           <div style={linkBoxStyle}>
             <div style={{ fontSize: 13, color: '#555', marginBottom: 6 }}>
-              Bu linkni haydovchiga yuboring — u bossa bot avtomatik tanib oladi:
+              Bu linkni {roleLabel(driver.type).toLowerCase()}ga yuboring — u bossa bot avtomatik tanib oladi:
             </div>
             <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', background: '#fff', padding: 8, borderRadius: 4, fontSize: 13 }}>
               {driver.deepLink}
@@ -280,135 +345,204 @@ export default function AdminDriverDetailPage({ mobile = false }) {
           </div>
         )}
 
-        <div style={statsBoxStyle}>
-          <Stat label="Yuborilgan" value={s.sent ?? 0} />
-          <Stat label="Ko'rgan" value={s.viewed ?? 0} />
-          <Stat label="Qabul" value={s.accepted ?? 0} color="#1ba353" />
-          <Stat label="Rad" value={s.rejected ?? 0} color="#cc4444" />
-          <Stat label="Reaksiya yoq" value={s.noReaction ?? 0} color="#888" />
-          <Stat label="Qabul %" value={`${acceptanceRate}%`} color={acceptanceRate >= 50 ? '#1ba353' : '#cc8800'} />
-        </div>
-      </div>
-
-      {/* Transport */}
-      <div style={cardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-          <h3 style={{ margin: 0 }}>Transport</h3>
-          {driver.isLinked && (
-            <button onClick={() => setShowTransportModal(true)} style={smallBtnStyle}>
-              {driver.transport ? 'O\'zgartirish' : '+ Qo\'shish'}
-            </button>
-          )}
-        </div>
-        {driver.transport ? (
-          <div style={{ marginTop: 8, fontSize: 14, color: '#444' }}>
-            <div>📍 {driver.transport.loc1 || '—'}</div>
-            <div>🚛 {driver.transport.vehicleType || '—'}</div>
-            <div>⚖️ {driver.transport.maxWeight ? `${driver.transport.maxWeight} tonna` : '—'}</div>
-            {driver.transport.stateNumber && <div>🔢 {driver.transport.stateNumber}</div>}
+        {isDriver ? (
+          <div style={statsBoxStyle}>
+            <Stat label="Yuborilgan" value={s.sent ?? 0} />
+            <Stat label="Ko'rgan" value={s.viewed ?? 0} />
+            <Stat label="Qabul" value={s.accepted ?? 0} color="#1ba353" />
+            <Stat label="Rad" value={s.rejected ?? 0} color="#cc4444" />
+            <Stat label="Reaksiya yoq" value={s.noReaction ?? 0} color="#888" />
+            <Stat label="Qabul %" value={`${acceptanceRate}%`} color={acceptanceRate >= 50 ? '#1ba353' : '#cc8800'} />
           </div>
         ) : (
-          <div style={{ color: '#888', marginTop: 8 }}>Transport hali kiritilmagan.</div>
+          <div style={statsBoxStyle}>
+            <Stat label="Jami yuklar" value={driver.ordersCount ?? ownerOrders.length} color="#558b2f" />
+            <Stat label="Aktiv yuklar" value={activeOwnerOrders} color="#1976d2" />
+            <Stat label="Biriktirilgan" value={appointedOwnerOrders} color="#1ba353" />
+            <Stat label="Tarif" value={driver.subscription?.isActive ? 'Faol' : 'Yoq'} color={driver.subscription?.isActive ? '#1ba353' : '#888'} />
+          </div>
         )}
       </div>
 
-      {/* Habarchi */}
-      <div style={cardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-          <h3 style={{ margin: 0 }}>Habarchilar ({driver.harbingers?.length ?? 0})</h3>
-          {driver.isLinked && (
-            <button onClick={() => setShowHarbingerModal(true)} style={smallBtnStyle}>
-              + Yangi habarchi
-            </button>
-          )}
-        </div>
-        {driver.harbingers && driver.harbingers.length > 0 ? (
-          <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-            {driver.harbingers.map((h) => (
-              <div key={h.id} style={{ background: '#f9f9f9', padding: 10, borderRadius: 6, fontSize: 14 }}>
-                <div>🛣 {h.loc1 || '—'} → {h.loc2 || 'har qayoq'}</div>
-                <div>⚖️ {h.maxWeight?.value ? `${h.maxWeight.value} tonna gacha` : 'har qanday vazn'}</div>
+      {isDriver && (
+        <>
+          {/* Transport */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0 }}>Transport</h3>
+              {driver.isLinked && (
+                <button onClick={() => setShowTransportModal(true)} style={smallBtnStyle}>
+                  {driver.transport ? 'O\'zgartirish' : '+ Qo\'shish'}
+                </button>
+              )}
+            </div>
+            {driver.transport ? (
+              <div style={{ marginTop: 8, fontSize: 14, color: '#444' }}>
+                <div>📍 {driver.transport.loc1 || '—'}</div>
+                <div>🚛 {driver.transport.vehicleType || '—'}</div>
+                <div>⚖️ {driver.transport.maxWeight ? `${driver.transport.maxWeight} tonna` : '—'}</div>
+                {driver.transport.stateNumber && <div>🔢 {driver.transport.stateNumber}</div>}
               </div>
-            ))}
+            ) : (
+              <div style={{ color: '#888', marginTop: 8 }}>Transport hali kiritilmagan.</div>
+            )}
           </div>
-        ) : (
-          <div style={{ color: '#888', marginTop: 8 }}>Hozircha habarchi yoq — yuk yuborilmaydi.</div>
-        )}
-      </div>
 
-      {/* Offers history */}
-      <div style={cardStyle}>
-        <h3 style={{ marginTop: 0 }}>Takliflar tarixi ({offers.length})</h3>
-        {offers.length === 0 ? (
-          <div style={{ color: '#888' }}>Hozircha hech qanday taklif yuborilmagan.</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {offers.map((o) => {
-              const lbl = stateLabel(o.state);
-              const ord = o.order;
-              return (
-                <div key={o.id} style={offerRowStyle}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Order ma'lumoti yoki "o'chib ketgan" */}
-                    {o.orderDeleted ? (
-                      <div style={{ color: '#999', fontSize: 13, fontStyle: 'italic' }}>
-                        🗑 Buyurtma o&apos;chib ketgan (48+ soat)
-                      </div>
-                    ) : ord ? (
-                      <div style={{ fontSize: 14, marginBottom: 6 }}>
-                        <div style={{ fontWeight: 600 }}>
-                          🛣 {ord.loc1 || '—'} → {ord.loc2 || '—'}
-                        </div>
-                        <div style={{ color: '#555', fontSize: 13 }}>
-                          {ord.weightKg ? `⚖️ ${ord.weightKg} ${ord.weightUnit || 't'} · ` : ''}
-                          {ord.vehicleType ? `🚛 ${ord.vehicleType} · ` : ''}
-                          {ord.priceUzs ? `💰 ${ord.priceUzs.toLocaleString('ru-RU')} so'm · ` : ''}
-                          {ord.ownerPhone ? `📞 +${ord.ownerPhone}` : ''}
-                        </div>
-                        {ord.otherDesc && (
-                          <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
-                            ℹ️ {ord.otherDesc}
+          {/* Habarchi */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0 }}>Habarchilar ({driver.harbingers?.length ?? 0})</h3>
+              {driver.isLinked && (
+                <button onClick={() => setShowHarbingerModal(true)} style={smallBtnStyle}>
+                  + Yangi habarchi
+                </button>
+              )}
+            </div>
+            {driver.harbingers && driver.harbingers.length > 0 ? (
+              <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+                {driver.harbingers.map((h) => (
+                  <div key={h.id} style={{ background: '#f9f9f9', padding: 10, borderRadius: 6, fontSize: 14 }}>
+                    <div>🛣 {h.loc1 || '—'} → {h.loc2 || 'har qayoq'}</div>
+                    <div>⚖️ {h.maxWeight?.value ? `${h.maxWeight.value} tonna gacha` : 'har qanday vazn'}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color: '#888', marginTop: 8 }}>Hozircha habarchi yoq — yuk yuborilmaydi.</div>
+            )}
+          </div>
+
+          {/* Offers history */}
+          <div style={cardStyle}>
+            <h3 style={{ marginTop: 0 }}>Takliflar tarixi ({offers.length})</h3>
+            {offers.length === 0 ? (
+              <div style={{ color: '#888' }}>Hozircha hech qanday taklif yuborilmagan.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {offers.map((o) => {
+                  const lbl = stateLabel(o.state);
+                  const ord = o.order;
+                  return (
+                    <div key={o.id} style={offerRowStyle}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {/* Order ma'lumoti yoki "o'chib ketgan" */}
+                        {o.orderDeleted ? (
+                          <div style={{ color: '#999', fontSize: 13, fontStyle: 'italic' }}>
+                            🗑 Buyurtma o&apos;chib ketgan (48+ soat)
                           </div>
-                        )}
-                        {ord.status && ord.status !== 'new' && (
-                          <div style={{ fontSize: 12, marginTop: 2 }}>
-                            <span style={badge(ord.status === 'appointed' ? '#1ba353' : '#888')}>
-                              {ord.status === 'appointed' ? '✅ Biriktirilgan' : ord.status}
-                            </span>
-                            {ord.driverPhone && ord.driverId !== driver.chatId.toLong && (
-                              <span style={{ color: '#888', marginLeft: 6 }}>
-                                ({ord.driverId === parseInt(driver.chatId) ? 'Shu haydovchi' : `boshqa: +${ord.driverPhone}`})
-                              </span>
+                        ) : ord ? (
+                          <div style={{ fontSize: 14, marginBottom: 6 }}>
+                            <div style={{ fontWeight: 600 }}>
+                              🛣 {ord.loc1 || '—'} → {ord.loc2 || '—'}
+                            </div>
+                            <div style={{ color: '#555', fontSize: 13 }}>
+                              {ord.weightKg ? `⚖️ ${ord.weightKg} ${ord.weightUnit || 't'} · ` : ''}
+                              {ord.vehicleType ? `🚛 ${ord.vehicleType} · ` : ''}
+                              {ord.priceUzs ? `💰 ${ord.priceUzs.toLocaleString('ru-RU')} so'm · ` : ''}
+                              {ord.ownerPhone ? `📞 +${ord.ownerPhone}` : ''}
+                            </div>
+                            {ord.otherDesc && (
+                              <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>
+                                ℹ️ {ord.otherDesc}
+                              </div>
+                            )}
+                            {ord.status && ord.status !== 'new' && (
+                              <div style={{ fontSize: 12, marginTop: 2 }}>
+                                <span style={badge(ord.status === 'appointed' ? '#1ba353' : '#888')}>
+                                  {ord.status === 'appointed' ? '✅ Biriktirilgan' : ord.status}
+                                </span>
+                                {ord.driverPhone && ord.driverId !== parseInt(driver.chatId, 10) && (
+                                  <span style={{ color: '#888', marginLeft: 6 }}>
+                                    ({ord.driverId === parseInt(driver.chatId, 10) ? 'Shu haydovchi' : `boshqa: +${ord.driverPhone}`})
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
+                        ) : null}
+                        <div style={{ fontSize: 12, color: '#888' }}>
+                          Yuborilgan: {fmtDate(o.sentAt)}
+                          {o.viewedAt ? ` · Ko'rgan: ${fmtDate(o.viewedAt)}` : ''}
+                          {o.acceptedAt ? ` · Qabul: ${fmtDate(o.acceptedAt)}${o.acceptedByAdmin ? " (admin qo'lda)" : ''}` : ''}
+                          {o.rejectedAt ? ` · Rad: ${fmtDate(o.rejectedAt)}` : ''}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                        <span style={badge(lbl.color)}>{lbl.label}</span>
+                        {!o.orderDeleted && o.state !== 'accepted' && o.state !== 'rejected' && (
+                          <button onClick={() => handleManualAccept(o.orderId)} style={tinyBtnStyle}>
+                            {"Qo'lda qabul qildirish"}
+                          </button>
                         )}
                       </div>
-                    ) : null}
-                    <div style={{ fontSize: 12, color: '#888' }}>
-                      Yuborilgan: {fmtDate(o.sentAt)}
-                      {o.viewedAt ? ` · Ko'rgan: ${fmtDate(o.viewedAt)}` : ''}
-                      {o.acceptedAt ? ` · Qabul: ${fmtDate(o.acceptedAt)}${o.acceptedByAdmin ? " (admin qo'lda)" : ''}` : ''}
-                      {o.rejectedAt ? ` · Rad: ${fmtDate(o.rejectedAt)}` : ''}
                     </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                    <span style={badge(lbl.color)}>{lbl.label}</span>
-                    {!o.orderDeleted && o.state !== 'accepted' && o.state !== 'rejected' && (
-                      <button onClick={() => handleManualAccept(o.orderId)} style={tinyBtnStyle}>
-                        {"Qo'lda qabul qildirish"}
-                      </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {isCargoOwner && (
+        <div style={cardStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <div>
+              <h3 style={{ margin: 0 }}>Yuklar ({driver.ordersCount ?? ownerOrders.length})</h3>
+              <div style={{ color: '#666', fontSize: 13, marginTop: 4 }}>
+                Yuk egasi nomidan yaratilgan va platformaga chiqarilgan yuklar.
+              </div>
+            </div>
+            {driver.isLinked ? (
+              <button onClick={() => setShowOwnerOrderModal(true)} style={smallBtnStyle}>
+                + Yuk qo'shish
+              </button>
+            ) : (
+              <span style={{ color: '#888', fontSize: 13 }}>Yuk qo'shish uchun avval botga ulansin</span>
+            )}
+          </div>
+
+          {ownerOrders.length === 0 ? (
+            <div style={{ color: '#888', marginTop: 12 }}>Hozircha yuk qo'shilmagan.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+              {ownerOrders.map((order) => (
+                <div key={order.id} style={offerRowStyle}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700 }}>
+                      {order.fromCity || '—'} → {order.toCity || '—'}
+                    </div>
+                    <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
+                      {order.cargoName || 'Yuk'} · {order.vehicleType || 'Mashina turi ko\'rsatilmagan'} · {order.weightKg ? `${order.weightKg} t` : 'vazn yo\'q'} · {formatMoney(order.priceUzs)}
+                    </div>
+                    <div style={{ color: '#777', fontSize: 12, marginTop: 4 }}>
+                      {order.additionalPhone ? `Telefon: +${order.additionalPhone} · ` : ''}
+                      {order.createdTime ? `Yaratildi: ${fmtDate(order.createdTime)}` : ''}
+                    </div>
+                    {order.description && (
+                      <div style={{ color: '#666', fontSize: 12, marginTop: 4 }}>
+                        {order.description}
+                      </div>
                     )}
                   </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                    <span style={badge(order.status === 'appointed' ? '#1ba353' : '#1976d2')}>
+                      {order.status === 'appointed' ? 'Biriktirilgan' : order.status || 'new'}
+                    </span>
+                    <button onClick={() => handleDeleteOwnerOrder(order.id)} style={dangerBtnCompactStyle}>
+                      O'chirish
+                    </button>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ marginTop: 16 }}>
         <button onClick={handleDelete} style={dangerBtnStyle}>
-          {"🗑 Haydovchini o'chirish"}
+          {`🗑 ${roleLabel(driver.type)}ni o'chirish`}
         </button>
       </div>
 
@@ -435,7 +569,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
         />
       )}
 
-      {showHarbingerModal && (
+      {isDriver && showHarbingerModal && (
         <HarbingerModal
           driverId={id}
           staticData={staticData}
@@ -447,7 +581,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
         />
       )}
 
-      {showTransportModal && (
+      {isDriver && showTransportModal && (
         <TransportModal
           driverId={id}
           driver={driver}
@@ -459,11 +593,25 @@ export default function AdminDriverDetailPage({ mobile = false }) {
           }}
         />
       )}
+
+      {isCargoOwner && showOwnerOrderModal && (
+        <OwnerOrderModal
+          userId={id}
+          owner={driver}
+          staticData={staticData}
+          onClose={() => setShowOwnerOrderModal(false)}
+          onSuccess={() => {
+            setShowOwnerOrderModal(false);
+            loadAll();
+          }}
+        />
+      )}
     </div>
   );
 }
 
 function SubscriptionBox({ driver, tariffs, freeLimits, onAssign, onCancel }) {
+  const isDriver = driver.type === 'driver';
   const subscription = driver.subscription;
   const currentTariff = tariffs.find((tariff) => tariff.id === subscription?.tariffId);
   const harbingerFeature = currentTariff?.features?.createHarbinger;
@@ -489,16 +637,24 @@ function SubscriptionBox({ driver, tariffs, freeLimits, onAssign, onCancel }) {
               <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
                 Tugash vaqti: {subscription.expiresAt ? fmtDate(subscription.expiresAt) : 'muddatsiz'}
               </div>
-              <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
-                Xabarchi limiti: {usedHarbingers}/{harbingerLimitText}
-              </div>
+              {isDriver && (
+                <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
+                  Xabarchi limiti: {usedHarbingers}/{harbingerLimitText}
+                </div>
+              )}
             </>
           ) : (
             <>
               <strong>Tarif biriktirilmagan</strong>
-              <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
-                Bepul holatda xabarchi limiti: {usedHarbingers}/{freeHarbingerLimit} ta
-              </div>
+              {isDriver ? (
+                <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
+                  Bepul holatda xabarchi limiti: {usedHarbingers}/{freeHarbingerLimit} ta
+                </div>
+              ) : (
+                <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
+                  Kerak bo'lsa, bu foydalanuvchiga tarifni shu yerdan biriktiring.
+                </div>
+              )}
             </>
           )}
         </div>
@@ -878,6 +1034,178 @@ function TransportModal({ driverId, driver, staticData, onClose, onSuccess }) {
             </button>
             <button type="submit" style={primaryBtnStyle} disabled={saving}>
               {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function OwnerOrderModal({ userId, owner, staticData, onClose, onSuccess }) {
+  const [cargoName, setCargoName] = useState('');
+  const [fromCountry, setFromCountry] = useState('');
+  const [fromRegion, setFromRegion] = useState('');
+  const [fromCity, setFromCity] = useState('');
+  const [toCountry, setToCountry] = useState('');
+  const [toRegion, setToRegion] = useState('');
+  const [toCity, setToCity] = useState('');
+  const [vehicleTypeId, setVehicleTypeId] = useState('');
+  const [weight, setWeight] = useState('');
+  const [priceUzs, setPriceUzs] = useState('');
+  const [additionalPhone, setAdditionalPhone] = useState(owner?.phone ? `+${owner.phone}` : '');
+  const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const countries = staticData?.countries || [];
+  const fromRegions = staticData?.regions?.filter((r) => r.countryId === parseInt(fromCountry, 10)) || [];
+  const fromCities = staticData?.cities?.filter((c) => c.regionId === parseInt(fromRegion, 10)) || [];
+  const toRegions = staticData?.regions?.filter((r) => r.countryId === parseInt(toCountry, 10)) || [];
+  const toCities = staticData?.cities?.filter((c) => c.regionId === parseInt(toRegion, 10)) || [];
+  const vehicleTypes = staticData?.vehicleTypes || [];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!fromCountry || !toCountry || !cargoName.trim()) {
+      showError('Yuk nomi, qayerdan va qayerga maydonlarini to\'ldiring');
+      return;
+    }
+    setSaving(true);
+    try {
+      const data = {
+        cargoName: cargoName.trim(),
+        additionalPhone: additionalPhone.trim(),
+        description: description.trim(),
+        fromLocation: {
+          countryId: parseInt(fromCountry, 10) || 0,
+          regionId: parseInt(fromRegion, 10) || 0,
+          cityId: parseInt(fromCity, 10) || 0,
+        },
+        toLocation: {
+          countryId: parseInt(toCountry, 10) || 0,
+          regionId: parseInt(toRegion, 10) || 0,
+          cityId: parseInt(toCity, 10) || 0,
+        },
+        weight: weight ? parseFloat(weight) : null,
+        priceUzs: priceUzs ? parseInt(priceUzs, 10) || 0 : 0,
+        vehicleTypeId: vehicleTypeId ? parseInt(vehicleTypeId, 10) : null,
+      };
+      const response = await adminCreateOrderForOwner(userId, data);
+      if (response.code === 200) {
+        showSuccess('Yuk yaratildi va tarqatish boshlandi');
+        onSuccess();
+      } else {
+        showError(response.message || 'Xatolik');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Xatolik');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      style={modalOverlayStyle}
+      role="presentation"
+      onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+    >
+      <div
+        style={modalContentStyle}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 style={{ marginTop: 0 }}>Yuk egasi uchun yuk qo'shish</h3>
+        <form onSubmit={handleSubmit}>
+          <label style={labelStyle}>
+            Yuk nomi
+            <input
+              type="text"
+              value={cargoName}
+              onChange={(e) => setCargoName(e.target.value)}
+              style={inputStyle}
+              placeholder="masalan: sement, mebel, uskunalar"
+              required
+            />
+          </label>
+
+          <fieldset style={fieldsetStyle}>
+            <legend>Qayerdan</legend>
+            <select value={fromCountry} onChange={(e) => { setFromCountry(e.target.value); setFromRegion(''); setFromCity(''); }} style={selectStyle} required>
+              <option value="">Mamlakat tanlang</option>
+              {countries.map((c) => <option key={c.countryId} value={c.countryId}>{c.name}</option>)}
+            </select>
+            {fromCountry && (
+              <select value={fromRegion} onChange={(e) => { setFromRegion(e.target.value); setFromCity(''); }} style={selectStyle}>
+                <option value="">Viloyat (ixtiyoriy)</option>
+                {fromRegions.map((r) => <option key={r.regionId} value={r.regionId}>{r.name}</option>)}
+              </select>
+            )}
+            {fromRegion && (
+              <select value={fromCity} onChange={(e) => setFromCity(e.target.value)} style={selectStyle}>
+                <option value="">Shahar (ixtiyoriy)</option>
+                {fromCities.map((c) => <option key={c.cityId} value={c.cityId}>{c.name}</option>)}
+              </select>
+            )}
+          </fieldset>
+
+          <fieldset style={fieldsetStyle}>
+            <legend>Qayerga</legend>
+            <select value={toCountry} onChange={(e) => { setToCountry(e.target.value); setToRegion(''); setToCity(''); }} style={selectStyle} required>
+              <option value="">Mamlakat tanlang</option>
+              {countries.map((c) => <option key={c.countryId} value={c.countryId}>{c.name}</option>)}
+            </select>
+            {toCountry && (
+              <select value={toRegion} onChange={(e) => { setToRegion(e.target.value); setToCity(''); }} style={selectStyle}>
+                <option value="">Viloyat (ixtiyoriy)</option>
+                {toRegions.map((r) => <option key={r.regionId} value={r.regionId}>{r.name}</option>)}
+              </select>
+            )}
+            {toRegion && (
+              <select value={toCity} onChange={(e) => setToCity(e.target.value)} style={selectStyle}>
+                <option value="">Shahar (ixtiyoriy)</option>
+                {toCities.map((c) => <option key={c.cityId} value={c.cityId}>{c.name}</option>)}
+              </select>
+            )}
+          </fieldset>
+
+          <label style={labelStyle}>
+            Mashina turi
+            <select value={vehicleTypeId} onChange={(e) => setVehicleTypeId(e.target.value)} style={selectStyle}>
+              <option value="">Hammasi</option>
+              {vehicleTypes.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+            </select>
+          </label>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+            <label style={labelStyle}>
+              Vazn (tonna)
+              <input type="number" step="0.1" min="0" value={weight} onChange={(e) => setWeight(e.target.value)} style={inputStyle} placeholder="20" />
+            </label>
+            <label style={labelStyle}>
+              Narx (so'm)
+              <input type="number" min="0" value={priceUzs} onChange={(e) => setPriceUzs(e.target.value)} style={inputStyle} placeholder="Kelishiladi" />
+            </label>
+          </div>
+
+          <label style={labelStyle}>
+            Telefon
+            <input type="tel" value={additionalPhone} onChange={(e) => setAdditionalPhone(e.target.value)} style={inputStyle} placeholder="+998..." />
+          </label>
+
+          <label style={labelStyle}>
+            Izoh
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} placeholder="Qo'shimcha ma'lumot" />
+          </label>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button type="button" onClick={onClose} style={secondaryBtnStyle} disabled={saving}>
+              Bekor qilish
+            </button>
+            <button type="submit" style={primaryBtnStyle} disabled={saving}>
+              {saving ? 'Yaratilmoqda...' : 'Yukni yaratish'}
             </button>
           </div>
         </form>

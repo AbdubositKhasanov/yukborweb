@@ -796,8 +796,8 @@ export const getUserbotHealth = async () => {
 // ADMIN: DRIVERS
 // ============================================
 
-export const adminCreateDriver = async ({ phone, name, language = 'uz' }) => {
-  const response = await apiClient.post('/admin/drivers', { phone, name, language });
+export const adminCreateDriver = async ({ phone, name, language = 'uz', type = 'driver' }) => {
+  const response = await apiClient.post('/admin/drivers', { phone, name, language, type });
   return response.data;
 };
 
@@ -854,6 +854,12 @@ export const adminCreateHarbingerForDriver = async (driverId, harbinger) => {
 
 export const adminCreateTransportForDriver = async (driverId, transport) => {
   const response = await apiClient.post(`/admin/drivers/${driverId}/transports`, transport);
+  return response.data;
+};
+
+export const adminCreateOrderForOwner = async (userId, order) => {
+  const response = await apiClient.post(`/admin/users/${userId}/orders`, order);
+  apiCache.invalidate('orders');
   return response.data;
 };
 

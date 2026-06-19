@@ -74,6 +74,7 @@ export default function AdminSettingsPage({ mobile = false }) {
     return [
       { label: 'Foydalanuvchilar', path: `${base}/users` },
       { label: 'Haydovchilar', path: `${base}/drivers` },
+      { label: 'Yuk egalari', path: `${base}/cargo-owners` },
       { label: 'Tariflar', path: `${base}/tariffs` },
       { label: 'Broadcast', path: `${base}/broadcasts` },
       { label: 'Premium yuklar', path: `${base}/premium-orders` },

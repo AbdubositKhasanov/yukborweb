@@ -34,6 +34,26 @@ const ROLE_LABELS = {
   not_selected: 'Tanlanmagan',
 };
 
+const CREATE_ROLE_FALLBACK = 'driver';
+
+function normalizeCreateRole(role) {
+  return ['driver', 'logist', 'factory', 'not_selected'].includes(role) ? role : CREATE_ROLE_FALLBACK;
+}
+
+function pageTitle(role) {
+  if (role === 'driver') return 'Haydovchilar';
+  if (role === 'factory') return 'Yuk egalari';
+  if (role === 'logist') return 'Logistlar';
+  return 'Foydalanuvchilar';
+}
+
+function detailPathForRole(role, id, mobile) {
+  if (mobile) return `/mobile/admin/users/${id}`;
+  if (role === 'driver') return `/admin/drivers/${id}`;
+  if (role === 'factory') return `/admin/cargo-owners/${id}`;
+  return `/admin/users/${id}`;
+}
+
 function formatRelativeTime(timestamp) {
   if (!timestamp) return '—';
   const diff = Date.now() - timestamp;
@@ -72,7 +92,7 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createPhone, setCreatePhone] = useState('');
   const [createName, setCreateName] = useState('');
-  const [createRole, setCreateRole] = useState('driver');
+  const [createRole, setCreateRole] = useState(normalizeCreateRole(initialRole));
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -176,17 +196,15 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
       const resp = await adminCreateDriver({
         phone: createPhone.trim(),
         name: createName.trim(),
+        type: createRole,
       });
       if (resp.code === 200 && resp.result) {
-        if (createRole && createRole !== 'driver') {
-          await import('../services/api').then((m) => m.adminUpdateUserRole(resp.result.id, createRole));
-        }
         showSuccess("Foydalanuvchi yaratildi");
         setShowCreateModal(false);
         setCreatePhone('');
         setCreateName('');
-        setCreateRole('driver');
-        const detailPath = mobile ? `/mobile/admin/users/${resp.result.id}` : `/admin/drivers/${resp.result.id}`;
+        setCreateRole(normalizeCreateRole(role));
+        const detailPath = detailPathForRole(resp.result.type || createRole, resp.result.id, mobile);
         navigate(detailPath);
       } else {
         showError(resp.message || 'Yaratishda xatolik');
@@ -195,6 +213,18 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
       showError(e.response?.data?.message || e.message || 'Xatolik');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openCreateModal = () => {
+    setCreateRole(normalizeCreateRole(role));
+    setShowCreateModal(true);
+  };
+
+  const handleRoleFilter = (nextRole) => {
+    setRole(nextRole);
+    if (nextRole !== 'driver' && !['all', 'not_linked', 'linked'].includes(filter)) {
+      setFilter('all');
     }
   };
 
@@ -214,7 +244,7 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
       <div style={headerStyle}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
           <h2 style={{ margin: 0, fontSize: 22 }}>
-            {role === 'driver' ? 'Haydovchilar' : 'Foydalanuvchilar'}
+            {pageTitle(role)}
           </h2>
           {!loading && (
             <span style={{ fontSize: 14, color: '#666' }}>
@@ -223,10 +253,10 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
           )}
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={openCreateModal}
           style={primaryBtnStyle}
         >
-          + Yangi foydalanuvchi
+          + Yangi {role === 'factory' ? 'yuk egasi' : role === 'driver' ? 'haydovchi' : 'foydalanuvchi'}
         </button>
       </div>
 
@@ -235,7 +265,7 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
         {ROLE_FILTERS.map((rf) => (
           <button
             key={rf.key}
-            onClick={() => setRole(rf.key)}
+            onClick={() => handleRoleFilter(rf.key)}
             style={{
               ...chipStyle,
               ...(role === rf.key ? activeChipStyle : {}),
@@ -265,7 +295,7 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
       </div>
 
       <div style={filtersRowStyle}>
-        {FILTERS.map((f) => (
+        {(role === 'driver' ? FILTERS : FILTERS.filter((f) => ['all', 'not_linked', 'linked'].includes(f.key))).map((f) => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
@@ -283,7 +313,7 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
         <div style={{ padding: 24 }}>Yuklanmoqda...</div>
       ) : drivers.length === 0 ? (
         <div style={{ padding: 24, textAlign: 'center', color: '#666' }}>
-          Hozircha haydovchilar topilmadi.
+          Hozircha {pageTitle(role).toLowerCase()} topilmadi.
         </div>
       ) : (
         <>
@@ -292,7 +322,7 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
               <DriverCard
                 key={d.id}
                 driver={d}
-                onClick={() => navigate(mobile ? `/mobile/admin/users/${d.id}` : `/admin/drivers/${d.id}`)}
+                onClick={() => navigate(detailPathForRole(d.type || role, d.id, mobile))}
               />
             ))}
           </div>
@@ -386,6 +416,8 @@ function DriverCard({ driver, onClick }) {
   const s = driver.stats || {};
   const acceptanceRate = s.sent > 0 ? Math.round((s.accepted / s.sent) * 100) : 0;
   const userRole = driver.type || 'not_selected';
+  const isDriver = userRole === 'driver';
+  const isCargoOwner = userRole === 'factory';
   return (
     <button type="button" style={cardBtnStyle} onClick={onClick}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
@@ -407,16 +439,31 @@ function DriverCard({ driver, onClick }) {
           )}
         </div>
       </div>
-      <div style={statsRowStyle}>
-        <Stat label="Yuborilgan" value={s.sent ?? 0} />
-        <Stat label={"Ko'rgan"} value={s.viewed ?? 0} />
-        <Stat label="Qabul" value={s.accepted ?? 0} highlight={acceptanceRate >= 50 ? '#1ba353' : null} />
-        <Stat label="Rad" value={s.rejected ?? 0} />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#888' }}>
-        <span>Qabul foizi: {acceptanceRate}%</span>
-        <span>Oxirgi taklif: {formatRelativeTime(s.lastSentAt)}</span>
-      </div>
+      {isDriver ? (
+        <>
+          <div style={statsRowStyle}>
+            <Stat label="Yuborilgan" value={s.sent ?? 0} />
+            <Stat label={"Ko'rgan"} value={s.viewed ?? 0} />
+            <Stat label="Qabul" value={s.accepted ?? 0} highlight={acceptanceRate >= 50 ? '#1ba353' : null} />
+            <Stat label="Rad" value={s.rejected ?? 0} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#888' }}>
+            <span>Qabul foizi: {acceptanceRate}%</span>
+            <span>Oxirgi taklif: {formatRelativeTime(s.lastSentAt)}</span>
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={statsRowStyle}>
+            <Stat label={isCargoOwner ? 'Yuklari' : 'Yozuvlar'} value={driver.ordersCount ?? 0} highlight={isCargoOwner ? '#558b2f' : null} />
+            <Stat label="Tarif" value={driver.subscription?.isActive ? 'Faol' : 'Yoq'} />
+            <Stat label="Holat" value={driver.isLinked ? 'Ulangan' : 'Kutilmoqda'} />
+          </div>
+          <div style={{ fontSize: 12, color: '#888' }}>
+            {isCargoOwner ? 'Yuk egasining yuklari va tarifini detail sahifada boshqarasiz.' : 'Foydalanuvchi profili detail sahifada boshqariladi.'}
+          </div>
+        </>
+      )}
     </button>
   );
 }

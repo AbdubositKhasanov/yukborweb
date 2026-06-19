@@ -102,6 +102,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
       tabs = [
         ...tabs,
         { path: '/admin/users', label: 'Foydalanuvchilar', auth: true },
+        { path: '/admin/cargo-owners', label: 'Yuk egalari', auth: true },
         { path: '/admin/tariffs', label: 'Tariflar', auth: true },
         { path: '/admin/settings', label: 'Sozlamalar', auth: true },
         { path: '/admin/broadcasts', label: 'Broadcast', auth: true },

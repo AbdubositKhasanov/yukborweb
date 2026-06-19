@@ -305,6 +305,14 @@ function MobileAppContent() {
             }
           />
           <Route
+            path="/admin/cargo-owners"
+            element={
+              <MobileProtectedRoute>
+                <AdminUsersPage defaultRole="factory" mobile />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/tariffs"
             element={
               <MobileProtectedRoute>
