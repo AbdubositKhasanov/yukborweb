@@ -6,6 +6,7 @@ import {
   adminUpdateSettings,
   getUserMe,
 } from '../services/api';
+import AdminMediaUpload from '../components/AdminMediaUpload';
 import { showError, showSuccess } from '../utils/toast';
 
 const emptyForms = {
@@ -229,6 +230,15 @@ export default function AdminSettingsPage({ mobile = false }) {
     savePatch('onboarding', { onboarding: forms.onboarding }, 'Onboarding sozlamalari saqlandi');
   };
 
+  const handleOnboardingVideoUploaded = async (media) => {
+    const nextOnboarding = {
+      ...forms.onboarding,
+      onboardingVideoFileId: media.fileId,
+    };
+    updateForm('onboarding', nextOnboarding);
+    await savePatch('onboardingMedia', { onboarding: nextOnboarding }, 'Onboarding video yuklandi va saqlandi');
+  };
+
   const saveIdentity = (e) => {
     e.preventDefault();
     savePatch('identity', { identity: forms.identity }, 'Bot username sozlamalari saqlandi');
@@ -429,14 +439,16 @@ export default function AdminSettingsPage({ mobile = false }) {
             <h3 style={sectionTitleStyle}>Onboarding</h3>
             <p style={hintStyle}>Botga yangi kirgan userga ko'rsatiladigan video, matn va Mini App tugmasi.</p>
             <form onSubmit={saveOnboarding} style={formGridStyle}>
-              <label style={labelStyle}>
-                Video file_id
-                <input
-                  value={forms.onboarding.onboardingVideoFileId}
-                  onChange={(e) => updateForm('onboarding', { onboardingVideoFileId: e.target.value })}
-                  style={inputStyle}
-                />
-              </label>
+              <AdminMediaUpload
+                type="VIDEO"
+                value={forms.onboarding.onboardingVideoFileId}
+                label="Onboarding video"
+                description="Video bot orqali admin chattingizga yuboriladi va file_id avtomatik saqlanadi."
+                disabled={!!savingSection}
+                successMessage=""
+                onManualChange={(onboardingVideoFileId) => updateForm('onboarding', { onboardingVideoFileId })}
+                onUploaded={handleOnboardingVideoUploaded}
+              />
               <label style={labelStyle}>
                 Welcome text
                 <textarea

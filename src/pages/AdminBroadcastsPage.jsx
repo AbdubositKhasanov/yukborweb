@@ -8,6 +8,7 @@ import {
   adminUpdateScheduledBroadcast,
   getUserMe,
 } from '../services/api';
+import AdminMediaUpload from '../components/AdminMediaUpload';
 import { showError, showSuccess } from '../utils/toast';
 
 const userTypeOptions = [
@@ -277,6 +278,30 @@ export default function AdminBroadcastsPage({ mobile = false }) {
     }
   };
 
+  const handleMediaUploaded = async (media) => {
+    if (!selected || !form) return;
+    const nextForm = {
+      ...form,
+      contentType: media.contentType || form.contentType,
+      mediaFileId: media.fileId,
+    };
+    setForm(nextForm);
+    setSaving(true);
+    try {
+      const response = await adminUpdateScheduledBroadcast(selected.id, formToPayload(nextForm));
+      if (response.code === 200) {
+        showSuccess('Media yuklandi va reja saqlandi');
+        await loadAll(response.result.id);
+      } else {
+        showError(response.message || 'Media yuklandi, lekin reja saqlanmadi');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Media yuklandi, lekin reja saqlanmadi');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!authChecked) return <div style={{ padding: 24 }}>Yuklanmoqda...</div>;
   if (!isAdmin) return <div style={{ padding: 24, color: '#c00' }}>Bu sahifa faqat adminlar uchun.</div>;
 
@@ -471,10 +496,17 @@ export default function AdminBroadcastsPage({ mobile = false }) {
                     </label>
                   </div>
                   {form.contentType !== 'TEXT' && (
-                    <label style={{ ...labelStyle, marginTop: 10 }}>
-                      Media file_id
-                      <input value={form.mediaFileId} onChange={(e) => updateForm({ mediaFileId: e.target.value })} style={inputStyle} />
-                    </label>
+                    <div style={{ marginTop: 10 }}>
+                      <AdminMediaUpload
+                        type={form.contentType}
+                        value={form.mediaFileId}
+                        label="Broadcast media"
+                        disabled={saving}
+                        successMessage=""
+                        onManualChange={(mediaFileId) => updateForm({ mediaFileId })}
+                        onUploaded={handleMediaUploaded}
+                      />
+                    </div>
                   )}
                   <label style={{ ...labelStyle, marginTop: 10 }}>
                     Matn / caption

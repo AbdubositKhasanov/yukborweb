@@ -891,6 +891,17 @@ export const adminSendGroupAnnouncementNow = async (pin = false) => {
   return response.data;
 };
 
+export const adminUploadMedia = async (file, type = 'PHOTO') => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('type', type);
+  const response = await apiClient.post('/admin/media/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
+  });
+  return response.data;
+};
+
 export const adminListPremiumOrders = async (params = {}) => {
   const response = await apiClient.get('/admin/premium-orders', { params });
   return response.data;
