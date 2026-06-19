@@ -12,6 +12,7 @@ export default function CreateHarbingerPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [permissions, setPermissions] = useState(null);
+  const [featureLimits, setFeatureLimits] = useState(null);
   const [showClubModal, setShowClubModal] = useState(false);
 
   const [fromCountry, setFromCountry] = useState('');
@@ -32,6 +33,7 @@ export default function CreateHarbingerPage() {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
         setPermissions(response.result.permissions || null);
+        setFeatureLimits(response.result.featureLimits || null);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -92,6 +94,28 @@ export default function CreateHarbingerPage() {
       <h1 className="page-title">Xabarchi yaratish</h1>
 
       <div className="card" style={{ maxWidth: '700px', margin: '0 auto' }}>
+        {featureLimits?.createHarbinger && (
+          <div
+            style={{
+              marginBottom: '14px',
+              padding: '12px',
+              background: featureLimits.createHarbinger.remaining === 0 && !featureLimits.createHarbinger.unlimited ? '#fff5f5' : '#f5f9ff',
+              border: '1px solid #d9e6f8',
+              borderRadius: '6px',
+              color: '#333',
+              fontSize: '14px',
+            }}
+          >
+            Xabarchi limiti:{' '}
+            {featureLimits.createHarbinger.unlimited
+              ? `${featureLimits.createHarbinger.used || 0}/cheksiz`
+              : `${featureLimits.createHarbinger.used || 0}/${featureLimits.createHarbinger.limit || 0}`}
+            {featureLimits.createHarbinger.expiresAt && (
+              <span> · Tarif tugaydi: {new Date(featureLimits.createHarbinger.expiresAt).toLocaleDateString('uz-UZ')}</span>
+            )}
+          </div>
+        )}
+
         <p
           style={{
             marginBottom: '25px',
@@ -202,7 +226,13 @@ export default function CreateHarbingerPage() {
         </form>
       </div>
 
-      <ClubMembershipModal isOpen={showClubModal} onClose={() => setShowClubModal(false)} />
+      <ClubMembershipModal
+        isOpen={showClubModal}
+        onClose={() => setShowClubModal(false)}
+        featureKey="createHarbinger"
+        message="Xabarchi yaratish uchun faol premium tarif kerak yoki limitingiz tugagan."
+        currentLimit={featureLimits?.createHarbinger}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { trackPhoneView, trackPhoneRequest } from '../services/analytics';
 import { getTelegramProfileLink } from '../utils/telegramLinks';
+import { goToTariffs, openSupportForPurchase } from '../utils/premiumUpgrade';
 
 export default function PhoneAccessModal({ isOpen, onClose, type, message, phone, telegramUsername, chatId, ownerName }) {
   useEffect(() => {
@@ -40,15 +41,21 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
               <button className="btn btn-secondary" onClick={onClose}>
                 Yopish
               </button>
-              <a
-                href="https://t.me/yukborsupport"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary"
-                style={{ textDecoration: 'none' }}
+              <button
+                className="btn btn-secondary"
+                onClick={() => goToTariffs('viewCargoPhone')}
               >
-                Qo'llab-quvvatlash
-              </a>
+                Tariflarni ko'rish
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => openSupportForPurchase({
+                  featureKey: 'viewCargoPhone',
+                  reason: message || 'Telefon raqamni ko\'rish uchun premium kerak.',
+                })}
+              >
+                Sotib olish
+              </button>
             </div>
           </div>
         );

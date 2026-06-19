@@ -342,6 +342,8 @@ export default function MyOrdersPage() {
       <ClubMembershipModal
         isOpen={showClubModal}
         onClose={() => setShowClubModal(false)}
+        featureKey="offerToDriver"
+        message="Buyurtma uchun transport topish va taklif yuborish premium tarif orqali ochiladi."
       />
 
       <BroadcastModal

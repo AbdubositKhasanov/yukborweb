@@ -9,6 +9,9 @@ import {
   adminAcceptOrderForDriver,
   adminUpdateUser,
   adminUpdateUserRole,
+  adminListTariffs,
+  adminAssignUserTariff,
+  adminCancelUserTariff,
   getLocationsAndVehicles,
   getUserMe,
 } from '../services/api';
@@ -51,6 +54,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   const navigate = useNavigate();
   const [driver, setDriver] = useState(null);
   const [offers, setOffers] = useState([]);
+  const [tariffs, setTariffs] = useState([]);
   const [staticData, setStaticData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -59,6 +63,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   const [showHarbingerModal, setShowHarbingerModal] = useState(false);
   const [showTransportModal, setShowTransportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [savingRole, setSavingRole] = useState(false);
 
   const backPath = mobile ? '/mobile/admin/users' : '/admin/drivers';
@@ -79,14 +84,16 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [d, o, s] = await Promise.all([
+      const [d, o, s, t] = await Promise.all([
         adminGetDriver(id),
         adminGetDriverOffers(id),
         getLocationsAndVehicles(),
+        adminListTariffs(true),
       ]);
       if (d.code === 200) setDriver(d.result);
       if (o.code === 200) setOffers(o.result || []);
       if (s.code === 200) setStaticData(s.result);
+      if (t.code === 200) setTariffs(t.result || []);
     } catch (e) {
       showError(e.response?.data?.message || e.message || 'Xatolik');
     } finally {
@@ -162,6 +169,22 @@ export default function AdminDriverDetailPage({ mobile = false }) {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    if (!driver?.subscription) return;
+    if (!confirm("Foydalanuvchining tarifini bekor qilasizmi?")) return;
+    try {
+      const r = await adminCancelUserTariff(id);
+      if (r.code === 200) {
+        showSuccess("Tarif bekor qilindi");
+        loadAll();
+      } else {
+        showError(r.message || 'Xatolik');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Xatolik');
+    }
+  };
+
   if (!authChecked) return <div style={{ padding: 24 }}>Yuklanmoqda...</div>;
   if (!isAdmin) {
     return <div style={{ padding: 24, color: '#c00' }}>Bu sahifa faqat adminlar uchun.</div>;
@@ -225,6 +248,13 @@ export default function AdminDriverDetailPage({ mobile = false }) {
             ))}
           </div>
         </div>
+
+        <SubscriptionBox
+          driver={driver}
+          tariffs={tariffs}
+          onAssign={() => setShowSubscriptionModal(true)}
+          onCancel={handleCancelSubscription}
+        />
 
         {!driver.isLinked && driver.deepLink && (
           <div style={linkBoxStyle}>
@@ -388,6 +418,18 @@ export default function AdminDriverDetailPage({ mobile = false }) {
         />
       )}
 
+      {showSubscriptionModal && (
+        <SubscriptionModal
+          userId={id}
+          tariffs={tariffs}
+          onClose={() => setShowSubscriptionModal(false)}
+          onSuccess={() => {
+            setShowSubscriptionModal(false);
+            loadAll();
+          }}
+        />
+      )}
+
       {showHarbingerModal && (
         <HarbingerModal
           driverId={id}
@@ -412,6 +454,169 @@ export default function AdminDriverDetailPage({ mobile = false }) {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function SubscriptionBox({ driver, tariffs, onAssign, onCancel }) {
+  const subscription = driver.subscription;
+  const currentTariff = tariffs.find((tariff) => tariff.id === subscription?.tariffId);
+  const harbingerFeature = currentTariff?.features?.createHarbinger;
+  const harbingerLimitText = harbingerFeature?.enabled
+    ? (harbingerFeature.limit === null || harbingerFeature.limit === undefined ? 'cheksiz' : `${harbingerFeature.limit} ta`)
+    : '0 ta';
+  const usedHarbingers = driver.harbingers?.length || 0;
+
+  return (
+    <div style={{ marginTop: 12, padding: 12, border: '1px solid #e6edf8', background: '#f8fbff', borderRadius: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Premium tarif:</div>
+          {subscription ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <strong>{subscription.tariffName || currentTariff?.name || 'Tarif'}</strong>
+                <span style={badge(subscription.isActive ? '#1ba353' : '#888')}>
+                  {subscription.isActive ? 'Faol' : 'Muddati tugagan'}
+                </span>
+              </div>
+              <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
+                Tugash vaqti: {subscription.expiresAt ? fmtDate(subscription.expiresAt) : 'muddatsiz'}
+              </div>
+              <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
+                Xabarchi limiti: {usedHarbingers}/{harbingerLimitText}
+              </div>
+            </>
+          ) : (
+            <>
+              <strong>Tarif biriktirilmagan</strong>
+              <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
+                Bepul holatda xabarchi limiti: {usedHarbingers}/0 ta
+              </div>
+            </>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button onClick={onAssign} style={smallBtnStyle}>
+            {subscription ? 'Tarifni almashtirish' : '+ Tarif berish'}
+          </button>
+          {subscription && (
+            <button onClick={onCancel} style={dangerBtnCompactStyle}>
+              Bekor qilish
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubscriptionModal({ userId, tariffs, onClose, onSuccess }) {
+  const activeTariffs = tariffs.filter((tariff) => tariff.isActive !== false);
+  const [tariffId, setTariffId] = useState(activeTariffs[0]?.id || tariffs[0]?.id || '');
+  const [durationDays, setDurationDays] = useState('');
+  const [expiresDate, setExpiresDate] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const selectedTariff = tariffs.find((tariff) => tariff.id === tariffId);
+  const harbingerFeature = selectedTariff?.features?.createHarbinger;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!tariffId) {
+      showError('Tarif tanlang');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = { tariffId };
+      if (durationDays.trim()) payload.durationDays = Math.max(1, parseInt(durationDays, 10) || 1);
+      if (expiresDate) payload.expiresAt = new Date(`${expiresDate}T23:59:59`).getTime();
+      const response = await adminAssignUserTariff(userId, payload);
+      if (response.code === 200) {
+        showSuccess('Tarif biriktirildi');
+        onSuccess();
+      } else {
+        showError(response.message || 'Xatolik');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Xatolik');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      style={modalOverlayStyle}
+      role="presentation"
+      onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+    >
+      <div
+        style={modalContentStyle}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 style={{ marginTop: 0 }}>Foydalanuvchiga tarif berish</h3>
+        <form onSubmit={handleSubmit}>
+          <label style={labelStyle}>
+            Tarif
+            <select value={tariffId} onChange={(e) => setTariffId(e.target.value)} style={selectStyle}>
+              <option value="">Tanlang</option>
+              {tariffs.map((tariff) => (
+                <option key={tariff.id} value={tariff.id}>
+                  {tariff.name} · {Number(tariff.priceUzs || 0).toLocaleString('ru-RU')} {tariff.currency}
+                  {tariff.isActive === false ? " (o'chirilgan)" : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {selectedTariff && (
+            <div style={{ background: '#f5f7fb', padding: 10, borderRadius: 6, fontSize: 13, marginBottom: 10 }}>
+              <div>Muddat: {selectedTariff.durationDays ? `${selectedTariff.durationDays} kun` : 'muddatsiz'}</div>
+              <div>
+                Xabarchi: {harbingerFeature?.enabled
+                  ? (harbingerFeature.limit === null || harbingerFeature.limit === undefined ? 'cheksiz' : `${harbingerFeature.limit} ta`)
+                  : 'yoqilmagan'}
+              </div>
+            </div>
+          )}
+
+          <label style={labelStyle}>
+            Muddat override (kun)
+            <input
+              type="number"
+              min="1"
+              value={durationDays}
+              onChange={(e) => setDurationDays(e.target.value)}
+              style={inputStyle}
+              placeholder="Bo'sh qoldirilsa tarif muddatidan foydalanadi"
+            />
+          </label>
+
+          <label style={labelStyle}>
+            Aniq tugash sanasi
+            <input
+              type="date"
+              value={expiresDate}
+              onChange={(e) => setExpiresDate(e.target.value)}
+              style={inputStyle}
+            />
+          </label>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button type="button" onClick={onClose} style={secondaryBtnStyle} disabled={saving}>
+              Bekor qilish
+            </button>
+            <button type="submit" style={primaryBtnStyle} disabled={saving || !tariffId}>
+              {saving ? 'Saqlanmoqda...' : 'Biriktirish'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -797,6 +1002,7 @@ const secondaryBtnStyle = { padding: '10px 16px', borderRadius: 6, background: '
 const smallBtnStyle = { padding: '6px 12px', borderRadius: 4, background: '#f0f0f0', color: '#333', border: '1px solid #ccc', cursor: 'pointer', fontSize: 13 };
 const tinyBtnStyle = { padding: '4px 8px', borderRadius: 4, background: '#fff', color: '#1976d2', border: '1px solid #1976d2', cursor: 'pointer', fontSize: 12 };
 const dangerBtnStyle = { padding: '10px 16px', borderRadius: 6, background: '#cc4444', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14 };
+const dangerBtnCompactStyle = { padding: '6px 12px', borderRadius: 4, background: '#fff', color: '#b00020', border: '1px solid #f1c7cf', cursor: 'pointer', fontSize: 13 };
 const backBtnStyle = { padding: '6px 12px', background: 'transparent', border: 'none', color: '#1976d2', cursor: 'pointer', fontSize: 14, marginBottom: 12 };
 const badge = (color) => ({ padding: '4px 10px', borderRadius: 12, background: color, color: '#fff', fontSize: 12, whiteSpace: 'nowrap' });
 const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 };

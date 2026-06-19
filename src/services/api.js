@@ -1,6 +1,7 @@
 import axios from 'axios';
 import CryptoJS from 'crypto-js';
 import { showError } from '../utils/toast';
+import { inferPremiumFeature, isPremiumUpgradeError, openPremiumUpgrade } from '../utils/premiumUpgrade';
 import {
   trackSearch,
   trackOrderCreate,
@@ -151,7 +152,15 @@ apiClient.interceptors.response.use(
           break;
 
         case 403:
-          showError('Sizda bu amalni bajarish uchun ruxsat yo\'q');
+          if (isPremiumUpgradeError(data?.message)) {
+            openPremiumUpgrade({
+              featureKey: inferPremiumFeature(data?.message),
+              message: data?.message,
+              source: 'api',
+            });
+          } else {
+            showError(data?.message || 'Sizda bu amalni bajarish uchun ruxsat yo\'q');
+          }
           break;
 
         case 404:
@@ -370,6 +379,10 @@ export const getLocationsAndVehicles = async () => {
 
 export const getInfo = async () => {
   return cachedGet('/info');
+};
+
+export const getPublicTariffs = async () => {
+  return cachedGet('/tariffs', {}, { skipCache: true });
 };
 
 // ============================================
@@ -858,6 +871,43 @@ export const adminAcceptOrderForDriver = async (orderId, driverId) => {
   const response = await apiClient.post(`/admin/orders/${orderId}/accept`, null, {
     params: { driverId },
   });
+  return response.data;
+};
+
+export const adminListTariffFeatures = async () => {
+  const response = await apiClient.get('/admin/tariffs/features');
+  return response.data;
+};
+
+export const adminListTariffs = async (includeInactive = true) => {
+  const response = await apiClient.get('/admin/tariffs', {
+    params: { includeInactive: includeInactive ? 'true' : 'false' },
+  });
+  return response.data;
+};
+
+export const adminCreateTariff = async (payload) => {
+  const response = await apiClient.post('/admin/tariffs', payload);
+  return response.data;
+};
+
+export const adminUpdateTariff = async (id, payload) => {
+  const response = await apiClient.put(`/admin/tariffs/${id}`, payload);
+  return response.data;
+};
+
+export const adminDeleteTariff = async (id) => {
+  const response = await apiClient.delete(`/admin/tariffs/${id}`);
+  return response.data;
+};
+
+export const adminAssignUserTariff = async (userId, payload) => {
+  const response = await apiClient.post(`/admin/users/${userId}/subscription`, payload);
+  return response.data;
+};
+
+export const adminCancelUserTariff = async (userId) => {
+  const response = await apiClient.delete(`/admin/users/${userId}/subscription`);
   return response.data;
 };
 

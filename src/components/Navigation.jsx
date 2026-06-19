@@ -6,6 +6,7 @@ import { getUserMe } from '../services/api';
 const TAB_CONFIG = {
   driver: [
     { path: '/', label: 'Yuklar', auth: false },
+    { path: '/tariffs', label: 'Tariflar', auth: false },
     { path: '/driver-status', label: 'Haydovchi holati', auth: true },
     { path: '/my-transports', label: 'Transportlarim', auth: true },
     { path: '/my-harbingers', label: 'Xabarchilarim', auth: true },
@@ -13,6 +14,7 @@ const TAB_CONFIG = {
   ],
   logist: [
     { path: '/', label: 'Yuklar', auth: false },
+    { path: '/tariffs', label: 'Tariflar', auth: false },
     { path: '/platform-loads', label: 'Platforma yuklari', auth: true, requireDispatcher: true },
     { path: '/transports', label: 'Transportlar', auth: false },
     { path: '/my-orders', label: 'Buyurtmalarim', auth: true },
@@ -23,6 +25,7 @@ const TAB_CONFIG = {
   ],
   factory: [
     { path: '/', label: 'Yuklar', auth: false },
+    { path: '/tariffs', label: 'Tariflar', auth: false },
     { path: '/transports', label: 'Transportlar', auth: false },
     { path: '/my-orders', label: 'Buyurtmalarim', auth: true },
     { path: '/profile', label: 'Profil', auth: true },
@@ -32,6 +35,7 @@ const TAB_CONFIG = {
 // Default tabs for unauthenticated users
 const DEFAULT_TABS = [
   { path: '/', label: 'Yuklar', auth: false },
+  { path: '/tariffs', label: 'Tariflar', auth: false },
   { path: '/transports', label: 'Transportlar', auth: false },
 ];
 
@@ -98,6 +102,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
       tabs = [
         ...tabs,
         { path: '/admin/users', label: 'Foydalanuvchilar', auth: true },
+        { path: '/admin/tariffs', label: 'Tariflar', auth: true },
         { path: '/admin/userbots', label: 'Userbotlar', auth: true },
       ];
     }

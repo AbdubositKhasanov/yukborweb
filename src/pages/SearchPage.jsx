@@ -24,6 +24,7 @@ export default function SearchPage() {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [permissions, setPermissions] = useState(null);
+  const [featureLimits, setFeatureLimits] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
@@ -62,6 +63,7 @@ export default function SearchPage() {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
         setPermissions(response.result.permissions || null);
+        setFeatureLimits(response.result.featureLimits || null);
         const normalizedRole = String(response.result.type || '').toLowerCase();
         setUserRole(normalizedRole === 'zavod' ? 'factory' : normalizedRole);
       }
@@ -812,7 +814,13 @@ export default function SearchPage() {
         </>
       )}
 
-      <ClubMembershipModal isOpen={showClubModal} onClose={() => setShowClubModal(false)} />
+      <ClubMembershipModal
+        isOpen={showClubModal}
+        onClose={() => setShowClubModal(false)}
+        featureKey="createHarbinger"
+        message="Tanlangan qidiruv bo'yicha avtomatik xabarchi yaratish uchun premium tarif kerak."
+        currentLimit={featureLimits?.createHarbinger}
+      />
     </div>
   );
 }

@@ -32,6 +32,7 @@ export default function MobileHome() {
 
   // Permissions check
   const [permissions, setPermissions] = useState(null);
+  const [featureLimits, setFeatureLimits] = useState(null);
 
   // Search mode: 'simple' (text) or 'advanced' (filters)
   const [searchMode, setSearchMode] = useState(fromDriver ? 'advanced' : 'simple');
@@ -95,6 +96,7 @@ export default function MobileHome() {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
         setPermissions(response.result.permissions || null);
+        setFeatureLimits(response.result.featureLimits || null);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -777,7 +779,13 @@ export default function MobileHome() {
         </div>
       </BottomSheet>
 
-      <ClubMembershipModal isOpen={showClubModal} onClose={() => setShowClubModal(false)} />
+      <ClubMembershipModal
+        isOpen={showClubModal}
+        onClose={() => setShowClubModal(false)}
+        featureKey="createHarbinger"
+        message="Tanlangan qidiruv bo'yicha avtomatik xabarchi yaratish uchun premium tarif kerak."
+        currentLimit={featureLimits?.createHarbinger}
+      />
     </>
   );
 }

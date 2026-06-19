@@ -228,17 +228,31 @@ export default function MobileProfile() {
                 >
                   💰 Balansni to'ldirish
                 </button>
+                <button
+                  className="m-btn m-btn-secondary"
+                  onClick={() => navigate('/mobile/tariffs')}
+                  style={{ marginTop: 8 }}
+                >
+                  Premium tariflarni ko'rish
+                </button>
               </div>
 
               {/* Admin tools */}
               {user?.isAdmin && (
-                <button
-                  className="m-btn m-btn-secondary m-btn-full"
-                  onClick={() => navigate('/mobile/admin/users')}
-                  style={{ marginTop: 16 }}
-                >
-                  🛠 Admin: foydalanuvchilar
-                </button>
+                <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
+                  <button
+                    className="m-btn m-btn-secondary m-btn-full"
+                    onClick={() => navigate('/mobile/admin/users')}
+                  >
+                    🛠 Admin: foydalanuvchilar
+                  </button>
+                  <button
+                    className="m-btn m-btn-secondary m-btn-full"
+                    onClick={() => navigate('/mobile/admin/tariffs')}
+                  >
+                    💎 Admin: tariflar
+                  </button>
+                </div>
               )}
 
               {/* Logout */}

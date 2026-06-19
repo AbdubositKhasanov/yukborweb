@@ -277,6 +277,8 @@ export default function CargoCard({
       <ClubMembershipModal 
         isOpen={showClubModal}
         onClose={() => setShowClubModal(false)}
+        featureKey="offerToDriver"
+        message="Haydovchiga yuk taklif qilish uchun premium tarif yoki admin ruxsati kerak."
       />
 
       <OfferToDriverModal

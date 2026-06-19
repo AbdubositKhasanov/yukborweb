@@ -29,10 +29,12 @@ const MobileProfile = lazy(() => import('./pages/MobileProfile'));
 const MobileMyTransports = lazy(() => import('./pages/MobileMyTransports'));
 const MobileCreateTransport = lazy(() => import('./pages/MobileCreateTransport'));
 const MobileMyListings = lazy(() => import('./pages/MobileMyListings'));
+const TariffsPage = lazy(() => import('../pages/TariffsPage'));
 
 // Admin pages (shared between desktop and mobile — responsive components)
 const AdminUsersPage = lazy(() => import('../pages/AdminDriversPage'));
 const AdminUserDetailPage = lazy(() => import('../pages/AdminDriverDetailPage'));
+const AdminTariffsPage = lazy(() => import('../pages/AdminTariffsPage'));
 
 // Role-based default page redirect
 function RoleBasedHome() {
@@ -181,6 +183,7 @@ function MobileAppContent() {
           />
           <Route path="/login" element={<Navigate to="/mobile" replace />} />
           <Route path="/cargo/:id" element={<MobileCargoDetail />} />
+          <Route path="/tariffs" element={<TariffsPage mobile />} />
 
           {/* Protected Routes */}
           <Route
@@ -294,6 +297,14 @@ function MobileAppContent() {
             element={
               <MobileProtectedRoute>
                 <AdminUsersPage defaultRole="driver" mobile />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tariffs"
+            element={
+              <MobileProtectedRoute>
+                <AdminTariffsPage mobile />
               </MobileProtectedRoute>
             }
           />

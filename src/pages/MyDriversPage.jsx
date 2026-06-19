@@ -269,6 +269,8 @@ export default function MyDriversPage() {
       <ClubMembershipModal
         isOpen={showClubModal}
         onClose={() => setShowClubModal(false)}
+        featureKey="offerToDriver"
+        message="Haydovchilarga mos yuk topish va taklif yuborish uchun premium tarif kerak."
       />
 
       <CounterpartyTransportModal

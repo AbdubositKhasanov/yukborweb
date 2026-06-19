@@ -5,6 +5,7 @@ import { StaticDataProvider } from './context/StaticDataContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import ProtectedRoute from './components/ProtectedRoute';
+import PremiumUpgradeListener from './components/PremiumUpgradeListener';
 import { PageSkeleton } from './components/LoadingSkeleton';
 import { trackPageView, trackLogout } from './services/analytics';
 
@@ -28,6 +29,8 @@ const PlatformLoadsPage = lazy(() => import('./pages/PlatformLoadsPage'));
 const UserbotManagementPage = lazy(() => import('./pages/UserbotManagementPage'));
 const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
 const AdminDriverDetailPage = lazy(() => import('./pages/AdminDriverDetailPage'));
+const AdminTariffsPage = lazy(() => import('./pages/AdminTariffsPage'));
+const TariffsPage = lazy(() => import('./pages/TariffsPage'));
 
 function AppContent() {
   const [authToken, setAuthToken] = useState(null);
@@ -73,11 +76,14 @@ function AppContent() {
 
   if (isMobileRoute) {
     return (
-      <Suspense fallback={<PageSkeleton />}>
-        <Routes>
-          <Route path="/mobile/*" element={<MobileApp />} />
-        </Routes>
-      </Suspense>
+      <>
+        <Suspense fallback={<PageSkeleton />}>
+          <Routes>
+            <Route path="/mobile/*" element={<MobileApp />} />
+          </Routes>
+        </Suspense>
+        <PremiumUpgradeListener />
+      </>
     );
   }
 
@@ -90,6 +96,7 @@ function AppContent() {
           {/* Public Routes */}
           <Route path="/" element={<SearchPage />} />
           <Route path="/transports" element={<BrowseTransportsPage />} />
+          <Route path="/tariffs" element={<TariffsPage />} />
           <Route path="/login" element={<LoginPage />} />
 
           {/* Protected Routes */}
@@ -182,6 +189,14 @@ function AppContent() {
             }
           />
           <Route
+            path="/admin/tariffs"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <AdminTariffsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/drivers"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
@@ -215,6 +230,8 @@ function AppContent() {
           />
         </Routes>
       </Suspense>
+
+      <PremiumUpgradeListener />
     </div>
   );
 }
