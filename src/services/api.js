@@ -591,8 +591,9 @@ export const getMyInvitedUsers = async () => {
  * Add invited user (driver) by phone number
  * @param {string} phone - Phone number of the driver to invite
  */
-export const addInvitedUser = async (phone) => {
-  const response = await apiClient.post('/add/invited/user', { phone });
+export const addInvitedUser = async (payload) => {
+  const body = typeof payload === 'string' ? { phone: payload } : payload;
+  const response = await apiClient.post('/add/invited/user', body);
   apiCache.invalidate('invited-users');
   trackDriverInvite();
   return response.data;

@@ -13,6 +13,11 @@ import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
 import LocationSelector from '../../components/LocationSelector';
 
+const ROLE_FILTERS = [
+  { key: 'driver', label: 'Haydovchilar' },
+  { key: 'factory', label: 'Yuk egalari' },
+];
+
 export default function MobileMyDrivers() {
   const navigate = useNavigate();
   const { staticData } = useStaticData();
@@ -23,7 +28,10 @@ export default function MobileMyDrivers() {
 
   // Add driver sheet
   const [addSheet, setAddSheet] = useState(false);
+  const [activeRole, setActiveRole] = useState('driver');
+  const [addName, setAddName] = useState('');
   const [addPhone, setAddPhone] = useState('');
+  const [addRole, setAddRole] = useState('driver');
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState('');
 
@@ -67,10 +75,16 @@ export default function MobileMyDrivers() {
   }, [loadDrivers]);
 
   const handleDriverClick = (driver) => {
+    if ((driver.type || 'driver') !== 'driver') return;
+    if (!driver.isRegistered && !driver.chatId) return;
     navigate(`/mobile/driver/${driver.chatId || driver.id || driver._id}`);
   };
 
   const handleAddDriver = async () => {
+    if (!addName.trim()) {
+      setAddError('Ismni kiriting');
+      return;
+    }
     if (!addPhone.trim()) {
       setAddError('Telefon raqamni kiriting');
       return;
@@ -79,11 +93,17 @@ export default function MobileMyDrivers() {
     try {
       setAddLoading(true);
       setAddError('');
-      const response = await addInvitedUser(addPhone.trim());
+      const response = await addInvitedUser({
+        name: addName.trim(),
+        phone: addPhone.trim(),
+        type: addRole,
+      });
 
       if (response.code === 200) {
         setAddSheet(false);
+        setAddName('');
         setAddPhone('');
+        setAddRole(activeRole);
         await loadDrivers(true);
       } else {
         setAddError(response.message || 'Xatolik yuz berdi');
@@ -97,6 +117,9 @@ export default function MobileMyDrivers() {
 
   // Get status display
   const getStatusDisplay = (driver) => {
+    if (!driver.isRegistered && !driver.chatId) {
+      return { dot: 'offline', label: 'Ro\'yxatdan o\'tmagan' };
+    }
     const isOnline = driver.isActive || driver.is_active;
     const isBusy = driver.isBusy || driver.is_busy;
 
@@ -112,6 +135,7 @@ export default function MobileMyDrivers() {
   // Transport handlers
   const handleOpenTransportSheet = (e, driver, mode) => {
     e.stopPropagation();
+    if (!driver.isRegistered && !driver.chatId) return;
     const transportForm = driver.driverTransportForm;
 
     if (mode === 'edit' && transportForm) {
@@ -192,10 +216,17 @@ export default function MobileMyDrivers() {
     return tf && (tf.loc1 || tf.vehicleType || tf.maxWeight);
   };
 
+  const openAddSheet = (role = activeRole) => {
+    setAddRole(role);
+    setAddSheet(true);
+  };
+
+  const visibleDrivers = drivers.filter((driver) => (driver.type || 'driver') === activeRole);
+
   if (loading) {
     return (
       <>
-        <TopBar title="Haydovchilarim" rightIcon="+" onRightAction={() => setAddSheet(true)} />
+        <TopBar title="Hamkorlarim" rightIcon="+" onRightAction={() => openAddSheet(activeRole)} />
         <main className="m-content">
           <ListSkeleton count={5} />
         </main>
@@ -205,34 +236,49 @@ export default function MobileMyDrivers() {
 
   return (
     <>
-      <TopBar title="Haydovchilarim" rightIcon="+" onRightAction={() => setAddSheet(true)} />
+      <TopBar title="Hamkorlarim" rightIcon="+" onRightAction={() => openAddSheet(activeRole)} />
 
       <main className="m-content">
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto' }}>
+          {ROLE_FILTERS.map((role) => (
+            <button
+              key={role.key}
+              className={`m-btn ${activeRole === role.key ? 'm-btn-primary' : 'm-btn-secondary'}`}
+              onClick={() => setActiveRole(role.key)}
+              style={{ whiteSpace: 'nowrap', minHeight: 36 }}
+            >
+              {role.label} · {drivers.filter((driver) => (driver.type || 'driver') === role.key).length}
+            </button>
+          ))}
+        </div>
         <PullToRefresh onRefresh={() => loadDrivers(true)} disabled={loading}>
-          {drivers.length === 0 ? (
+          {visibleDrivers.length === 0 ? (
             <div className="m-empty">
               <div className="m-empty-icon">👥</div>
-              <h3 className="m-empty-title">Haydovchilar yo'q</h3>
-              <p className="m-empty-text">Haydovchi qo'shish uchun "+" tugmasini bosing</p>
-              <button className="m-btn m-btn-primary" onClick={() => setAddSheet(true)}>
-                + Haydovchi qo'shish
+              <h3 className="m-empty-title">{activeRole === 'driver' ? 'Haydovchilar' : 'Yuk egalari'} yo'q</h3>
+              <p className="m-empty-text">Hamkor qo'shish uchun "+" tugmasini bosing</p>
+              <button className="m-btn m-btn-primary" onClick={() => openAddSheet(activeRole)}>
+                + Hamkor qo'shish
               </button>
             </div>
           ) : (
           <div className="m-card m-card-list">
-            {drivers.map((driver) => {
+            {visibleDrivers.map((driver) => {
               const statusDisplay = getStatusDisplay(driver);
               const driverHasTransport = hasTransport(driver);
+              const isRegistered = driver.isRegistered === true || Boolean(driver.chatId);
+              const isDriver = (driver.type || 'driver') === 'driver';
               return (
                 <div
                   key={driver.chatId || driver.id || driver._id}
                   className="m-list-item m-card-tap"
                   onClick={() => handleDriverClick(driver)}
+                  style={!isRegistered ? { opacity: 0.95 } : null}
                 >
                   <div className={`m-status-dot ${statusDisplay.dot}`} />
                   <div className="m-list-item-content">
                     <p className="m-list-item-title">
-                      {driver.fullName || driver.full_name || 'Haydovchi'}
+                      {driver.name || driver.fullName || driver.full_name || 'Hamkor'}
                       {statusDisplay.label && (
                         <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--m-warning)' }}>
                           ({statusDisplay.label})
@@ -242,7 +288,12 @@ export default function MobileMyDrivers() {
                     <p className="m-list-item-subtitle">
                       {driver.phone || driver.phoneNumber || 'Telefon yo\'q'}
                     </p>
-                    {driverHasTransport && driver.driverTransportForm && (
+                    <div className="m-list-item-meta">
+                      <span>{isDriver ? 'Haydovchi' : 'Yuk egasi'}</span>
+                      <span>•</span>
+                      <span>{isRegistered ? 'Ro\'yxatdan o\'tgan' : 'Hali ro\'yxatdan o\'tmagan'}</span>
+                    </div>
+                    {isDriver && driverHasTransport && driver.driverTransportForm && (
                       <div className="m-list-item-meta">
                         <span>🚚 {driver.driverTransportForm.vehicleType || 'Transport'}</span>
                         {driver.driverTransportForm.maxWeight && (
@@ -252,13 +303,16 @@ export default function MobileMyDrivers() {
                     )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                    {isDriver && (
                     <button
                       className={`m-btn ${driverHasTransport ? 'm-btn-secondary' : 'm-btn-primary'}`}
                       onClick={(e) => handleOpenTransportSheet(e, driver, driverHasTransport ? 'edit' : 'create')}
-                      style={{ padding: '4px 10px', fontSize: 12, minHeight: 28 }}
+                      disabled={!isRegistered}
+                      style={{ padding: '4px 10px', fontSize: 12, minHeight: 28, opacity: isRegistered ? 1 : 0.55 }}
                     >
                       {driverHasTransport ? '✎' : '+ 🚚'}
                     </button>
+                    )}
                     <span className="m-list-item-arrow">→</span>
                   </div>
                 </div>
@@ -274,10 +328,12 @@ export default function MobileMyDrivers() {
         isOpen={addSheet}
         onClose={() => {
           setAddSheet(false);
+          setAddName('');
           setAddPhone('');
+          setAddRole(activeRole);
           setAddError('');
         }}
-        title="Haydovchi qo'shish"
+        title="Hamkor qo'shish"
         footer={
           <button
             className="m-btn m-btn-primary m-btn-full m-btn-lg"
@@ -288,6 +344,30 @@ export default function MobileMyDrivers() {
           </button>
         }
       >
+        <div className="m-form-group">
+          <label className="m-form-label">Rol</label>
+          <select
+            className="m-form-select"
+            value={addRole}
+            onChange={(e) => setAddRole(e.target.value)}
+          >
+            <option value="driver">Haydovchi</option>
+            <option value="factory">Yuk egasi</option>
+          </select>
+        </div>
+        <div className="m-form-group">
+          <label className="m-form-label">Ism</label>
+          <input
+            type="text"
+            className={`m-form-input ${addError ? 'error' : ''}`}
+            placeholder="Aliyev Ali"
+            value={addName}
+            onChange={(e) => {
+              setAddName(e.target.value);
+              setAddError('');
+            }}
+          />
+        </div>
         <div className="m-form-group">
           <label className="m-form-label">Telefon raqam</label>
           <input
@@ -304,7 +384,7 @@ export default function MobileMyDrivers() {
           {addError && <p className="m-form-error">{addError}</p>}
         </div>
         <p style={{ fontSize: 14, color: 'var(--m-text-muted)', marginTop: 8 }}>
-          Haydovchi YukBor botida ro'yxatdan o'tgan bo'lishi kerak
+          Ichki logist ro'yxatdan o'tmagan hamkorni ham oldindan yaratishi mumkin.
         </p>
       </BottomSheet>
 

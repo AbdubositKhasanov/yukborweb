@@ -6,6 +6,16 @@ import { showSuccess, showError } from '../utils/toast';
 import ClubMembershipModal from '../components/ClubMembershipModal';
 import CounterpartyTransportModal from '../components/CounterpartyTransportModal';
 
+const ROLE_FILTERS = [
+  { key: 'driver', label: 'Haydovchilar' },
+  { key: 'factory', label: 'Yuk egalari' },
+];
+
+const ROLE_LABELS = {
+  driver: 'Haydovchi',
+  factory: 'Yuk egasi',
+};
+
 export default function MyDriversPage() {
   const navigate = useNavigate();
   const [drivers, setDrivers] = useState([]);
@@ -18,7 +28,10 @@ export default function MyDriversPage() {
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [transportModalMode, setTransportModalMode] = useState('create');
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [activeRole, setActiveRole] = useState('driver');
+  const [inviteName, setInviteName] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
+  const [inviteRole, setInviteRole] = useState('driver');
   const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
@@ -151,19 +164,29 @@ export default function MyDriversPage() {
       showError('Telefon raqamini kiriting');
       return;
     }
+    if (!inviteName || !inviteName.trim()) {
+      showError('Ism kiriting');
+      return;
+    }
 
     setInviting(true);
 
     try {
-      const response = await addInvitedUser(invitePhone.trim());
+      const response = await addInvitedUser({
+        phone: invitePhone.trim(),
+        name: inviteName.trim(),
+        type: inviteRole,
+      });
 
       if (response.code === 200) {
-        showSuccess('Haydovchi muvaffaqiyatli qo\'shildi!');
+        showSuccess(`${ROLE_LABELS[inviteRole] || 'Hamkor'} muvaffaqiyatli qo'shildi!`);
         setShowInviteModal(false);
+        setInviteName('');
         setInvitePhone('');
+        setInviteRole(activeRole);
         loadDrivers(); // Reload to show new driver
       } else {
-        showError(response.message || 'Haydovchini qo\'shib bo\'lmadi');
+        showError(response.message || 'Hamkorni qo\'shib bo\'lmadi');
       }
     } catch (err) {
       showError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
@@ -171,6 +194,20 @@ export default function MyDriversPage() {
       setInviting(false);
     }
   };
+
+  const openInviteModal = (role = activeRole) => {
+    setInviteRole(role);
+    setShowInviteModal(true);
+  };
+
+  const handleCopyLink = async (driver) => {
+    if (!driver?.deepLink) return;
+    await navigator.clipboard.writeText(driver.deepLink);
+    showSuccess('Ro\'yxatdan o\'tish linki nusxalandi');
+  };
+
+  const visibleDrivers = drivers.filter((driver) => (driver.type || 'driver') === activeRole);
+  const currentRoleLabel = ROLE_LABELS[activeRole] || 'Hamkor';
 
   const getStatusColor = (isOnline) => {
     return isOnline ? '#28a745' : '#6c757d';
@@ -198,7 +235,7 @@ export default function MyDriversPage() {
   if (loading) {
     return (
       <div className="container">
-        <h1 className="page-title">Haydovchilarim</h1>
+        <h1 className="page-title">Hamkorlarim</h1>
         <div className="loading">Yuklanmoqda...</div>
       </div>
     );
@@ -207,7 +244,7 @@ export default function MyDriversPage() {
   if (error) {
     return (
       <div className="container">
-        <h1 className="page-title">Haydovchilarim</h1>
+        <h1 className="page-title">Hamkorlarim</h1>
         <div className="error-message">{error}</div>
       </div>
     );
@@ -221,43 +258,65 @@ export default function MyDriversPage() {
         alignItems: 'center',
         marginBottom: '20px'
       }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Haydovchilarim</h1>
+        <h1 className="page-title" style={{ margin: 0 }}>Hamkorlarim</h1>
         <button
           className="btn btn-primary"
-          onClick={() => setShowInviteModal(true)}
+          onClick={() => openInviteModal(activeRole)}
           style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          <span style={{ fontSize: '18px' }}>+</span> Haydovchi qo'shish
+          <span style={{ fontSize: '18px' }}>+</span> {currentRoleLabel} qo'shish
         </button>
       </div>
 
-      {drivers.length === 0 ? (
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        {ROLE_FILTERS.map((role) => (
+          <button
+            key={role.key}
+            type="button"
+            onClick={() => setActiveRole(role.key)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 999,
+              border: `1px solid ${activeRole === role.key ? '#1976d2' : '#d6dde8'}`,
+              background: activeRole === role.key ? '#1976d2' : '#fff',
+              color: activeRole === role.key ? '#fff' : '#334155',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            {role.label} · {drivers.filter((driver) => (driver.type || 'driver') === role.key).length}
+          </button>
+        ))}
+      </div>
+
+      {visibleDrivers.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
           <div style={{ fontSize: '48px', marginBottom: '20px' }}>👥</div>
           <h3 style={{ marginBottom: '10px', color: '#666' }}>
-            Hozircha haydovchilaringiz yo'q
+            Hozircha {activeRole === 'driver' ? 'haydovchilar' : 'yuk egalari'} yo'q
           </h3>
           <p style={{ color: '#999', marginBottom: '20px' }}>
-            Haydovchini telefon raqami orqali qo'shing
+            Ism va telefon orqali qo'shing. Ro'yxatdan o'tmagan bo'lsa ham ichki logist uchun pending yozuv yaratiladi.
           </p>
           <button
             className="btn btn-primary"
-            onClick={() => setShowInviteModal(true)}
+            onClick={() => openInviteModal(activeRole)}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
-            <span style={{ fontSize: '18px' }}>+</span> Haydovchi qo'shish
+            <span style={{ fontSize: '18px' }}>+</span> {currentRoleLabel} qo'shish
           </button>
         </div>
       ) : (
         <div className="grid">
-          {drivers.map((driver) => (
+          {visibleDrivers.map((driver) => (
             <DriverCard
-              key={driver.chatId}
+              key={driver.id || driver.chatId || driver.phone}
               driver={driver}
               onFindOrder={handleFindOrder}
               onStatusUpdate={handleStatusUpdate}
               onAddTransport={handleAddTransport}
               onEditTransport={handleEditTransport}
+              onCopyLink={handleCopyLink}
               formatDate={formatDate}
               getStatusColor={getStatusColor}
               getStatusText={getStatusText}
@@ -286,12 +345,40 @@ export default function MyDriversPage() {
       {showInviteModal && (
         <div className="modal-overlay" onClick={() => setShowInviteModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <h3 className="card-title">Haydovchi qo'shish</h3>
+            <h3 className="card-title">Hamkor qo'shish</h3>
             <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
-              Haydovchining telefon raqamini kiriting. Haydovchi YukBor tizimida ro'yxatdan o'tgan bo'lishi kerak.
+              Haydovchi yoki yuk egasi hali ro'yxatdan o'tmagan bo'lsa ham ichki logist uni oldindan yaratishi mumkin.
             </p>
 
             <form onSubmit={handleInviteDriver}>
+              <div className="form-group">
+                <label className="form-label">
+                  Rol <span style={{ color: 'red' }}>*</span>
+                </label>
+                <select
+                  className="form-input"
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                  disabled={inviting}
+                >
+                  <option value="driver">Haydovchi</option>
+                  <option value="factory">Yuk egasi</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">
+                  Ism <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  placeholder="Aliyev Ali"
+                  autoFocus
+                  disabled={inviting}
+                />
+              </div>
               <div className="form-group">
                 <label className="form-label">
                   Telefon raqami <span style={{ color: 'red' }}>*</span>
@@ -302,7 +389,6 @@ export default function MyDriversPage() {
                   value={invitePhone}
                   onChange={(e) => setInvitePhone(e.target.value)}
                   placeholder="+998901234567"
-                  autoFocus
                   disabled={inviting}
                 />
               </div>
@@ -313,6 +399,7 @@ export default function MyDriversPage() {
                   className="btn btn-secondary"
                   onClick={() => {
                     setShowInviteModal(false);
+                    setInviteName('');
                     setInvitePhone('');
                   }}
                   disabled={inviting}
@@ -335,10 +422,12 @@ export default function MyDriversPage() {
   );
 }
 
-function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatusText, onStatusUpdate, onAddTransport, onEditTransport }) {
+function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatusText, onStatusUpdate, onAddTransport, onEditTransport, onCopyLink }) {
   const transportForm = driver.driverTransportForm;
   const isOnline = driver.driverCurrentStatus === true;
   const hasTransport = transportForm && (transportForm.loc1 || transportForm.vehicleType || transportForm.maxWeight);
+  const isDriver = (driver.type || 'driver') === 'driver';
+  const isRegistered = driver.isRegistered === true || Boolean(driver.chatId);
   
   // Local state for optimistic update - initialized from driverCurrentStatus
   const [isActive, setIsActive] = useState(driver.driverCurrentStatus === true);
@@ -383,25 +472,39 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
         <h3 className="card-title" style={{ margin: 0 }}>
           {driver.name || 'Noma\'lum'}
         </h3>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '6px 12px',
-          backgroundColor: isOnline ? '#d4edda' : '#f8f9fa',
-          borderRadius: '20px',
-          fontSize: '13px',
-          fontWeight: '600'
-        }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flexDirection: 'column' }}>
           <span style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: getStatusColor(isOnline)
-          }} />
-          <span style={{ color: getStatusColor(isOnline) }}>
-            {getStatusText(isOnline)}
+            padding: '5px 10px',
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 700,
+            background: isRegistered ? '#d4edda' : '#fff3cd',
+            color: isRegistered ? '#155724' : '#8a5a00',
+          }}>
+            {isRegistered ? 'Ro\'yxatdan o\'tgan' : 'Hali ro\'yxatdan o\'tmagan'}
           </span>
+          {isDriver && isRegistered && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              backgroundColor: isOnline ? '#d4edda' : '#f8f9fa',
+              borderRadius: '20px',
+              fontSize: '13px',
+              fontWeight: '600'
+            }}>
+              <span style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: getStatusColor(isOnline)
+              }} />
+              <span style={{ color: getStatusColor(isOnline) }}>
+                {getStatusText(isOnline)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -429,6 +532,39 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
         </div>
       </div>
 
+      {!isRegistered && (
+        <div style={{
+          marginBottom: 15,
+          padding: 12,
+          backgroundColor: '#fff8e1',
+          border: '1px solid #ffe0a3',
+          borderRadius: 8,
+          color: '#7a5200',
+          fontSize: 13,
+        }}>
+          Bu hamkor hali bot/saytda ro'yxatdan o'tmagan. Link yuboring yoki telefon bilan ro'yxatdan o'tganda avtomatik ulanadi.
+          {driver.deepLink && (
+            <button
+              type="button"
+              onClick={() => onCopyLink(driver)}
+              style={{
+                display: 'block',
+                marginTop: 8,
+                padding: '8px 10px',
+                borderRadius: 6,
+                border: '1px solid #f2c76d',
+                background: '#fff',
+                color: '#7a5200',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              Ro'yxatdan o'tish linkini nusxalash
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Balance */}
       <div style={{
         marginBottom: '15px',
@@ -454,7 +590,7 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
       </div>
 
       {/* Transport Information */}
-      {hasTransport ? (
+      {isDriver && hasTransport ? (
         <div style={{ marginBottom: '15px' }}>
           <div style={{
             display: 'flex',
@@ -527,12 +663,13 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
             )}
           </div>
         </div>
-      ) : (
+      ) : isDriver ? (
         <div style={{ marginBottom: '15px' }}>
           <button
             type="button"
             className="btn btn-secondary"
             onClick={() => onAddTransport(driver)}
+            disabled={!isRegistered}
             style={{
               width: '100%',
               padding: '12px',
@@ -540,11 +677,17 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px'
+              gap: '8px',
+              opacity: isRegistered ? 1 : 0.65,
+              cursor: isRegistered ? 'pointer' : 'not-allowed',
             }}
           >
-            <span>+</span> Transport qo'shish
+            <span>+</span> {isRegistered ? 'Transport qo\'shish' : 'Ro\'yxatdan o\'tgach transport qo\'shiladi'}
           </button>
+        </div>
+      ) : (
+        <div style={{ marginBottom: 15, padding: 12, backgroundColor: '#f8f9fa', borderRadius: 8, color: '#666', fontSize: 14 }}>
+          Yuk egasi uchun kontakt va ro'yxatdan o'tish holati boshqariladi.
         </div>
       )}
 
@@ -560,6 +703,7 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
       )}
 
       {/* Driver Status Toggle */}
+      {isDriver && isRegistered && (
       <div style={{
         marginBottom: '15px',
         padding: '14px',
@@ -646,20 +790,26 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
           </div>
         )}
       </div>
+      )}
 
       {/* Action Button */}
-      <button
-        className="btn btn-primary"
-        onClick={() => onFindOrder(driver)}
-        style={{
-          width: '100%',
-          padding: '12px',
-          fontSize: '15px',
-          fontWeight: '600'
-        }}
-      >
-        🔍 Buyurtma topish
-      </button>
+      {isDriver && (
+        <button
+          className="btn btn-primary"
+          onClick={() => onFindOrder(driver)}
+          disabled={!isRegistered}
+          style={{
+            width: '100%',
+            padding: '12px',
+            fontSize: '15px',
+            fontWeight: '600',
+            opacity: isRegistered ? 1 : 0.65,
+            cursor: isRegistered ? 'pointer' : 'not-allowed',
+          }}
+        >
+          {isRegistered ? '🔍 Buyurtma topish' : 'Ro\'yxatdan o\'tgach buyurtma taklif qilinadi'}
+        </button>
+      )}
     </div>
   );
 }

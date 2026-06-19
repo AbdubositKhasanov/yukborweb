@@ -18,7 +18,7 @@ const TAB_CONFIG = {
     { path: '/platform-loads', label: 'Platforma yuklari', auth: true, requireDispatcher: true },
     { path: '/transports', label: 'Transportlar', auth: false },
     { path: '/my-orders', label: 'Buyurtmalarim', auth: true },
-    { path: '/my-drivers', label: 'Haydovchilarim', auth: true },
+    { path: '/my-drivers', label: 'Hamkorlarim', auth: true },
     { path: '/my-transports', label: 'Transportlarim', auth: true },
     { path: '/my-harbingers', label: 'Xabarchilarim', auth: true },
     { path: '/profile', label: 'Profil', auth: true },

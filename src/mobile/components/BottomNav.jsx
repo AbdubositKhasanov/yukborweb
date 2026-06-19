@@ -24,7 +24,7 @@ const TAB_CONFIG = {
   logist: [
     { id: 'home', icon: '📦', label: 'Yuklar', path: '/mobile' },
     { id: 'transports', icon: '🚚', label: 'Transport', path: '/mobile/transports' },
-    { id: 'drivers', icon: '👥', label: 'Haydovchi', path: '/mobile/drivers' },
+    { id: 'drivers', icon: '👥', label: 'Hamkor', path: '/mobile/drivers' },
     { id: 'listings', icon: '📋', label: "E'lonlarim", path: '/mobile/my-listings' },
     { id: 'profile', icon: '👤', label: 'Profil', path: '/mobile/profile' },
   ],
