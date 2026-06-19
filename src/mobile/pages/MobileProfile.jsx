@@ -9,20 +9,30 @@ import { formatBalance, getBalanceColor } from '../../utils/formatBalance';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import MobileLoading from '../components/MobileLoading';
+import { getDefaultMobilePath } from '../navigationConfig';
 
 const TABS = ['Ma\'lumot', 'Tahrirlash', 'Statistika'];
 
-// Helper to get default page by role
-// Roles: driver, factory, logist (default)
-const getDefaultPageByRole = (userType) => {
+const ADMIN_PROFILE_LINKS = [
+  { section: 'adminUsers', label: 'Admin: foydalanuvchilar', path: '/mobile/admin/users' },
+  { section: 'adminDrivers', label: 'Admin: haydovchilar', path: '/mobile/admin/drivers' },
+  { section: 'adminCargoOwners', label: 'Admin: yuk egalari', path: '/mobile/admin/cargo-owners' },
+  { section: 'adminTariffs', label: 'Admin: tariflar', path: '/mobile/admin/tariffs' },
+  { section: 'adminSettings', label: 'Admin: sozlamalar', path: '/mobile/admin/settings' },
+  { section: 'adminBroadcasts', label: 'Admin: broadcast', path: '/mobile/admin/broadcasts' },
+  { section: 'adminPremiumOrders', label: 'Admin: premium yuklar', path: '/mobile/admin/premium-orders' },
+  { section: 'adminUserbots', label: 'Admin: userbotlar', path: '/mobile/admin/userbots' },
+];
+
+const normalizeMobileRole = (userType) => {
   const type = userType?.toLowerCase() || '';
   if (type === 'driver' || type === 'haydovchi') {
-    return '/mobile/status'; // Haydovchi holati
+    return 'driver';
   }
   if (type === 'factory' || type === 'zavod') {
-    return '/mobile/orders'; // Buyurtmalarim
+    return 'factory';
   }
-  return '/mobile'; // Yuklar (logist default)
+  return 'logist';
 };
 
 export default function MobileProfile() {
@@ -102,7 +112,10 @@ export default function MobileProfile() {
 
         // If role changed, navigate to the new role's default page
         if (oldType !== editData.type) {
-          const newDefaultPage = getDefaultPageByRole(editData.type);
+          const newDefaultPage = getDefaultMobilePath(
+            normalizeMobileRole(editData.type),
+            response.result?.navigation || user?.navigation
+          );
           console.log('[MobileProfile] Role changed from', oldType, 'to', editData.type, '-> navigating to', newDefaultPage);
           navigate(newDefaultPage, { replace: true });
         } else {
@@ -137,6 +150,11 @@ export default function MobileProfile() {
   }
 
   const balance = user?.balance ?? 0;
+  const visibleAdminLinks = ADMIN_PROFILE_LINKS.filter((link) => {
+    const adminSections = user?.navigation?.adminSections;
+    if (!Array.isArray(adminSections)) return true;
+    return adminSections.includes(link.section);
+  });
 
   return (
     <>
@@ -238,44 +256,17 @@ export default function MobileProfile() {
               </div>
 
               {/* Admin tools */}
-              {user?.isAdmin && (
+              {user?.isAdmin && visibleAdminLinks.length > 0 && (
                 <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
-                  <button
-                    className="m-btn m-btn-secondary m-btn-full"
-                    onClick={() => navigate('/mobile/admin/users')}
-                  >
-                    🛠 Admin: foydalanuvchilar
-                  </button>
-                  <button
-                    className="m-btn m-btn-secondary m-btn-full"
-                    onClick={() => navigate('/mobile/admin/tariffs')}
-                  >
-                    💎 Admin: tariflar
-                  </button>
-                  <button
-                    className="m-btn m-btn-secondary m-btn-full"
-                    onClick={() => navigate('/mobile/admin/settings')}
-                  >
-                    ⚙️ Admin: sozlamalar
-                  </button>
-                  <button
-                    className="m-btn m-btn-secondary m-btn-full"
-                    onClick={() => navigate('/mobile/admin/broadcasts')}
-                  >
-                    📣 Admin: broadcast
-                  </button>
-                  <button
-                    className="m-btn m-btn-secondary m-btn-full"
-                    onClick={() => navigate('/mobile/admin/premium-orders')}
-                  >
-                    📦 Admin: premium yuklar
-                  </button>
-                  <button
-                    className="m-btn m-btn-secondary m-btn-full"
-                    onClick={() => navigate('/mobile/admin/userbots')}
-                  >
-                    📡 Admin: userbotlar
-                  </button>
+                  {visibleAdminLinks.map((link) => (
+                    <button
+                      key={link.path}
+                      className="m-btn m-btn-secondary m-btn-full"
+                      onClick={() => navigate(link.path)}
+                    >
+                      {link.label}
+                    </button>
+                  ))}
                 </div>
               )}
 

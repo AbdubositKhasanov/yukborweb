@@ -2,33 +2,69 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getUserMe } from '../services/api';
 
+const SECTION = {
+  search: 'search',
+  tariffs: 'tariffs',
+  transports: 'transports',
+  driverStatus: 'driverStatus',
+  myOrders: 'myOrders',
+  myPartners: 'myPartners',
+  myTransports: 'myTransports',
+  myHarbingers: 'myHarbingers',
+  createOrder: 'createOrder',
+  createTransport: 'createTransport',
+  createHarbinger: 'createHarbinger',
+  platformLoads: 'platformLoads',
+  profile: 'profile',
+  adminUsers: 'adminUsers',
+  adminDrivers: 'adminDrivers',
+  adminCargoOwners: 'adminCargoOwners',
+  adminTariffs: 'adminTariffs',
+  adminSettings: 'adminSettings',
+  adminBroadcasts: 'adminBroadcasts',
+  adminPremiumOrders: 'adminPremiumOrders',
+  adminUserbots: 'adminUserbots',
+};
+
 // Tab configuration by role
 const TAB_CONFIG = {
   driver: [
-    { path: '/', label: 'Yuklar', auth: false },
-    { path: '/tariffs', label: 'Tariflar', auth: false },
-    { path: '/driver-status', label: 'Haydovchi holati', auth: true },
-    { path: '/my-transports', label: 'Transportlarim', auth: true },
-    { path: '/my-harbingers', label: 'Xabarchilarim', auth: true },
-    { path: '/profile', label: 'Profil', auth: true },
+    { path: '/', label: 'Yuklar', auth: false, section: SECTION.search },
+    { path: '/tariffs', label: 'Tariflar', auth: false, section: SECTION.tariffs },
+    { path: '/driver-status', label: 'Haydovchi holati', auth: true, section: SECTION.driverStatus },
+    { path: '/create-transport', label: "Mashina qo'shish", auth: true, section: SECTION.createTransport, optional: true },
+    { path: '/create-harbinger', label: "Xabarchi qo'shish", auth: true, section: SECTION.createHarbinger, optional: true },
+    { path: '/my-transports', label: 'Transportlarim', auth: true, section: SECTION.myTransports },
+    { path: '/my-harbingers', label: 'Xabarchilarim', auth: true, section: SECTION.myHarbingers },
+    { path: '/profile', label: 'Profil', auth: true, section: SECTION.profile },
   ],
   logist: [
-    { path: '/', label: 'Yuklar', auth: false },
-    { path: '/tariffs', label: 'Tariflar', auth: false },
-    { path: '/platform-loads', label: 'Platforma yuklari', auth: true, requireDispatcher: true },
-    { path: '/transports', label: 'Transportlar', auth: false },
-    { path: '/my-orders', label: 'Buyurtmalarim', auth: true },
-    { path: '/my-drivers', label: 'Hamkorlarim', auth: true },
-    { path: '/my-transports', label: 'Transportlarim', auth: true },
-    { path: '/my-harbingers', label: 'Xabarchilarim', auth: true },
-    { path: '/profile', label: 'Profil', auth: true },
+    { path: '/', label: 'Yuklar', auth: false, section: SECTION.search },
+    { path: '/tariffs', label: 'Tariflar', auth: false, section: SECTION.tariffs },
+    { path: '/platform-loads', label: 'Platforma yuklari', auth: true, section: SECTION.platformLoads, requireDispatcher: true },
+    { path: '/transports', label: 'Transportlar', auth: false, section: SECTION.transports },
+    { path: '/create-order', label: "Yuk qo'shish", auth: true, section: SECTION.createOrder, optional: true },
+    { path: '/create-transport', label: "Mashina qo'shish", auth: true, section: SECTION.createTransport, optional: true },
+    { path: '/create-harbinger', label: "Xabarchi qo'shish", auth: true, section: SECTION.createHarbinger, optional: true },
+    { path: '/my-orders', label: 'Buyurtmalarim', auth: true, section: SECTION.myOrders },
+    { path: '/my-drivers', label: 'Hamkorlarim', auth: true, section: SECTION.myPartners },
+    { path: '/my-transports', label: 'Transportlarim', auth: true, section: SECTION.myTransports },
+    { path: '/my-harbingers', label: 'Xabarchilarim', auth: true, section: SECTION.myHarbingers },
+    { path: '/profile', label: 'Profil', auth: true, section: SECTION.profile },
   ],
   factory: [
-    { path: '/', label: 'Yuklar', auth: false },
-    { path: '/tariffs', label: 'Tariflar', auth: false },
-    { path: '/transports', label: 'Transportlar', auth: false },
-    { path: '/my-orders', label: 'Buyurtmalarim', auth: true },
-    { path: '/profile', label: 'Profil', auth: true },
+    { path: '/', label: 'Yuklar', auth: false, section: SECTION.search },
+    { path: '/tariffs', label: 'Tariflar', auth: false, section: SECTION.tariffs },
+    { path: '/transports', label: 'Transportlar', auth: false, section: SECTION.transports },
+    { path: '/create-order', label: "Yuk qo'shish", auth: true, section: SECTION.createOrder, optional: true },
+    { path: '/my-orders', label: 'Buyurtmalarim', auth: true, section: SECTION.myOrders },
+    { path: '/profile', label: 'Profil', auth: true, section: SECTION.profile },
+  ],
+  not_selected: [
+    { path: '/', label: 'Yuklar', auth: false, section: SECTION.search },
+    { path: '/tariffs', label: 'Tariflar', auth: false, section: SECTION.tariffs },
+    { path: '/transports', label: 'Transportlar', auth: false, section: SECTION.transports },
+    { path: '/profile', label: 'Profil', auth: true, section: SECTION.profile },
   ],
 };
 
@@ -52,6 +88,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
   const [permissions, setPermissions] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [navigation, setNavigation] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,6 +101,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
             setIsInternalDispatcher(response.result.isInternalDispatcher === true);
             setPermissions(response.result.permissions || null);
             setIsAdmin(response.result.isAdmin === true);
+            setNavigation(response.result.navigation || null);
           }
         } catch (error) {
           console.error('Failed to fetch user role:', error);
@@ -87,8 +125,20 @@ export default function Navigation({ isAuthenticated, onLogout }) {
     // Use role-specific tabs or fallback to logist tabs
     let tabs = TAB_CONFIG[userRole] || TAB_CONFIG.logist;
 
-    // Filter "Harbinger yaratish" for drivers if no permission
-    if (userRole === 'driver' && !permissions?.createHarbinger) {
+    const roleSections = navigation?.roleSections;
+    tabs = tabs.filter((tab) => {
+      if (!tab.section) return !tab.optional;
+      if (!Array.isArray(roleSections)) return !tab.optional;
+      return roleSections.includes(tab.section);
+    });
+
+    if (!permissions?.createOrder) {
+      tabs = tabs.filter(tab => tab.path !== '/create-order');
+    }
+    if (!permissions?.createTransport) {
+      tabs = tabs.filter(tab => tab.path !== '/create-transport');
+    }
+    if (!permissions?.createHarbinger) {
       tabs = tabs.filter(tab => tab.path !== '/create-harbinger');
     }
 
@@ -99,16 +149,22 @@ export default function Navigation({ isAuthenticated, onLogout }) {
 
     // Add admin tab for admins
     if (isAdmin) {
-      tabs = [
-        ...tabs,
-        { path: '/admin/users', label: 'Foydalanuvchilar', auth: true },
-        { path: '/admin/cargo-owners', label: 'Yuk egalari', auth: true },
-        { path: '/admin/tariffs', label: 'Tariflar', auth: true },
-        { path: '/admin/settings', label: 'Sozlamalar', auth: true },
-        { path: '/admin/broadcasts', label: 'Broadcast', auth: true },
-        { path: '/admin/premium-orders', label: 'Premium yuklar', auth: true },
-        { path: '/admin/userbots', label: 'Userbotlar', auth: true },
-      ];
+      const adminSections = navigation?.adminSections;
+      const adminTabs = [
+        { path: '/admin/users', label: 'Foydalanuvchilar', auth: true, section: SECTION.adminUsers },
+        { path: '/admin/drivers', label: 'Haydovchilar', auth: true, section: SECTION.adminDrivers },
+        { path: '/admin/cargo-owners', label: 'Yuk egalari', auth: true, section: SECTION.adminCargoOwners },
+        { path: '/admin/tariffs', label: 'Tariflar', auth: true, section: SECTION.adminTariffs },
+        { path: '/admin/settings', label: 'Sozlamalar', auth: true, section: SECTION.adminSettings },
+        { path: '/admin/broadcasts', label: 'Broadcast', auth: true, section: SECTION.adminBroadcasts },
+        { path: '/admin/premium-orders', label: 'Premium yuklar', auth: true, section: SECTION.adminPremiumOrders },
+        { path: '/admin/userbots', label: 'Userbotlar', auth: true, section: SECTION.adminUserbots },
+      ].filter((tab) => {
+        if (!Array.isArray(adminSections)) return true;
+        return adminSections.includes(tab.section);
+      });
+
+      tabs = [...tabs, ...adminTabs];
     }
 
     return tabs;

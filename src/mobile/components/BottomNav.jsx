@@ -4,34 +4,12 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { getMobileTabs } from '../navigationConfig';
 
-// TAB_CONFIG - Role-specific navigation
-// Roles: driver, factory, logist (default)
-const TAB_CONFIG = {
-  driver: [
-    { id: 'home', icon: '⚡', label: 'Holat', path: '/mobile/status' }, // Default for driver
-    { id: 'search', icon: '📦', label: 'Yuklar', path: '/mobile/yuklar' },
-    { id: 'orders', icon: '🚚', label: 'Transport', path: '/mobile/my-transports' },
-    { id: 'profile', icon: '👤', label: 'Profil', path: '/mobile/profile' },
-  ],
-  factory: [
-    { id: 'home', icon: '📋', label: 'Buyurtma', path: '/mobile/orders' }, // Default for factory
-    { id: 'search', icon: '📦', label: 'Yuklar', path: '/mobile/yuklar' },
-    { id: 'add', icon: '➕', label: "Qo'shish", path: '/mobile/create-order' },
-    { id: 'transports', icon: '🚚', label: 'Transport', path: '/mobile/transports' },
-    { id: 'profile', icon: '👤', label: 'Profil', path: '/mobile/profile' },
-  ],
-  logist: [
-    { id: 'home', icon: '📦', label: 'Yuklar', path: '/mobile' },
-    { id: 'transports', icon: '🚚', label: 'Transport', path: '/mobile/transports' },
-    { id: 'drivers', icon: '👥', label: 'Hamkor', path: '/mobile/drivers' },
-    { id: 'listings', icon: '📋', label: "E'lonlarim", path: '/mobile/my-listings' },
-    { id: 'profile', icon: '👤', label: 'Profil', path: '/mobile/profile' },
-  ],
-};
+export default function BottomNav({ activeTab, userRole = 'logist', navigation = null }) {
+  const tabs = getMobileTabs(userRole, navigation);
 
-export default function BottomNav({ activeTab, userRole = 'logist' }) {
-  const tabs = TAB_CONFIG[userRole] || TAB_CONFIG.logist;
+  if (tabs.length === 0) return null;
 
   return (
     <nav className="m-bottomnav">

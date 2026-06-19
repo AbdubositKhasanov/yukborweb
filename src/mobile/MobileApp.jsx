@@ -12,6 +12,7 @@ import { MobileAuthProvider, useMobileAuth } from './context/MobileAuthContext';
 import MobileRoleSelect from './pages/MobileRoleSelect';
 import { trackPageView } from '../services/analytics';
 import useTelegramBackButton from './hooks/useTelegramBackButton';
+import { getDefaultMobilePath } from './navigationConfig';
 import './styles/mobile.css';
 
 // Lazy load mobile pages
@@ -42,7 +43,7 @@ const UserbotManagementPage = lazy(() => import('../pages/UserbotManagementPage'
 
 // Role-based default page redirect
 function RoleBasedHome() {
-  const { isAuthenticated, userRole, loading } = useMobileAuth();
+  const { isAuthenticated, user, userRole, loading } = useMobileAuth();
 
   console.log('[RoleBasedHome] isAuthenticated:', isAuthenticated, 'userRole:', userRole);
 
@@ -58,17 +59,12 @@ function RoleBasedHome() {
     return <MobileRoleSelect />;
   }
 
-  // Redirect based on role - MUST match Desktop behavior
-  if (userRole === 'driver') {
-    console.log('[RoleBasedHome] Redirecting driver to /mobile/status');
-    return <Navigate to="/mobile/status" replace />;
-  }
-  if (userRole === 'factory') {
-    console.log('[RoleBasedHome] Redirecting factory to /mobile/orders');
-    return <Navigate to="/mobile/orders" replace />;
+  const defaultPath = getDefaultMobilePath(userRole, user?.navigation);
+  if (defaultPath !== '/mobile') {
+    console.log('[RoleBasedHome] Redirecting', userRole, 'to', defaultPath);
+    return <Navigate to={defaultPath} replace />;
   }
 
-  // Logist yoki boshqa rollar: Yuklar (MobileHome)
   return <MobileHome />;
 }
 
@@ -105,7 +101,7 @@ function MiniAppUnavailable() {
 
 function MobileAppContent() {
   const location = useLocation();
-  const { isAuthenticated, userRole, loading, needsRoleSelection } = useMobileAuth();
+  const { isAuthenticated, user, userRole, loading, needsRoleSelection } = useMobileAuth();
 
   // Telegram Mini App back button — navigate(-1) instead of closing app
   useTelegramBackButton();
@@ -371,6 +367,7 @@ function MobileAppContent() {
           key={userRole}
           activeTab={getActiveTab()}
           userRole={userRole}
+          navigation={user?.navigation}
         />
       )}
     </div>

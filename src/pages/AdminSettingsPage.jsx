@@ -28,6 +28,13 @@ const emptyForms = {
   },
   groupAnnouncer: { enabled: true, intervalMinutes: 30, pinTimes: '10:00, 16:00' },
   automation: { orderOwnerStatusPromptEnabled: false },
+  navigation: {
+    driver: [],
+    logist: [],
+    factory: [],
+    notSelected: [],
+    admin: [],
+  },
 };
 
 const ALL_ACCESS_GROUP = 'ALL';
@@ -35,6 +42,10 @@ const ALL_ACCESS_GROUP = 'ALL';
 function normalizePermissionGroups(groups = []) {
   const cleaned = [...new Set(groups.filter(Boolean))];
   return cleaned.includes(ALL_ACCESS_GROUP) ? [ALL_ACCESS_GROUP] : cleaned;
+}
+
+function normalizeNavigationList(items = []) {
+  return [...new Set((items || []).filter(Boolean))];
 }
 
 function toNumber(value, fallback = 0) {
@@ -118,6 +129,13 @@ export default function AdminSettingsPage({ mobile = false }) {
       automation: {
         orderOwnerStatusPromptEnabled: data.automation?.orderOwnerStatusPromptEnabled === true,
       },
+      navigation: {
+        driver: normalizeNavigationList(data.navigation?.driver),
+        logist: normalizeNavigationList(data.navigation?.logist),
+        factory: normalizeNavigationList(data.navigation?.factory),
+        notSelected: normalizeNavigationList(data.navigation?.notSelected),
+        admin: normalizeNavigationList(data.navigation?.admin),
+      },
     });
     setPermissions((data.permissions || []).map((permission) => ({
       ...permission,
@@ -196,6 +214,22 @@ export default function AdminSettingsPage({ mobile = false }) {
     }));
   };
 
+  const toggleNavigationSection = (roleKey, sectionKey) => {
+    setForms((prev) => {
+      const current = normalizeNavigationList(prev.navigation?.[roleKey] || []);
+      const next = current.includes(sectionKey)
+        ? current.filter((item) => item !== sectionKey)
+        : [...current, sectionKey];
+      return {
+        ...prev,
+        navigation: {
+          ...prev.navigation,
+          [roleKey]: next,
+        },
+      };
+    });
+  };
+
   const saveFreeLimits = (e) => {
     e.preventDefault();
     savePatch('freeLimits', {
@@ -213,6 +247,18 @@ export default function AdminSettingsPage({ mobile = false }) {
       payload[item.key] = normalizePermissionGroups(item.allowedGroups || []);
     });
     savePatch('permissions', { permissions: payload }, 'Funksiya ruxsatlari saqlandi');
+  };
+
+  const saveNavigation = () => {
+    savePatch('navigation', {
+      navigation: {
+        driver: normalizeNavigationList(forms.navigation.driver),
+        logist: normalizeNavigationList(forms.navigation.logist),
+        factory: normalizeNavigationList(forms.navigation.factory),
+        notSelected: normalizeNavigationList(forms.navigation.notSelected),
+        admin: normalizeNavigationList(forms.navigation.admin),
+      },
+    }, "Bo'lim ko'rinishi saqlandi");
   };
 
   const saveGroupAnnouncer = (e) => {
@@ -285,6 +331,36 @@ export default function AdminSettingsPage({ mobile = false }) {
 
   if (!authChecked) return <div style={{ padding: 24 }}>Yuklanmoqda...</div>;
   if (!isAdmin) return <div style={{ padding: 24, color: '#c00' }}>Bu sahifa faqat adminlar uchun.</div>;
+
+  const navigationRoles = settings?.navigation?.roles || [];
+  const userNavigationRoles = navigationRoles.filter((role) => role.key !== 'admin');
+  const userNavigationSections = (settings?.navigation?.sections || []).filter((section) => section.scope === 'user');
+  const adminNavigationSections = (settings?.navigation?.sections || []).filter((section) => section.scope === 'admin');
+
+  const renderSurfaceBadges = (section) => (
+    <div style={surfaceBadgeWrapStyle}>
+      {(section.surfaces || []).map((surface) => (
+        <span key={surface} style={surfaceBadgeStyle}>
+          {surface === 'mobile' ? 'Mobile' : 'Desktop'}
+        </span>
+      ))}
+      {section.dispatcherOnly && <span style={dispatcherBadgeStyle}>Ichki logist</span>}
+    </div>
+  );
+
+  const renderNavigationToggle = (role, section) => {
+    const active = normalizeNavigationList(forms.navigation?.[role.key]).includes(section.key);
+    return (
+      <label key={`${role.key}-${section.key}`} style={navigationChipStyle(active)}>
+        <input
+          type="checkbox"
+          checked={active}
+          onChange={() => toggleNavigationSection(role.key, section.key)}
+        />
+        {mobile ? role.label : "Ko'rinadi"}
+      </label>
+    );
+  };
 
   return (
     <div style={{ ...pageStyle, padding: mobile ? '16px 12px 90px' : pageStyle.padding }}>
@@ -407,6 +483,88 @@ export default function AdminSettingsPage({ mobile = false }) {
               disabled={savingSection === 'permissions'}
             >
               {savingSection === 'permissions' ? 'Saqlanmoqda...' : 'Ruxsatlarni saqlash'}
+            </button>
+          </section>
+
+          <section style={{ ...cardStyle, gridColumn: mobile ? 'auto' : '1 / -1' }}>
+            <h3 style={sectionTitleStyle}>Bo'lim ko'rinishi</h3>
+            <p style={hintStyle}>
+              Qaysi rol qaysi bo'limni menyuda ko'rishini belgilang. Bu sozlama ko'rinishni boshqaradi;
+              amaliy ruxsatlar va tarif limitlari alohida tekshiriladi.
+            </p>
+
+            <div style={navigationBlockStyle}>
+              <div style={navigationBlockHeaderStyle}>
+                <div>
+                  <strong>Foydalanuvchi bo'limlari</strong>
+                  <div style={hintStyle}>Desktop menyu va Mobile pastki navigatsiya uchun.</div>
+                </div>
+                <span style={countPillStyle}>
+                  {userNavigationSections.length} bo'lim
+                </span>
+              </div>
+
+              {!mobile && (
+                <div style={navigationHeaderRowStyle(userNavigationRoles.length)}>
+                  <span />
+                  {userNavigationRoles.map((role) => (
+                    <strong key={role.key} style={navigationRoleHeaderStyle}>
+                      {role.label}
+                    </strong>
+                  ))}
+                </div>
+              )}
+
+              <div style={navigationRowsStyle}>
+                {userNavigationSections.map((section) => (
+                  <div key={section.key} style={navigationRowStyle(mobile, userNavigationRoles.length)}>
+                    <div style={navigationSectionInfoStyle}>
+                      <strong>{section.label}</strong>
+                      {section.description && <div style={hintStyle}>{section.description}</div>}
+                      {renderSurfaceBadges(section)}
+                    </div>
+                    <div style={navigationToggleWrapStyle(mobile)}>
+                      {userNavigationRoles.map((role) => renderNavigationToggle(role, section))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ ...navigationBlockStyle, marginTop: 14 }}>
+              <div style={navigationBlockHeaderStyle}>
+                <div>
+                  <strong>Admin bo'limlari</strong>
+                  <div style={hintStyle}>Admin rolida web va mobile admin havolalarida ko'rinadigan bo'limlar.</div>
+                </div>
+                <span style={countPillStyle}>
+                  {adminNavigationSections.length} bo'lim
+                </span>
+              </div>
+
+              <div style={navigationRowsStyle}>
+                {adminNavigationSections.map((section) => (
+                  <div key={section.key} style={navigationRowStyle(mobile, 1)}>
+                    <div style={navigationSectionInfoStyle}>
+                      <strong>{section.label}</strong>
+                      {section.description && <div style={hintStyle}>{section.description}</div>}
+                      {renderSurfaceBadges(section)}
+                    </div>
+                    <div style={navigationToggleWrapStyle(mobile)}>
+                      {renderNavigationToggle({ key: 'admin', label: 'Admin' }, section)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              style={{ ...primaryBtnStyle, marginTop: 14 }}
+              onClick={saveNavigation}
+              disabled={savingSection === 'navigation'}
+            >
+              {savingSection === 'navigation' ? 'Saqlanmoqda...' : "Bo'lim ko'rinishini saqlash"}
             </button>
           </section>
 
@@ -740,4 +898,115 @@ const permissionHintStyle = {
   border: '1px solid #edf0f5',
   borderRadius: 8,
   padding: '8px 10px',
+};
+
+const navigationBlockStyle = {
+  border: '1px solid #edf0f5',
+  borderRadius: 8,
+  padding: 12,
+  background: '#fbfdff',
+};
+
+const navigationBlockHeaderStyle = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: 10,
+  marginBottom: 10,
+  flexWrap: 'wrap',
+};
+
+const countPillStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  border: '1px solid #d8e8ff',
+  background: '#eef6ff',
+  color: '#1d4ed8',
+  borderRadius: 999,
+  padding: '5px 9px',
+  fontSize: 12,
+  fontWeight: 800,
+};
+
+const navigationRowsStyle = {
+  display: 'grid',
+  gap: 8,
+};
+
+const navigationHeaderRowStyle = (roleCount) => ({
+  display: 'grid',
+  gridTemplateColumns: `minmax(220px, 1.5fr) repeat(${roleCount}, minmax(110px, 0.55fr))`,
+  gap: 10,
+  alignItems: 'center',
+  padding: '0 12px 8px',
+});
+
+const navigationRoleHeaderStyle = {
+  fontSize: 12,
+  color: '#475569',
+  textAlign: 'center',
+};
+
+const navigationRowStyle = (mobile, roleCount) => ({
+  display: 'grid',
+  gridTemplateColumns: mobile ? '1fr' : `minmax(220px, 1.5fr) repeat(${roleCount}, minmax(110px, 0.55fr))`,
+  gap: 10,
+  alignItems: 'center',
+  border: '1px solid #edf0f5',
+  borderRadius: 8,
+  padding: 12,
+  background: '#fff',
+});
+
+const navigationSectionInfoStyle = {
+  minWidth: 0,
+};
+
+const navigationToggleWrapStyle = (mobile) => ({
+  display: 'contents',
+  ...(mobile ? {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 7,
+  } : {}),
+});
+
+const navigationChipStyle = (active) => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  border: `1px solid ${active ? '#9cc9ff' : '#e5e7eb'}`,
+  background: active ? '#e8f2ff' : '#fff',
+  color: '#334155',
+  borderRadius: 999,
+  padding: '7px 10px',
+  fontSize: 12,
+  cursor: 'pointer',
+  minHeight: 34,
+  boxSizing: 'border-box',
+});
+
+const surfaceBadgeWrapStyle = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 6,
+  marginTop: 7,
+};
+
+const surfaceBadgeStyle = {
+  border: '1px solid #e2e8f0',
+  background: '#f8fafc',
+  color: '#475569',
+  borderRadius: 999,
+  padding: '3px 7px',
+  fontSize: 11,
+  fontWeight: 700,
+};
+
+const dispatcherBadgeStyle = {
+  ...surfaceBadgeStyle,
+  borderColor: '#fde68a',
+  background: '#fffbeb',
+  color: '#92400e',
 };
