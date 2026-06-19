@@ -30,6 +30,13 @@ const emptyForms = {
   automation: { orderOwnerStatusPromptEnabled: false },
 };
 
+const ALL_ACCESS_GROUP = 'ALL';
+
+function normalizePermissionGroups(groups = []) {
+  const cleaned = [...new Set(groups.filter(Boolean))];
+  return cleaned.includes(ALL_ACCESS_GROUP) ? [ALL_ACCESS_GROUP] : cleaned;
+}
+
 function toNumber(value, fallback = 0) {
   const parsed = parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -111,7 +118,10 @@ export default function AdminSettingsPage({ mobile = false }) {
         orderOwnerStatusPromptEnabled: data.automation?.orderOwnerStatusPromptEnabled === true,
       },
     });
-    setPermissions(data.permissions || []);
+    setPermissions((data.permissions || []).map((permission) => ({
+      ...permission,
+      allowedGroups: normalizePermissionGroups(permission.allowedGroups || []),
+    })));
   }, []);
 
   useEffect(() => {
@@ -171,10 +181,16 @@ export default function AdminSettingsPage({ mobile = false }) {
   const togglePermissionGroup = (featureKey, groupKey) => {
     setPermissions((prev) => prev.map((item) => {
       if (item.key !== featureKey) return item;
-      const current = item.allowedGroups || [];
-      const next = current.includes(groupKey)
-        ? current.filter((group) => group !== groupKey)
-        : [...current, groupKey];
+      const current = normalizePermissionGroups(item.allowedGroups || []);
+      let next;
+      if (groupKey === ALL_ACCESS_GROUP) {
+        next = current.includes(ALL_ACCESS_GROUP) ? [] : [ALL_ACCESS_GROUP];
+      } else {
+        const withoutAll = current.filter((group) => group !== ALL_ACCESS_GROUP);
+        next = withoutAll.includes(groupKey)
+          ? withoutAll.filter((group) => group !== groupKey)
+          : [...withoutAll, groupKey];
+      }
       return { ...item, allowedGroups: next };
     }));
   };
@@ -193,7 +209,7 @@ export default function AdminSettingsPage({ mobile = false }) {
   const savePermissions = () => {
     const payload = {};
     permissions.forEach((item) => {
-      payload[item.key] = item.allowedGroups || [];
+      payload[item.key] = normalizePermissionGroups(item.allowedGroups || []);
     });
     savePatch('permissions', { permissions: payload }, 'Funksiya ruxsatlari saqlandi');
   };
@@ -348,26 +364,40 @@ export default function AdminSettingsPage({ mobile = false }) {
             <h3 style={sectionTitleStyle}>Funksiya ruxsatlari</h3>
             <p style={hintStyle}>Qaysi guruh qaysi funksiyadan foydalana olishini belgilang. Tarif bo'lsa, tarif ruxsati ham ishlaydi.</p>
             <div style={{ display: 'grid', gap: 10 }}>
-              {permissions.map((permission) => (
-                <div key={permission.key} style={permissionRowStyle}>
-                  <div style={{ minWidth: 0 }}>
-                    <strong>{permission.label}</strong>
-                    {permission.description && <div style={hintStyle}>{permission.description}</div>}
+              {permissions.map((permission) => {
+                const allowedGroups = normalizePermissionGroups(permission.allowedGroups || []);
+                const allSelected = allowedGroups.includes(ALL_ACCESS_GROUP);
+                return (
+                  <div key={permission.key} style={permissionRowStyle}>
+                    <div style={{ minWidth: 0 }}>
+                      <strong>{permission.label}</strong>
+                      {permission.description && <div style={hintStyle}>{permission.description}</div>}
+                    </div>
+                    <div style={groupGridStyle}>
+                      {(settings.accessGroups || []).map((group) => {
+                        const disabled = allSelected && group.key !== ALL_ACCESS_GROUP;
+                        const active = allowedGroups.includes(group.key);
+                        return (
+                          <label key={group.key} style={chipStyle(active, disabled)}>
+                            <input
+                              type="checkbox"
+                              checked={active}
+                              disabled={disabled}
+                              onChange={() => togglePermissionGroup(permission.key, group.key)}
+                            />
+                            {group.label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {allSelected && (
+                      <div style={permissionHintStyle}>
+                        Hammasi tanlangan: alohida guruhlar avtomatik qamrab olinadi.
+                      </div>
+                    )}
                   </div>
-                  <div style={groupGridStyle}>
-                    {(settings.accessGroups || []).map((group) => (
-                      <label key={group.key} style={chipStyle(permission.allowedGroups?.includes(group.key))}>
-                        <input
-                          type="checkbox"
-                          checked={permission.allowedGroups?.includes(group.key) || false}
-                          onChange={() => togglePermissionGroup(permission.key, group.key)}
-                        />
-                        {group.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <button
               type="button"
@@ -688,14 +718,25 @@ const groupGridStyle = {
   flexWrap: 'wrap',
 };
 
-const chipStyle = (active) => ({
+const chipStyle = (active, disabled = false) => ({
   display: 'inline-flex',
   alignItems: 'center',
   gap: 5,
   border: `1px solid ${active ? '#9cc9ff' : '#e5e7eb'}`,
-  background: active ? '#e8f2ff' : '#fff',
+  background: active ? '#e8f2ff' : disabled ? '#f5f6f8' : '#fff',
+  color: disabled ? '#94a3b8' : '#334155',
   borderRadius: 999,
   padding: '6px 9px',
   fontSize: 12,
-  cursor: 'pointer',
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  opacity: disabled ? 0.68 : 1,
 });
+
+const permissionHintStyle = {
+  color: '#64748b',
+  fontSize: 12,
+  background: '#f8fafc',
+  border: '1px solid #edf0f5',
+  borderRadius: 8,
+  padding: '8px 10px',
+};
