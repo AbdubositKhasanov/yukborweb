@@ -252,6 +252,30 @@ export default function MobileProfile() {
                   >
                     💎 Admin: tariflar
                   </button>
+                  <button
+                    className="m-btn m-btn-secondary m-btn-full"
+                    onClick={() => navigate('/mobile/admin/settings')}
+                  >
+                    ⚙️ Admin: sozlamalar
+                  </button>
+                  <button
+                    className="m-btn m-btn-secondary m-btn-full"
+                    onClick={() => navigate('/mobile/admin/broadcasts')}
+                  >
+                    📣 Admin: broadcast
+                  </button>
+                  <button
+                    className="m-btn m-btn-secondary m-btn-full"
+                    onClick={() => navigate('/mobile/admin/premium-orders')}
+                  >
+                    📦 Admin: premium yuklar
+                  </button>
+                  <button
+                    className="m-btn m-btn-secondary m-btn-full"
+                    onClick={() => navigate('/mobile/admin/userbots')}
+                  >
+                    📡 Admin: userbotlar
+                  </button>
                 </div>
               )}
 

@@ -30,6 +30,9 @@ const UserbotManagementPage = lazy(() => import('./pages/UserbotManagementPage')
 const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
 const AdminDriverDetailPage = lazy(() => import('./pages/AdminDriverDetailPage'));
 const AdminTariffsPage = lazy(() => import('./pages/AdminTariffsPage'));
+const AdminSettingsPage = lazy(() => import('./pages/AdminSettingsPage'));
+const AdminBroadcastsPage = lazy(() => import('./pages/AdminBroadcastsPage'));
+const AdminPremiumOrdersPage = lazy(() => import('./pages/AdminPremiumOrdersPage'));
 const TariffsPage = lazy(() => import('./pages/TariffsPage'));
 
 function AppContent() {
@@ -193,6 +196,30 @@ function AppContent() {
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
                 <AdminTariffsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <AdminSettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/broadcasts"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <AdminBroadcastsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/premium-orders"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <AdminPremiumOrdersPage />
               </ProtectedRoute>
             }
           />

@@ -874,6 +874,83 @@ export const adminAcceptOrderForDriver = async (orderId, driverId) => {
   return response.data;
 };
 
+export const adminGetSettings = async () => {
+  const response = await apiClient.get('/admin/settings');
+  return response.data;
+};
+
+export const adminUpdateSettings = async (payload) => {
+  const response = await apiClient.put('/admin/settings', payload);
+  return response.data;
+};
+
+export const adminSendGroupAnnouncementNow = async (pin = false) => {
+  const response = await apiClient.post('/admin/settings/group-announcer/send-now', null, {
+    params: { pin: pin ? 'true' : 'false' },
+  });
+  return response.data;
+};
+
+export const adminListPremiumOrders = async (params = {}) => {
+  const response = await apiClient.get('/admin/premium-orders', { params });
+  return response.data;
+};
+
+export const adminDeletePremiumOrders = async (payload) => {
+  const response = await apiClient.post('/admin/premium-orders/delete', payload);
+  return response.data;
+};
+
+export const adminBlockPremiumOrderChat = async (chatId, reason = 'admin manual block') => {
+  const response = await apiClient.post(`/admin/premium-orders/${chatId}/block`, { reason });
+  return response.data;
+};
+
+export const adminUnblockPremiumOrderChat = async (chatId) => {
+  const response = await apiClient.post(`/admin/premium-orders/${chatId}/unblock`);
+  return response.data;
+};
+
+export const adminGetTariffFreeLimits = async () => {
+  const response = await apiClient.get('/admin/tariffs/free-limits');
+  return response.data;
+};
+
+export const adminUpdateTariffFreeLimits = async (payload) => {
+  const response = await apiClient.put('/admin/tariffs/free-limits', payload);
+  return response.data;
+};
+
+export const adminListScheduledBroadcasts = async () => {
+  const response = await apiClient.get('/admin/scheduled-broadcasts');
+  return response.data;
+};
+
+export const adminCreateScheduledBroadcast = async (payload) => {
+  const response = await apiClient.post('/admin/scheduled-broadcasts', payload);
+  return response.data;
+};
+
+export const adminUpdateScheduledBroadcast = async (id, payload) => {
+  const response = await apiClient.put(`/admin/scheduled-broadcasts/${id}`, payload);
+  return response.data;
+};
+
+export const adminDeleteScheduledBroadcast = async (id) => {
+  const response = await apiClient.delete(`/admin/scheduled-broadcasts/${id}`);
+  return response.data;
+};
+
+export const adminDuplicateScheduledBroadcast = async (id) => {
+  const response = await apiClient.post(`/admin/scheduled-broadcasts/${id}/duplicate`);
+  return response.data;
+};
+
+export const adminSendScheduledBroadcastTest = async (id) => {
+  const response = await apiClient.post(`/admin/scheduled-broadcasts/${id}/send-test`);
+  return response.data;
+};
+
 export const adminListTariffFeatures = async () => {
   const response = await apiClient.get('/admin/tariffs/features');
   return response.data;

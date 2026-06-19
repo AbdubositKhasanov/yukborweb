@@ -103,6 +103,9 @@ export default function Navigation({ isAuthenticated, onLogout }) {
         ...tabs,
         { path: '/admin/users', label: 'Foydalanuvchilar', auth: true },
         { path: '/admin/tariffs', label: 'Tariflar', auth: true },
+        { path: '/admin/settings', label: 'Sozlamalar', auth: true },
+        { path: '/admin/broadcasts', label: 'Broadcast', auth: true },
+        { path: '/admin/premium-orders', label: 'Premium yuklar', auth: true },
         { path: '/admin/userbots', label: 'Userbotlar', auth: true },
       ];
     }

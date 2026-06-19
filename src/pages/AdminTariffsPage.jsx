@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   adminCreateTariff,
   adminDeleteTariff,
+  adminGetTariffFreeLimits,
   adminListTariffFeatures,
   adminListTariffs,
   adminUpdateTariff,
+  adminUpdateTariffFreeLimits,
   getUserMe,
 } from '../services/api';
 import { showError, showSuccess } from '../utils/toast';
@@ -79,7 +81,14 @@ export default function AdminTariffsPage({ mobile = false }) {
   const [tariffs, setTariffs] = useState([]);
   const [featureDefs, setFeatureDefs] = useState([]);
   const [form, setForm] = useState(emptyForm);
+  const [freeLimits, setFreeLimits] = useState(null);
+  const [freeLimitForm, setFreeLimitForm] = useState({
+    freeHarbingerCreateLimit: 0,
+    freeOrderShowLimit: 3,
+    defaultCarShowLimit: 5,
+  });
   const [saving, setSaving] = useState(false);
+  const [savingFreeLimits, setSavingFreeLimits] = useState(false);
 
   const sortedTariffs = useMemo(() => {
     return [...tariffs].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || (a.priceUzs || 0) - (b.priceUzs || 0));
@@ -101,12 +110,21 @@ export default function AdminTariffsPage({ mobile = false }) {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [featuresRes, tariffsRes] = await Promise.all([
+      const [featuresRes, tariffsRes, freeLimitsRes] = await Promise.all([
         adminListTariffFeatures(),
         adminListTariffs(true),
+        adminGetTariffFreeLimits(),
       ]);
       if (featuresRes.code === 200) setFeatureDefs(featuresRes.result || []);
       if (tariffsRes.code === 200) setTariffs(tariffsRes.result || []);
+      if (freeLimitsRes.code === 200 && freeLimitsRes.result) {
+        setFreeLimits(freeLimitsRes.result);
+        setFreeLimitForm({
+          freeHarbingerCreateLimit: freeLimitsRes.result.freeHarbingerCreateLimit ?? 0,
+          freeOrderShowLimit: freeLimitsRes.result.freeOrderShowLimit ?? 3,
+          defaultCarShowLimit: freeLimitsRes.result.defaultCarShowLimit ?? 5,
+        });
+      }
     } catch (e) {
       showError(e.response?.data?.message || e.message || 'Tariflar yuklanmadi');
     } finally {
@@ -176,6 +194,34 @@ export default function AdminTariffsPage({ mobile = false }) {
     }
   };
 
+  const handleFreeLimitSubmit = async (e) => {
+    e.preventDefault();
+    setSavingFreeLimits(true);
+    try {
+      const payload = {
+        freeHarbingerCreateLimit: Math.max(0, parseInt(freeLimitForm.freeHarbingerCreateLimit, 10) || 0),
+        freeOrderShowLimit: Math.max(1, parseInt(freeLimitForm.freeOrderShowLimit, 10) || 1),
+        defaultCarShowLimit: Math.max(1, parseInt(freeLimitForm.defaultCarShowLimit, 10) || 1),
+      };
+      const response = await adminUpdateTariffFreeLimits(payload);
+      if (response.code === 200) {
+        setFreeLimits(response.result);
+        setFreeLimitForm({
+          freeHarbingerCreateLimit: response.result.freeHarbingerCreateLimit ?? 0,
+          freeOrderShowLimit: response.result.freeOrderShowLimit ?? 1,
+          defaultCarShowLimit: response.result.defaultCarShowLimit ?? 1,
+        });
+        showSuccess('Bepul limitlar yangilandi');
+      } else {
+        showError(response.message || 'Bepul limitlar saqlanmadi');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Bepul limitlar saqlanmadi');
+    } finally {
+      setSavingFreeLimits(false);
+    }
+  };
+
   if (!authChecked) return <div style={{ padding: 24 }}>Yuklanmoqda...</div>;
   if (!isAdmin) return <div style={{ padding: 24, color: '#c00' }}>Bu sahifa faqat adminlar uchun.</div>;
 
@@ -185,7 +231,8 @@ export default function AdminTariffsPage({ mobile = false }) {
         <div>
           <h2 style={{ margin: 0 }}>Premium tariflar</h2>
           <div style={{ color: '#666', fontSize: 14, marginTop: 4 }}>
-            Bepul holatda xabarchi limiti 0 ta. Tarif orqali limit va muddat ochiladi.
+            Bepul xabarchi limiti: {freeLimits?.freeHarbingerCreateLimit ?? freeLimitForm.freeHarbingerCreateLimit} ta.
+            Tarif orqali limit va muddat oshiriladi.
           </div>
         </div>
         <button type="button" onClick={() => setForm(emptyForm)} style={secondaryBtnStyle}>
@@ -198,7 +245,53 @@ export default function AdminTariffsPage({ mobile = false }) {
       ) : (
         <div style={{ ...gridStyle, gridTemplateColumns: mobile ? '1fr' : gridStyle.gridTemplateColumns }}>
           <section style={cardStyle}>
-            <h3 style={{ marginTop: 0 }}>Tariflar</h3>
+            <div style={freePlanStyle}>
+              <div>
+                <h3 style={{ margin: 0 }}>Bepul limitlar</h3>
+                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 13 }}>
+                  Bu qiymatlar tarif sotib olmagan foydalanuvchilarga qo'llanadi. Xabarchi uchun 0 = butunlay yopiq.
+                </p>
+              </div>
+              <form onSubmit={handleFreeLimitSubmit} style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+                <label style={labelStyle}>
+                  Bepul xabarchi yaratish limiti
+                  <input
+                    type="number"
+                    value={freeLimitForm.freeHarbingerCreateLimit}
+                    min="0"
+                    onChange={(e) => setFreeLimitForm({ ...freeLimitForm, freeHarbingerCreateLimit: e.target.value })}
+                    style={inputStyle}
+                  />
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr' : '1fr 1fr', gap: 10 }}>
+                  <label style={labelStyle}>
+                    Bepul yuk ko'rish limiti
+                    <input
+                      type="number"
+                      value={freeLimitForm.freeOrderShowLimit}
+                      min="1"
+                      onChange={(e) => setFreeLimitForm({ ...freeLimitForm, freeOrderShowLimit: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </label>
+                  <label style={labelStyle}>
+                    Bepul mashina ko'rish limiti
+                    <input
+                      type="number"
+                      value={freeLimitForm.defaultCarShowLimit}
+                      min="1"
+                      onChange={(e) => setFreeLimitForm({ ...freeLimitForm, defaultCarShowLimit: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </label>
+                </div>
+                <button type="submit" style={primaryBtnStyle} disabled={savingFreeLimits}>
+                  {savingFreeLimits ? 'Saqlanmoqda...' : 'Bepul limitlarni saqlash'}
+                </button>
+              </form>
+            </div>
+
+            <h3 style={{ marginTop: 16 }}>Tariflar</h3>
             {sortedTariffs.length === 0 ? (
               <div style={{ color: '#888' }}>Hali tarif yaratilmagan.</div>
             ) : (
@@ -383,6 +476,14 @@ const cardStyle = {
   borderRadius: 8,
   padding: 16,
   boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+};
+
+const freePlanStyle = {
+  border: '1px solid #dbeafe',
+  background: '#f8fbff',
+  borderRadius: 8,
+  padding: 14,
+  marginBottom: 14,
 };
 
 const tariffRowStyle = {

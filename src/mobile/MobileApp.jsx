@@ -35,6 +35,10 @@ const TariffsPage = lazy(() => import('../pages/TariffsPage'));
 const AdminUsersPage = lazy(() => import('../pages/AdminDriversPage'));
 const AdminUserDetailPage = lazy(() => import('../pages/AdminDriverDetailPage'));
 const AdminTariffsPage = lazy(() => import('../pages/AdminTariffsPage'));
+const AdminSettingsPage = lazy(() => import('../pages/AdminSettingsPage'));
+const AdminBroadcastsPage = lazy(() => import('../pages/AdminBroadcastsPage'));
+const AdminPremiumOrdersPage = lazy(() => import('../pages/AdminPremiumOrdersPage'));
+const UserbotManagementPage = lazy(() => import('../pages/UserbotManagementPage'));
 
 // Role-based default page redirect
 function RoleBasedHome() {
@@ -305,6 +309,38 @@ function MobileAppContent() {
             element={
               <MobileProtectedRoute>
                 <AdminTariffsPage mobile />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <MobileProtectedRoute>
+                <AdminSettingsPage mobile />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/broadcasts"
+            element={
+              <MobileProtectedRoute>
+                <AdminBroadcastsPage mobile />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/premium-orders"
+            element={
+              <MobileProtectedRoute>
+                <AdminPremiumOrdersPage mobile />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/userbots"
+            element={
+              <MobileProtectedRoute>
+                <UserbotManagementPage mobile />
               </MobileProtectedRoute>
             }
           />
