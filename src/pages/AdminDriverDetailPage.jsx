@@ -602,6 +602,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
         <SubscriptionModal
           userId={id}
           tariffs={tariffs}
+          currentSubscription={driver.subscription}
           onClose={() => setShowSubscriptionModal(false)}
           onSuccess={() => {
             setShowSubscriptionModal(false);
@@ -714,20 +715,31 @@ function SubscriptionBox({ driver, tariffs, freeLimits, onAssign, onCancel }) {
   );
 }
 
-function SubscriptionModal({ userId, tariffs, onClose, onSuccess }) {
+function SubscriptionModal({ userId, tariffs, currentSubscription, onClose, onSuccess }) {
   const isTariffActive = (tariff) => {
     if (tariff?.isActive === true || tariff?.active === true) return true;
     if (tariff?.isActive === false || tariff?.active === false) return false;
     return true;
   };
   const activeTariffs = tariffs.filter(isTariffActive);
-  const [tariffId, setTariffId] = useState(activeTariffs[0]?.id || tariffs[0]?.id || '');
-  const [durationDays, setDurationDays] = useState('');
+  const initialTariffId = currentSubscription?.tariffId || activeTariffs[0]?.id || tariffs[0]?.id || '';
+  const initialTariff = tariffs.find((tariff) => tariff.id === initialTariffId);
+  const [tariffId, setTariffId] = useState(initialTariffId);
+  const [durationDays, setDurationDays] = useState(initialTariff?.durationDays ? String(initialTariff.durationDays) : '');
   const [expiresDate, setExpiresDate] = useState('');
   const [saving, setSaving] = useState(false);
 
   const selectedTariff = tariffs.find((tariff) => tariff.id === tariffId);
   const harbingerFeature = selectedTariff?.features?.createHarbinger;
+
+  useEffect(() => {
+    if (!selectedTariff) {
+      setDurationDays('');
+      return;
+    }
+    setDurationDays(selectedTariff.durationDays ? String(selectedTariff.durationDays) : '');
+    setExpiresDate('');
+  }, [selectedTariff?.id, selectedTariff?.durationDays]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -799,7 +811,10 @@ function SubscriptionModal({ userId, tariffs, onClose, onSuccess }) {
               type="number"
               min="1"
               value={durationDays}
-              onChange={(e) => setDurationDays(e.target.value)}
+              onChange={(e) => {
+                setDurationDays(e.target.value);
+                setExpiresDate('');
+              }}
               style={inputStyle}
               placeholder="Bo'sh qoldirilsa tarif muddatidan foydalanadi"
             />
@@ -810,7 +825,10 @@ function SubscriptionModal({ userId, tariffs, onClose, onSuccess }) {
             <input
               type="date"
               value={expiresDate}
-              onChange={(e) => setExpiresDate(e.target.value)}
+              onChange={(e) => {
+                setExpiresDate(e.target.value);
+                if (e.target.value) setDurationDays('');
+              }}
               style={inputStyle}
             />
           </label>
