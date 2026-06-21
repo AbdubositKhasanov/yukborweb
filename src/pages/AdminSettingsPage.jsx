@@ -456,6 +456,11 @@ export default function AdminSettingsPage({ mobile = false }) {
           <section style={cardStyle}>
             <h3 style={sectionTitleStyle}>Funksiya ruxsatlari</h3>
             <p style={hintStyle}>Qaysi guruh qaysi funksiyadan foydalana olishini belgilang. Tarif bo'lsa, tarif ruxsati ham ishlaydi.</p>
+            <div style={permissionRuleStyle}>
+              <strong>Ustuvorlik qoidasi:</strong> funksiya userga tarif orqali yoki shu global ruxsat orqali ochiladi.
+              Agar bu yerda <strong>Hammasi</strong> tanlansa, funksiya barcha userlarga ochiq bo&apos;ladi va tarifdagi cheklov o&apos;sha funksiya uchun bloklamaydi.
+              Tarif orqali cheklamoqchi bo&apos;lsangiz, bu yerda <strong>Hammasi</strong>ni yoqmang.
+            </div>
             <div style={{ display: 'grid', gap: 10 }}>
               {permissions.map((permission) => {
                 const allowedGroups = normalizePermissionGroups(permission.allowedGroups || []);
@@ -963,6 +968,17 @@ const permissionHintStyle = {
   border: '1px solid #edf0f5',
   borderRadius: 8,
   padding: '8px 10px',
+};
+
+const permissionRuleStyle = {
+  color: '#334155',
+  fontSize: 13,
+  lineHeight: 1.5,
+  background: '#fffbeb',
+  border: '1px solid #fde68a',
+  borderRadius: 8,
+  padding: '10px 12px',
+  marginBottom: 12,
 };
 
 const navigationBlockStyle = {

@@ -4,9 +4,11 @@ import axios from 'axios';
 import {
   adminListUsers,
   adminCreateDriver,
+  adminListTariffs,
   getUserMe,
 } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
+import { formatSubscriptionShort, getTariffState } from '../components/TariffStatusCard';
 
 const PAGE_SIZE = 20;
 
@@ -25,6 +27,14 @@ const ROLE_FILTERS = [
   { key: 'logist', label: 'Logistlar' },
   { key: 'factory', label: 'Yuk egalari' },
   { key: 'not_selected', label: 'Tanlanmagan' },
+];
+
+const SUBSCRIPTION_FILTERS = [
+  { key: 'all', label: 'Tarif: hammasi' },
+  { key: 'active', label: 'Faol tarif' },
+  { key: 'expired', label: 'Muddati tugagan' },
+  { key: 'none', label: 'Tarifsiz' },
+  { key: 'any', label: 'Tarif bor' },
 ];
 
 const ROLE_LABELS = {
@@ -84,6 +94,9 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [onlyMine, setOnlyMine] = useState(true);
+  const [subscriptionFilter, setSubscriptionFilter] = useState('all');
+  const [tariffId, setTariffId] = useState('');
+  const [tariffs, setTariffs] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -110,6 +123,18 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
     })();
   }, []);
 
+  useEffect(() => {
+    if (!isAdmin) return;
+    (async () => {
+      try {
+        const response = await adminListTariffs(true);
+        if (response.code === 200) setTariffs(response.result || []);
+      } catch (e) {
+        console.error('tariffs failed', e);
+      }
+    })();
+  }, [isAdmin]);
+
   const loadPage = useCallback(async (pageNum, append) => {
     // Avvalgi so'rovni bekor qilish
     if (abortRef.current) {
@@ -125,6 +150,8 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
         filter,
         onlyMine,
         role,
+        subscriptionFilter,
+        tariffId,
         page: pageNum,
         size: PAGE_SIZE,
       };
@@ -157,7 +184,7 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
         setLoadingMore(false);
       }
     }
-  }, [filter, debouncedSearch, onlyMine, role]);
+  }, [filter, debouncedSearch, onlyMine, role, subscriptionFilter, tariffId]);
 
   // Filter o'zgarganda 0-page'dan boshlab yuklaymiz
   useEffect(() => {
@@ -226,6 +253,11 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
     if (nextRole !== 'driver' && !['all', 'not_linked', 'linked'].includes(filter)) {
       setFilter('all');
     }
+  };
+
+  const handleSubscriptionFilter = (nextFilter) => {
+    setSubscriptionFilter(nextFilter);
+    if (nextFilter === 'none') setTariffId('');
   };
 
   if (!authChecked) {
@@ -307,6 +339,40 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
             {f.label}
           </button>
         ))}
+      </div>
+
+      <div style={filtersRowStyle}>
+        {SUBSCRIPTION_FILTERS.map((sf) => (
+          <button
+            key={sf.key}
+            onClick={() => handleSubscriptionFilter(sf.key)}
+            style={{
+              ...chipStyle,
+              ...(subscriptionFilter === sf.key ? activeChipStyle : {}),
+            }}
+          >
+            {sf.label}
+          </button>
+        ))}
+        <select
+          value={tariffId}
+          onChange={(e) => setTariffId(e.target.value)}
+          disabled={subscriptionFilter === 'none'}
+          style={{
+            ...inputStyle,
+            flex: '0 1 260px',
+            minWidth: 220,
+            padding: '7px 10px',
+            opacity: subscriptionFilter === 'none' ? 0.55 : 1,
+          }}
+        >
+          <option value="">Barcha tariflar</option>
+          {tariffs.map((tariff) => (
+            <option key={tariff.id} value={tariff.id}>
+              {tariff.name}{tariff.isActive === false ? " (o'chirilgan)" : ''}
+            </option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -418,6 +484,8 @@ function DriverCard({ driver, onClick }) {
   const userRole = driver.type || 'not_selected';
   const isDriver = userRole === 'driver';
   const isCargoOwner = userRole === 'factory';
+  const tariffState = getTariffState(driver.subscription);
+  const tariffText = formatSubscriptionShort(driver.subscription);
   return (
     <button type="button" style={cardBtnStyle} onClick={onClick}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
@@ -429,9 +497,13 @@ function DriverCard({ driver, onClick }) {
           {driver.telegramUsername && (
             <div style={{ color: '#0088cc', fontSize: 13 }}>@{driver.telegramUsername}</div>
           )}
+          <div style={{ color: tariffState.tone, fontSize: 13, marginTop: 4, fontWeight: 700 }}>
+            Tarif: {tariffText}
+          </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
           <span style={badgeStyle(roleColor(userRole))}>{ROLE_LABELS[userRole] || userRole}</span>
+          <span style={badgeStyle(tariffState.tone)}>{tariffState.label}</span>
           {driver.isLinked ? (
             <span style={badgeStyle('#1ba353')}>✓ Ulangan</span>
           ) : (

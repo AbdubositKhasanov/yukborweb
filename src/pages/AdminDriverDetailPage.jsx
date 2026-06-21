@@ -10,7 +10,6 @@ import {
   adminAcceptOrderForDriver,
   adminUpdateUser,
   adminUpdateUserRole,
-  adminGetTariffFreeLimits,
   adminListTariffs,
   adminAssignUserTariff,
   adminCancelUserTariff,
@@ -22,6 +21,7 @@ import {
 } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
 import CargoOwnerNeedProfileCard from '../components/CargoOwnerNeedProfileCard';
+import TariffStatusCard from '../components/TariffStatusCard';
 
 const ROLE_OPTIONS = [
   { value: 'driver', label: 'Haydovchi' },
@@ -102,7 +102,6 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   const [driver, setDriver] = useState(null);
   const [offers, setOffers] = useState([]);
   const [tariffs, setTariffs] = useState([]);
-  const [freeLimits, setFreeLimits] = useState(null);
   const [staticData, setStaticData] = useState(null);
   const [needProfile, setNeedProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -133,12 +132,11 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [d, o, s, t, f] = await Promise.all([
+      const [d, o, s, t] = await Promise.all([
         adminGetDriver(id),
         adminGetDriverOffers(id),
         getLocationsAndVehicles(),
         adminListTariffs(true),
-        adminGetTariffFreeLimits(),
       ]);
       if (d.code === 200) setDriver(d.result);
       if (d.code === 200 && d.result?.type === 'factory') {
@@ -154,7 +152,6 @@ export default function AdminDriverDetailPage({ mobile = false }) {
       if (o.code === 200) setOffers(o.result || []);
       if (s.code === 200) setStaticData(s.result);
       if (t.code === 200) setTariffs(t.result || []);
-      if (f.code === 200) setFreeLimits(f.result || null);
     } catch (e) {
       showError(e.response?.data?.message || e.message || 'Xatolik');
     } finally {
@@ -353,7 +350,6 @@ export default function AdminDriverDetailPage({ mobile = false }) {
         <SubscriptionBox
           driver={driver}
           tariffs={tariffs}
-          freeLimits={freeLimits}
           onAssign={() => setShowSubscriptionModal(true)}
           onCancel={handleCancelSubscription}
         />
@@ -652,66 +648,21 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   );
 }
 
-function SubscriptionBox({ driver, tariffs, freeLimits, onAssign, onCancel }) {
-  const isDriver = driver.type === 'driver';
+function SubscriptionBox({ driver, tariffs, onAssign, onCancel }) {
   const subscription = driver.subscription;
   const currentTariff = tariffs.find((tariff) => tariff.id === subscription?.tariffId);
-  const harbingerFeature = currentTariff?.features?.createHarbinger;
-  const harbingerLimitText = harbingerFeature?.enabled
-    ? (harbingerFeature.limit === null || harbingerFeature.limit === undefined ? 'cheksiz' : `${harbingerFeature.limit} ta`)
-    : '0 ta';
-  const usedHarbingers = driver.harbingers?.length || 0;
-  const freeHarbingerLimit = freeLimits?.freeHarbingerCreateLimit ?? 0;
 
   return (
-    <div style={{ marginTop: 12, padding: 12, border: '1px solid #e6edf8', background: '#f8fbff', borderRadius: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Premium tarif:</div>
-          {subscription ? (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <strong>{subscription.tariffName || currentTariff?.name || 'Tarif'}</strong>
-                <span style={badge(subscription.isActive ? '#1ba353' : '#888')}>
-                  {subscription.isActive ? 'Faol' : 'Muddati tugagan'}
-                </span>
-              </div>
-              <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
-                Tugash vaqti: {subscription.expiresAt ? fmtDate(subscription.expiresAt) : 'muddatsiz'}
-              </div>
-              {isDriver && (
-                <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
-                  Xabarchi limiti: {usedHarbingers}/{harbingerLimitText}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <strong>Tarif biriktirilmagan</strong>
-              {isDriver ? (
-                <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
-                  Bepul holatda xabarchi limiti: {usedHarbingers}/{freeHarbingerLimit} ta
-                </div>
-              ) : (
-                <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
-                  Kerak bo'lsa, bu foydalanuvchiga tarifni shu yerdan biriktiring.
-                </div>
-              )}
-            </>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <button onClick={onAssign} style={smallBtnStyle}>
-            {subscription ? 'Tarifni almashtirish' : '+ Tarif berish'}
-          </button>
-          {subscription && (
-            <button onClick={onCancel} style={dangerBtnCompactStyle}>
-              Bekor qilish
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+    <TariffStatusCard
+      user={driver}
+      tariff={currentTariff}
+      admin
+      mobile={false}
+      maxFeatures={6}
+      onManage={onAssign}
+      onCancel={subscription ? onCancel : null}
+      style={{ marginTop: 12 }}
+    />
   );
 }
 

@@ -246,6 +246,12 @@ export default function AdminTariffsPage({ mobile = false }) {
         </button>
       </div>
 
+      <div style={ruleNoticeStyle}>
+        <strong>Ruxsat qoidasi:</strong> tarifdagi funksiya userga imkoniyat beradi, lekin Admin sozlamalaridagi
+        Funksiya ruxsatlari ham alohida yo&apos;l. Agar Funksiya ruxsatlarida &quot;Hammasi&quot; yoki user guruhi yoqilgan bo&apos;lsa,
+        user tarif sotib olmasa ham o&apos;sha funksiyadan foydalana oladi.
+      </div>
+
       {loading ? (
         <div style={cardStyle}>Yuklanmoqda...</div>
       ) : (
@@ -484,6 +490,17 @@ const cardStyle = {
   borderRadius: 8,
   padding: 16,
   boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+};
+
+const ruleNoticeStyle = {
+  background: '#fffbeb',
+  border: '1px solid #fde68a',
+  color: '#334155',
+  borderRadius: 8,
+  padding: '10px 12px',
+  fontSize: 13,
+  lineHeight: 1.5,
+  marginBottom: 16,
 };
 
 const freePlanStyle = {

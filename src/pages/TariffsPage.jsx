@@ -6,6 +6,7 @@ import {
   openSupportForPurchase,
 } from '../utils/premiumUpgrade';
 import { showError } from '../utils/toast';
+import TariffStatusCard from '../components/TariffStatusCard';
 
 function formatMoney(value) {
   return Number(value || 0).toLocaleString('ru-RU');
@@ -39,6 +40,7 @@ export default function TariffsPage({ mobile = false }) {
   const featureKey = searchParams.get('feature') || 'createHarbinger';
   const [tariffs, setTariffs] = useState([]);
   const [featureLimits, setFeatureLimits] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export default function TariffsPage({ mobile = false }) {
           setTariffs(tariffsRes.value.result || []);
         }
         if (meRes.status === 'fulfilled' && meRes.value?.code === 200) {
+          setCurrentUser(meRes.value.result || null);
           setFeatureLimits(meRes.value.result?.featureLimits || null);
         }
       } catch (e) {
@@ -86,10 +89,19 @@ export default function TariffsPage({ mobile = false }) {
             {FEATURE_LABELS[featureKey] || 'Premium imkoniyatlar'}
           </h1>
           <p style={{ margin: 0, color: '#536172', lineHeight: 1.55 }}>
-            Limit tugaganda ish to'xtab qolmasin. O'zingizga mos tarifni tanlang, sotib olish uchun supportga yozing.
+            Limit tugaganda ish to&apos;xtab qolmasin. O&apos;zingizga mos tarifni tanlang, sotib olish uchun supportga yozing.
           </p>
         </div>
-        {limit && (
+        {currentUser ? (
+          <TariffStatusCard
+            user={currentUser}
+            mobile={mobile}
+            compact
+            showFeatures={false}
+            onViewTariffs={null}
+            style={{ flex: '1 1 260px', maxWidth: mobile ? 'none' : 360 }}
+          />
+        ) : limit ? (
           <div style={limitBoxStyle}>
             <div style={{ color: '#64748b', fontSize: 13 }}>Hozirgi holat</div>
             <div style={{ fontWeight: 900, fontSize: 22 }}>
@@ -103,14 +115,14 @@ export default function TariffsPage({ mobile = false }) {
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </section>
 
       {loading ? (
         <div style={cardStyle}>Tariflar yuklanmoqda...</div>
       ) : sortedTariffs.length === 0 ? (
         <div style={cardStyle}>
-          <h3 style={{ marginTop: 0 }}>Tariflar hozircha ko'rinmayapti</h3>
+          <h3 style={{ marginTop: 0 }}>Tariflar hozircha ko&apos;rinmayapti</h3>
           <p style={{ color: '#555' }}>Supportga yozing, admin sizga mos tarifni ulab beradi.</p>
           <button className="btn btn-primary" onClick={() => openSupportForPurchase({ featureKey, reason })}>
             Supportga yozish

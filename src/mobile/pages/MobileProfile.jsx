@@ -10,6 +10,7 @@ import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import MobileLoading from '../components/MobileLoading';
 import { getDefaultMobilePath } from '../navigationConfig';
+import TariffStatusCard from '../../components/TariffStatusCard';
 
 const TABS = ['Ma\'lumot', 'Tahrirlash', 'Statistika'];
 
@@ -246,14 +247,15 @@ export default function MobileProfile() {
                 >
                   💰 Balansni to'ldirish
                 </button>
-                <button
-                  className="m-btn m-btn-secondary"
-                  onClick={() => navigate('/mobile/tariffs')}
-                  style={{ marginTop: 8 }}
-                >
-                  Premium tariflarni ko'rish
-                </button>
               </div>
+
+              <TariffStatusCard
+                user={user}
+                mobile
+                maxFeatures={4}
+                onViewTariffs={() => navigate('/mobile/tariffs')}
+                style={{ marginTop: 16 }}
+              />
 
               {/* Admin tools */}
               {user?.isAdmin && visibleAdminLinks.length > 0 && (

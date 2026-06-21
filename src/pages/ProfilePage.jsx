@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { updateUser, getInfo, getUserMe } from '../services/api';
 import { formatBalance, getBalanceColor } from '../utils/formatBalance';
 import { getTelegramSupportUrl } from '../config/config';
+import TariffStatusCard from '../components/TariffStatusCard';
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -247,6 +250,13 @@ export default function ProfilePage() {
             <div className="error-message">Ma'lumotlarni yuklab bo'lmadi</div>
           )}
         </div>
+
+        {userData && (
+          <TariffStatusCard
+            user={userData}
+            onViewTariffs={() => navigate('/tariffs?feature=createHarbinger')}
+          />
+        )}
 
         {/* Stats Card */}
         <div className="card">

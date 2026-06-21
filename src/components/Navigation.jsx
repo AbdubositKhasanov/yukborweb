@@ -17,6 +17,7 @@ const SECTION = {
   createHarbinger: 'createHarbinger',
   platformLoads: 'platformLoads',
   profile: 'profile',
+  admin: 'admin',
   adminUsers: 'adminUsers',
   adminDrivers: 'adminDrivers',
   adminCargoOwners: 'adminCargoOwners',
@@ -137,24 +138,9 @@ export default function Navigation({ isAuthenticated, onLogout }) {
       tabs = tabs.filter(tab => !tab.requireDispatcher);
     }
 
-    // Add admin tab for admins
+    // Admin pages live under one desktop tab; detailed sections are inside /admin.
     if (isAdmin) {
-      const adminSections = navigation?.adminSections;
-      const adminTabs = [
-        { path: '/admin/users', label: 'Foydalanuvchilar', auth: true, section: SECTION.adminUsers },
-        { path: '/admin/drivers', label: 'Haydovchilar', auth: true, section: SECTION.adminDrivers },
-        { path: '/admin/cargo-owners', label: 'Yuk egalari', auth: true, section: SECTION.adminCargoOwners },
-        { path: '/admin/tariffs', label: 'Tariflar', auth: true, section: SECTION.adminTariffs },
-        { path: '/admin/settings', label: 'Sozlamalar', auth: true, section: SECTION.adminSettings },
-        { path: '/admin/broadcasts', label: 'Broadcast', auth: true, section: SECTION.adminBroadcasts },
-        { path: '/admin/premium-orders', label: 'Premium yuklar', auth: true, section: SECTION.adminPremiumOrders },
-        { path: '/admin/userbots', label: 'Userbotlar', auth: true, section: SECTION.adminUserbots },
-      ].filter((tab) => {
-        if (!Array.isArray(adminSections)) return true;
-        return adminSections.includes(tab.section);
-      });
-
-      tabs = [...tabs, ...adminTabs];
+      tabs = [...tabs, { path: '/admin', label: 'Admin', auth: true, section: SECTION.admin }];
     }
 
     return tabs;
@@ -207,7 +193,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
             state={PRIMARY_NAV_STATE}
           >
             <button 
-              className={`nav-button ${location.pathname === tab.path ? 'active' : ''}`}
+              className={`nav-button ${isTabActive(location.pathname, tab.path) ? 'active' : ''}`}
             >
               {tab.label}
             </button>
@@ -238,4 +224,9 @@ export default function Navigation({ isAuthenticated, onLogout }) {
       </div>
     </nav>
   );
+}
+
+function isTabActive(currentPath, tabPath) {
+  if (currentPath === tabPath) return true;
+  return tabPath === '/admin' && currentPath.startsWith('/admin/');
 }

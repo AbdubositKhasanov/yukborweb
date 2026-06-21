@@ -827,6 +827,8 @@ export const adminListDrivers = async (params = {}, signal) => {
   if (params.name) queryParams.name = params.name;
   if (params.onlyMine) queryParams.onlyMine = 'true';
   if (params.role) queryParams.role = params.role;
+  if (params.subscriptionFilter && params.subscriptionFilter !== 'all') queryParams.subscriptionFilter = params.subscriptionFilter;
+  if (params.tariffId) queryParams.tariffId = params.tariffId;
   if (params.page !== undefined) queryParams.page = params.page;
   if (params.size !== undefined) queryParams.size = params.size;
   const response = await apiClient.get('/admin/drivers', { params: queryParams, signal });
@@ -840,6 +842,8 @@ export const adminListUsers = async (params = {}, signal) => {
   if (params.name) queryParams.name = params.name;
   if (params.onlyMine) queryParams.onlyMine = 'true';
   queryParams.role = params.role || 'any';
+  if (params.subscriptionFilter && params.subscriptionFilter !== 'all') queryParams.subscriptionFilter = params.subscriptionFilter;
+  if (params.tariffId) queryParams.tariffId = params.tariffId;
   if (params.page !== undefined) queryParams.page = params.page;
   if (params.size !== undefined) queryParams.size = params.size;
   const response = await apiClient.get('/admin/users', { params: queryParams, signal });

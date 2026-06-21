@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { StaticDataProvider } from './context/StaticDataContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -8,6 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PremiumUpgradeListener from './components/PremiumUpgradeListener';
 import { PageSkeleton } from './components/LoadingSkeleton';
 import { trackPageView, trackLogout } from './services/analytics';
+import { getUserMe } from './services/api';
 
 // Lazy load Mobile App (isolated module)
 const MobileApp = lazy(() => import('./mobile/MobileApp'));
@@ -26,6 +27,7 @@ const MyDriversPage = lazy(() => import('./pages/MyDriversPage'));
 const DriverStatusPage = lazy(() => import('./pages/DriverStatusPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const PlatformLoadsPage = lazy(() => import('./pages/PlatformLoadsPage'));
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const UserbotManagementPage = lazy(() => import('./pages/UserbotManagementPage'));
 const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
 const AdminDriverDetailPage = lazy(() => import('./pages/AdminDriverDetailPage'));
@@ -34,6 +36,41 @@ const AdminSettingsPage = lazy(() => import('./pages/AdminSettingsPage'));
 const AdminBroadcastsPage = lazy(() => import('./pages/AdminBroadcastsPage'));
 const AdminPremiumOrdersPage = lazy(() => import('./pages/AdminPremiumOrdersPage'));
 const TariffsPage = lazy(() => import('./pages/TariffsPage'));
+
+function AdminRoute({ children, isAuthenticated }) {
+  const [checking, setChecking] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const checkAdmin = async () => {
+      if (!isAuthenticated) {
+        setChecking(false);
+        return;
+      }
+      try {
+        const response = await getUserMe();
+        if (!cancelled) {
+          setIsAdmin(response.code === 200 && response.result?.isAdmin === true);
+        }
+      } catch (e) {
+        if (!cancelled) setIsAdmin(false);
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    };
+
+    checkAdmin();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (checking) return <PageSkeleton />;
+  if (!isAdmin) return <Navigate to="/" replace />;
+  return children;
+}
 
 function AppContent() {
   const [authToken, setAuthToken] = useState(null);
@@ -184,91 +221,99 @@ function AppContent() {
             }
           />
           <Route
+            path="/admin"
+            element={
+              <AdminRoute isAuthenticated={isAuthenticated}>
+                <AdminDashboardPage />
+              </AdminRoute>
+            }
+          />
+          <Route
             path="/admin/userbots"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminRoute isAuthenticated={isAuthenticated}>
                 <UserbotManagementPage />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/admin/tariffs"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminTariffsPage />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/admin/settings"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminSettingsPage />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/admin/broadcasts"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminBroadcastsPage />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/admin/premium-orders"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminPremiumOrdersPage />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/admin/drivers"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminDriversPage defaultRole="driver" />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/admin/drivers/:id"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminDriverDetailPage />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/admin/cargo-owners"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminDriversPage defaultRole="factory" />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/admin/cargo-owners/:id"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminDriverDetailPage />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/admin/users"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminDriversPage defaultRole="any" />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route
             path="/admin/users/:id"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminDriverDetailPage />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
         </Routes>
