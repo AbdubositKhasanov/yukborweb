@@ -7,15 +7,19 @@
  * - Bosh sahifada: BackButton yashiriladi (back bosish app ni yopadi — to'g'ri)
  * - Ichki sahifalarda: BackButton ko'rsatiladi, bosilganda navigate(-1)
  */
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getMobileTabs } from '../navigationConfig';
 
-// Bosh sahifalar — bu sahifalarda back button ko'rsatilmaydi
-const ROOT_PATHS = ['/mobile', '/mobile/', '/mobile/yuklar', '/mobile/status', '/mobile/orders'];
+const STATIC_ROOT_PATHS = ['/mobile', '/mobile/'];
 
-export default function useTelegramBackButton() {
+export default function useTelegramBackButton(userRole = 'logist', navigation = null) {
   const location = useLocation();
   const navigate = useNavigate();
+  const rootPaths = useMemo(() => {
+    const tabPaths = getMobileTabs(userRole, navigation).map((tab) => tab.path);
+    return new Set([...STATIC_ROOT_PATHS, ...tabPaths]);
+  }, [userRole, navigation]);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -24,7 +28,7 @@ export default function useTelegramBackButton() {
     const backButton = tg.BackButton;
     if (!backButton) return;
 
-    const isRootPage = ROOT_PATHS.includes(location.pathname);
+    const isRootPage = rootPaths.has(location.pathname);
 
     if (isRootPage) {
       // Bosh sahifada back tugmasini yashirish
@@ -43,5 +47,5 @@ export default function useTelegramBackButton() {
         backButton.offClick(handleBack);
       };
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, rootPaths]);
 }

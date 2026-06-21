@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyOrders, deleteOrder, getUserMe } from '../services/api';
+import {
+  getMyOrders,
+  deleteOrder,
+  getUserMe,
+  getLocationsAndVehicles,
+  getCargoOwnerNeedProfile,
+  updateCargoOwnerNeedProfile,
+} from '../services/api';
 import PhoneShowModal from '../components/PhoneShowModal.jsx';
 import ClubMembershipModal from '../components/ClubMembershipModal';
 import BroadcastModal from '../components/BroadcastModal';
+import CargoOwnerNeedProfileCard, { buildCargoOwnerNeedTransportState } from '../components/CargoOwnerNeedProfileCard';
 import { getOrderStatusText, getOrderStatusClass, hasAppointedDriver } from '../utils/orderStatus';
 import { formatTimeAgo } from '../utils/formatTime';
+import { showError, showSuccess } from '../utils/toast';
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
@@ -20,22 +29,63 @@ export default function MyOrdersPage() {
   const [showClubModal, setShowClubModal] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastOrder, setBroadcastOrder] = useState(null);
+  const [staticData, setStaticData] = useState(null);
+  const [needProfile, setNeedProfile] = useState(null);
+  const [savingNeedProfile, setSavingNeedProfile] = useState(false);
 
   useEffect(() => {
     loadOrders();
     loadUserData();
+    loadNeedProfile();
   }, []);
 
   const loadUserData = async () => {
     try {
-      const response = await getUserMe();
+      const [response, staticResponse] = await Promise.all([
+        getUserMe(),
+        getLocationsAndVehicles(),
+      ]);
       if (response.code === 200 && response.result) {
         setIsInternalDispatcher(response.result.isInternalDispatcher === true);
         setPermissions(response.result.permissions || null);
       }
+      if (staticResponse.code === 200) setStaticData(staticResponse.result);
     } catch (err) {
       console.error('Failed to load user data:', err);
     }
+  };
+
+  const loadNeedProfile = async () => {
+    try {
+      const response = await getCargoOwnerNeedProfile();
+      if (response.code === 200) setNeedProfile(response.result);
+    } catch (err) {
+      console.error('Failed to load cargo owner need profile:', err);
+    }
+  };
+
+  const handleSaveNeedProfile = async (payload) => {
+    setSavingNeedProfile(true);
+    try {
+      const response = await updateCargoOwnerNeedProfile(payload);
+      if (response.code === 200) {
+        setNeedProfile(response.result);
+        showSuccess('Yukchi ehtiyoji saqlandi');
+      } else {
+        showError(response.message || 'Ehtiyoj saqlanmadi');
+      }
+    } catch (err) {
+      showError(err.response?.data?.message || err.message || 'Ehtiyoj saqlanmadi');
+    } finally {
+      setSavingNeedProfile(false);
+    }
+  };
+
+  const handleFindTransportFromNeed = () => {
+    if (!needProfile) return;
+    navigate('/transports', {
+      state: buildCargoOwnerNeedTransportState(needProfile, staticData),
+    });
   };
 
   const loadOrders = useCallback(async () => {
@@ -181,6 +231,14 @@ export default function MyOrdersPage() {
         </button>
       </div>
 
+      <CargoOwnerNeedProfileCard
+        profile={needProfile}
+        staticData={staticData}
+        saving={savingNeedProfile}
+        onSave={handleSaveNeedProfile}
+        onFindTransports={handleFindTransportFromNeed}
+      />
+
       {orders.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
           <div style={{ fontSize: '48px', marginBottom: '20px' }}>📦</div>
@@ -202,6 +260,7 @@ export default function MyOrdersPage() {
           </button>
         </div>
       ) : (
+        <>
         <div className="grid">
           {orders.map(order => (
             <div key={order.id} className="card">
@@ -327,6 +386,7 @@ export default function MyOrdersPage() {
             </div>
           ))}
         </div>
+        </>
       )}
 
       {showPremiumModal && (

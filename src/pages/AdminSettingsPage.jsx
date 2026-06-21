@@ -27,7 +27,13 @@ const emptyForms = {
     onboardingMiniAppUrl: '',
   },
   groupAnnouncer: { enabled: true, intervalMinutes: 30, pinTimes: '10:00, 16:00' },
-  automation: { orderOwnerStatusPromptEnabled: false },
+  automation: {
+    orderOwnerStatusPromptEnabled: false,
+    cargoOwnerNeedReminderEnabled: true,
+    cargoOwnerNeedReminderLeadMinutes: 60,
+    cargoOwnerNeedReminderCheckIntervalMinutes: 5,
+    cargoOwnerNeedReminderDailyLimit: 6,
+  },
   navigation: {
     driver: [],
     logist: [],
@@ -128,6 +134,10 @@ export default function AdminSettingsPage({ mobile = false }) {
       },
       automation: {
         orderOwnerStatusPromptEnabled: data.automation?.orderOwnerStatusPromptEnabled === true,
+        cargoOwnerNeedReminderEnabled: data.automation?.cargoOwnerNeedReminder?.enabled !== false,
+        cargoOwnerNeedReminderLeadMinutes: data.automation?.cargoOwnerNeedReminder?.leadMinutes ?? 60,
+        cargoOwnerNeedReminderCheckIntervalMinutes: data.automation?.cargoOwnerNeedReminder?.checkIntervalMinutes ?? 5,
+        cargoOwnerNeedReminderDailyLimit: data.automation?.cargoOwnerNeedReminder?.dailyLimit ?? 6,
       },
       navigation: {
         driver: normalizeNavigationList(data.navigation?.driver),
@@ -325,6 +335,12 @@ export default function AdminSettingsPage({ mobile = false }) {
     savePatch('automation', {
       automation: {
         orderOwnerStatusPromptEnabled: forms.automation.orderOwnerStatusPromptEnabled === true,
+        cargoOwnerNeedReminder: {
+          enabled: forms.automation.cargoOwnerNeedReminderEnabled === true,
+          leadMinutes: Math.max(1, Math.min(1440, toNumber(forms.automation.cargoOwnerNeedReminderLeadMinutes, 60))),
+          checkIntervalMinutes: Math.max(1, Math.min(1440, toNumber(forms.automation.cargoOwnerNeedReminderCheckIntervalMinutes, 5))),
+          dailyLimit: Math.max(1, Math.min(100, toNumber(forms.automation.cargoOwnerNeedReminderDailyLimit, 6))),
+        },
       },
     }, 'Avtomatsiya sozlamalari saqlandi');
   };
@@ -726,7 +742,7 @@ export default function AdminSettingsPage({ mobile = false }) {
 
           <section style={cardStyle}>
             <h3 style={sectionTitleStyle}>Avtomatsiya</h3>
-            <p style={hintStyle}>Yuk egasidan yuk holatini eslatma orqali so'rash oqimi.</p>
+            <p style={hintStyle}>Yuk egasidan yuk holatini so'rash va yukchi ehtiyojlari bo'yicha oldindan eslatmalar.</p>
             <label style={switchLabelStyle}>
               <input
                 type="checkbox"
@@ -735,6 +751,55 @@ export default function AdminSettingsPage({ mobile = false }) {
               />
               Order holatini har soatda so'rash
             </label>
+            <div style={{ ...navigationBlockStyle, marginTop: 12 }}>
+              <strong>Yukchi ehtiyoji eslatmalari</strong>
+              <p style={hintStyle}>
+                Yukchi o'zi belgilagan vaqtlaridan oldin Telegram orqali ogohlantiriladi. User profilida alohida yoqilgan bo'lishi kerak.
+              </p>
+              <div style={formGridStyle}>
+                <label style={switchLabelStyle}>
+                  <input
+                    type="checkbox"
+                    checked={forms.automation.cargoOwnerNeedReminderEnabled}
+                    onChange={(e) => updateForm('automation', { cargoOwnerNeedReminderEnabled: e.target.checked })}
+                  />
+                  Eslatmalar global yoqilgan
+                </label>
+                <label style={labelStyle}>
+                  Default oldindan ogohlantirish (daqiqa)
+                  <input
+                    type="number"
+                    min="1"
+                    max="1440"
+                    value={forms.automation.cargoOwnerNeedReminderLeadMinutes}
+                    onChange={(e) => updateForm('automation', { cargoOwnerNeedReminderLeadMinutes: e.target.value })}
+                    style={inputStyle}
+                  />
+                </label>
+                <label style={labelStyle}>
+                  Worker tekshirish intervali (daqiqa)
+                  <input
+                    type="number"
+                    min="1"
+                    max="1440"
+                    value={forms.automation.cargoOwnerNeedReminderCheckIntervalMinutes}
+                    onChange={(e) => updateForm('automation', { cargoOwnerNeedReminderCheckIntervalMinutes: e.target.value })}
+                    style={inputStyle}
+                  />
+                </label>
+                <label style={labelStyle}>
+                  Bir userga kunlik maksimal eslatma
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={forms.automation.cargoOwnerNeedReminderDailyLimit}
+                    onChange={(e) => updateForm('automation', { cargoOwnerNeedReminderDailyLimit: e.target.value })}
+                    style={inputStyle}
+                  />
+                </label>
+              </div>
+            </div>
             <button
               type="button"
               style={{ ...primaryBtnStyle, marginTop: 12 }}

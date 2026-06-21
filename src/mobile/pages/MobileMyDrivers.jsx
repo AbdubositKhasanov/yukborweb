@@ -76,7 +76,6 @@ export default function MobileMyDrivers() {
 
   const handleDriverClick = (driver) => {
     if ((driver.type || 'driver') !== 'driver') return;
-    if (!driver.isRegistered && !driver.chatId) return;
     navigate(`/mobile/driver/${driver.chatId || driver.id || driver._id}`);
   };
 
@@ -117,10 +116,10 @@ export default function MobileMyDrivers() {
 
   // Get status display
   const getStatusDisplay = (driver) => {
-    if (!driver.isRegistered && !driver.chatId) {
+    if (!hasTransport(driver) && !driver.isRegistered && !driver.chatId) {
       return { dot: 'offline', label: 'Ro\'yxatdan o\'tmagan' };
     }
-    const isOnline = driver.isActive || driver.is_active;
+    const isOnline = driver.driverCurrentStatus === true || driver.isActive || driver.is_active;
     const isBusy = driver.isBusy || driver.is_busy;
 
     if (isBusy) {
@@ -135,7 +134,6 @@ export default function MobileMyDrivers() {
   // Transport handlers
   const handleOpenTransportSheet = (e, driver, mode) => {
     e.stopPropagation();
-    if (!driver.isRegistered && !driver.chatId) return;
     const transportForm = driver.driverTransportForm;
 
     if (mode === 'edit' && transportForm) {
@@ -190,7 +188,7 @@ export default function MobileMyDrivers() {
       };
 
       let response;
-      const driverId = driver.chatId || driver.id;
+      const driverId = driver.chatId || driver.id || driver._id;
       if (transportSheet.mode === 'edit' && driver.driverTransportForm?.id) {
         response = await updateCounterpartyTransportForm(driver.driverTransportForm.id, driverId, payload);
       } else {
@@ -213,7 +211,7 @@ export default function MobileMyDrivers() {
   // Check if driver has transport
   const hasTransport = (driver) => {
     const tf = driver.driverTransportForm;
-    return tf && (tf.loc1 || tf.vehicleType || tf.maxWeight);
+    return tf && (tf.loc1 || tf.vehicleType || tf.maxWeight || tf.stateNumber || tf.additionalPhone);
   };
 
   const openAddSheet = (role = activeRole) => {
@@ -304,14 +302,13 @@ export default function MobileMyDrivers() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
                     {isDriver && (
-                    <button
-                      className={`m-btn ${driverHasTransport ? 'm-btn-secondary' : 'm-btn-primary'}`}
-                      onClick={(e) => handleOpenTransportSheet(e, driver, driverHasTransport ? 'edit' : 'create')}
-                      disabled={!isRegistered}
-                      style={{ padding: '4px 10px', fontSize: 12, minHeight: 28, opacity: isRegistered ? 1 : 0.55 }}
-                    >
-                      {driverHasTransport ? '✎' : '+ 🚚'}
-                    </button>
+                      <button
+                        className={`m-btn ${driverHasTransport ? 'm-btn-secondary' : 'm-btn-primary'}`}
+                        onClick={(e) => handleOpenTransportSheet(e, driver, driverHasTransport ? 'edit' : 'create')}
+                        style={{ padding: '4px 10px', fontSize: 12, minHeight: 28 }}
+                      >
+                        {driverHasTransport ? '✎' : '+ 🚚'}
+                      </button>
                     )}
                     <span className="m-list-item-arrow">→</span>
                   </div>

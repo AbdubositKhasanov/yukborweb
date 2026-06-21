@@ -3,11 +3,14 @@
  * Fixed 5 tabs, role-aware functionality
  */
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { getMobileTabs } from '../navigationConfig';
+import { PRIMARY_NAV_STATE, shouldReplacePrimaryNav } from '../../utils/navigationHistory';
 
 export default function BottomNav({ activeTab, userRole = 'logist', navigation = null }) {
+  const location = useLocation();
   const tabs = getMobileTabs(userRole, navigation);
+  const tabPaths = tabs.map((tab) => tab.path);
 
   if (tabs.length === 0) return null;
 
@@ -17,6 +20,8 @@ export default function BottomNav({ activeTab, userRole = 'logist', navigation =
         <Link
           key={tab.id}
           to={tab.path}
+          replace={shouldReplacePrimaryNav(location, tab.path, tabPaths)}
+          state={PRIMARY_NAV_STATE}
           className={`m-bottomnav-item ${activeTab === tab.id ? 'active' : ''}`}
         >
           <span className="m-bottomnav-icon">{tab.icon}</span>

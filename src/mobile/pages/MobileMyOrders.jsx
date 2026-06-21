@@ -7,7 +7,16 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyOrders, deleteOrder, getUserMe, broadcastMessage as sendBroadcast, getBroadcastStatus } from '../../services/api';
+import {
+  getMyOrders,
+  deleteOrder,
+  getUserMe,
+  broadcastMessage as sendBroadcast,
+  getBroadcastStatus,
+  getCargoOwnerNeedProfile,
+  updateCargoOwnerNeedProfile,
+} from '../../services/api';
+import { useStaticData } from '../../context/StaticDataContext';
 import { formatTimeAgo } from '../../utils/formatTime';
 import { getOrderStatusText, getOrderStatusClass, hasAppointedDriver } from '../../utils/orderStatus';
 import TopBar from '../components/TopBar';
@@ -15,9 +24,11 @@ import BottomSheet from '../components/BottomSheet';
 import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
 import PullToRefresh from '../components/PullToRefresh';
 import { buildCompactOrderMessage, formatOrderPrice } from '../../utils/orderText';
+import CargoOwnerNeedProfileCard, { buildCargoOwnerNeedTransportState } from '../../components/CargoOwnerNeedProfileCard';
 
 export default function MobileMyOrders() {
   const navigate = useNavigate();
+  const { staticData } = useStaticData();
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,10 +47,14 @@ export default function MobileMyOrders() {
   const [broadcastId, setBroadcastId] = useState(null);
   const [broadcastStatus, setBroadcastStatus] = useState(null);
   const [broadcastError, setBroadcastError] = useState('');
+  const [needProfile, setNeedProfile] = useState(null);
+  const [needSheetOpen, setNeedSheetOpen] = useState(false);
+  const [savingNeedProfile, setSavingNeedProfile] = useState(false);
 
   // Load user data - matches Desktop
   useEffect(() => {
     loadUserData();
+    loadNeedProfile();
   }, []);
 
   const loadUserData = async () => {
@@ -52,6 +67,39 @@ export default function MobileMyOrders() {
     } catch (err) {
       console.error('Failed to load user data:', err);
     }
+  };
+
+  const loadNeedProfile = async () => {
+    try {
+      const response = await getCargoOwnerNeedProfile();
+      if (response.code === 200) setNeedProfile(response.result);
+    } catch (err) {
+      console.error('Failed to load need profile:', err);
+    }
+  };
+
+  const handleSaveNeedProfile = async (payload) => {
+    try {
+      setSavingNeedProfile(true);
+      const response = await updateCargoOwnerNeedProfile(payload);
+      if (response.code === 200) {
+        setNeedProfile(response.result);
+        setNeedSheetOpen(false);
+      } else {
+        window.alert(response.message || 'Ehtiyoj saqlanmadi');
+      }
+    } catch (err) {
+      window.alert(err.response?.data?.message || err.message || 'Ehtiyoj saqlanmadi');
+    } finally {
+      setSavingNeedProfile(false);
+    }
+  };
+
+  const handleFindTransportFromNeed = () => {
+    if (!needProfile) return;
+    navigate('/mobile/transports', {
+      state: buildCargoOwnerNeedTransportState(needProfile, staticData, true),
+    });
   };
 
   const loadOrders = useCallback(async (isRefresh = false) => {
@@ -250,6 +298,45 @@ export default function MobileMyOrders() {
           >
             + Yuk qo'shish
           </button>
+        </div>
+
+        <div style={{ padding: 12, background: 'var(--m-card-bg)', borderBottom: '1px solid var(--m-border)' }}>
+          <div className="m-card" style={{ margin: 0, padding: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontWeight: 800, color: 'var(--m-text)', marginBottom: 4 }}>
+                  Yukchi ehtiyoji
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--m-text-secondary)', lineHeight: 1.4 }}>
+                  {needProfile?.title || 'Kunlik yuk va kerakli mashina vaqtlarini sozlang'}
+                </div>
+                {needProfile?.requiredTimes?.length > 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--m-text-muted)', marginTop: 6 }}>
+                    {needProfile.requiredTimes.join(', ')} · {needProfile.cargoCountPerDay || 1} ta yuk/kun
+                  </div>
+                )}
+              </div>
+              <span style={{
+                borderRadius: 999,
+                padding: '5px 8px',
+                fontSize: 11,
+                fontWeight: 800,
+                color: needProfile?.enabled === false ? '#64748b' : '#166534',
+                background: needProfile?.enabled === false ? '#f1f5f9' : '#dcfce7',
+                whiteSpace: 'nowrap',
+              }}>
+                {needProfile?.enabled === false ? "O'chirilgan" : 'Faol'}
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+              <button className="m-btn m-btn-secondary" onClick={() => setNeedSheetOpen(true)}>
+                Sozlash
+              </button>
+              <button className="m-btn m-btn-primary" onClick={handleFindTransportFromNeed}>
+                Mashina topish
+              </button>
+            </div>
+          </div>
         </div>
 
         <PullToRefresh onRefresh={() => loadOrders(true)} disabled={loading}>
@@ -498,6 +585,21 @@ export default function MobileMyOrders() {
             </div>
           )}
         </div>
+      </BottomSheet>
+
+      <BottomSheet
+        isOpen={needSheetOpen}
+        onClose={() => setNeedSheetOpen(false)}
+        title="Yukchi ehtiyoji"
+      >
+        <CargoOwnerNeedProfileCard
+          profile={needProfile}
+          staticData={staticData}
+          compact
+          saving={savingNeedProfile}
+          onSave={handleSaveNeedProfile}
+          onFindTransports={handleFindTransportFromNeed}
+        />
       </BottomSheet>
     </>
   );

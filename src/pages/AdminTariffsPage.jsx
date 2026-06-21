@@ -27,6 +27,12 @@ function money(value) {
   return Number(value || 0).toLocaleString('ru-RU');
 }
 
+function isTariffActive(tariff) {
+  if (tariff?.isActive === true || tariff?.active === true) return true;
+  if (tariff?.isActive === false || tariff?.active === false) return false;
+  return true;
+}
+
 function toForm(tariff) {
   if (!tariff) return emptyForm;
   const features = {};
@@ -44,7 +50,7 @@ function toForm(tariff) {
     priceUzs: tariff.priceUzs ?? '',
     currency: tariff.currency || 'UZS',
     durationDays: tariff.durationDays ?? '',
-    isActive: tariff.isActive !== false,
+    isActive: isTariffActive(tariff),
     sortOrder: tariff.sortOrder || 0,
     features,
   };
@@ -298,13 +304,14 @@ export default function AdminTariffsPage({ mobile = false }) {
               <div style={{ display: 'grid', gap: 10 }}>
                 {sortedTariffs.map((tariff) => {
                   const harbinger = tariff.features?.createHarbinger;
+                  const active = isTariffActive(tariff);
                   return (
                     <div key={tariff.id} style={tariffRowStyle}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <strong>{tariff.name}</strong>
-                          <span style={badge(tariff.isActive ? '#1ba353' : '#888')}>
-                            {tariff.isActive ? 'Faol' : "O'chirilgan"}
+                          <span style={badge(active ? '#1ba353' : '#888')}>
+                            {active ? 'Faol' : "O'chirilgan"}
                           </span>
                         </div>
                         <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>

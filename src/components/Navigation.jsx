@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getUserMe } from '../services/api';
+import { PRIMARY_NAV_STATE, shouldReplacePrimaryNav } from '../utils/navigationHistory';
 
 const SECTION = {
   search: 'search',
@@ -83,7 +84,6 @@ export default function Navigation({ isAuthenticated, onLogout }) {
   const [permissions, setPermissions] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [navigation, setNavigation] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -99,11 +99,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
           }
         } catch (error) {
           console.error('Failed to fetch user role:', error);
-        } finally {
-          setLoading(false);
         }
-      } else {
-        setLoading(false);
       }
     };
 
@@ -165,6 +161,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
   };
 
   const tabs = getTabs();
+  const tabPaths = tabs.map((tab) => tab.path);
 
   return (
     <nav className="navbar">
@@ -203,7 +200,12 @@ export default function Navigation({ isAuthenticated, onLogout }) {
       
       <div className="navbar-menu">
         {tabs.map((tab) => (
-          <Link key={tab.path} to={tab.path}>
+          <Link
+            key={tab.path}
+            to={tab.path}
+            replace={shouldReplacePrimaryNav(location, tab.path, tabPaths)}
+            state={PRIMARY_NAV_STATE}
+          >
             <button 
               className={`nav-button ${location.pathname === tab.path ? 'active' : ''}`}
             >

@@ -580,6 +580,24 @@ export const getSuitableTransports = async (filters = {}) => {
 };
 
 // ============================================
+// CARGO OWNER NEED PROFILE
+// ============================================
+
+export const getCargoOwnerNeedProfile = async () => {
+  return cachedGet('/cargo-owner/need-profile', {}, { skipCache: true });
+};
+
+export const updateCargoOwnerNeedProfile = async (payload) => {
+  const response = await apiClient.put('/cargo-owner/need-profile', payload);
+  apiCache.invalidate('cargo-owner');
+  return response.data;
+};
+
+export const getCargoOwnerNeedProfileTransports = async (page = 0) => {
+  return cachedGet('/cargo-owner/need-profile/suitable-transports', { page }, { skipCache: true });
+};
+
+// ============================================
 // MY INVITED DRIVERS (for logist role)
 // ============================================
 
@@ -601,7 +619,7 @@ export const addInvitedUser = async (payload) => {
 
 /**
  * Update counterparty driver status (activate/deactivate)
- * @param {number} driverId - Driver chat ID
+ * @param {number|string} driverId - Driver chat ID or pending user ID
  * @param {boolean} status - true = activate, false = deactivate
  */
 export const updateCounterpartyDriverStatus = async (driverId, status) => {
@@ -617,7 +635,7 @@ export const updateCounterpartyDriverStatus = async (driverId, status) => {
 
 /**
  * Create transport for counterparty driver
- * @param {number} driverId - Driver chat ID
+ * @param {number|string} driverId - Driver chat ID or pending user ID
  * @param {object} transportData - Transport data
  */
 export const createCounterpartyTransport = async (driverId, transportData) => {
@@ -631,7 +649,7 @@ export const createCounterpartyTransport = async (driverId, transportData) => {
 /**
  * Update counterparty's transport
  * @param {string} id - Transport ID
- * @param {number} driverId - Driver chat ID
+ * @param {number|string} driverId - Driver chat ID or pending user ID
  * @param {object} transportData - Transport data
  */
 export const updateCounterpartyTransport = async (id, driverId, transportData) => {
@@ -645,7 +663,7 @@ export const updateCounterpartyTransport = async (id, driverId, transportData) =
 /**
  * Update counterparty's transport form
  * @param {string} id - Transport form ID
- * @param {number} driverId - Driver chat ID
+ * @param {number|string} driverId - Driver chat ID or pending user ID
  * @param {object} transportData - Transport data
  */
 export const updateCounterpartyTransportForm = async (id, driverId, transportData) => {
@@ -861,6 +879,16 @@ export const adminCreateTransportForDriver = async (driverId, transport) => {
 export const adminCreateOrderForOwner = async (userId, order) => {
   const response = await apiClient.post(`/admin/users/${userId}/orders`, order);
   apiCache.invalidate('orders');
+  return response.data;
+};
+
+export const adminGetCargoOwnerNeedProfile = async (userId) => {
+  const response = await apiClient.get(`/admin/users/${userId}/cargo-owner-need-profile`);
+  return response.data;
+};
+
+export const adminUpdateCargoOwnerNeedProfile = async (userId, payload) => {
+  const response = await apiClient.put(`/admin/users/${userId}/cargo-owner-need-profile`, payload);
   return response.data;
 };
 

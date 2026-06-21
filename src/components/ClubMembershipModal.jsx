@@ -10,6 +10,12 @@ function formatMoney(value) {
   return Number(value || 0).toLocaleString('ru-RU');
 }
 
+function isTariffActive(tariff) {
+  if (tariff?.isActive === true || tariff?.active === true) return true;
+  if (tariff?.isActive === false || tariff?.active === false) return false;
+  return true;
+}
+
 function featureSummary(tariff, featureKey) {
   const feature = tariff?.features?.[featureKey];
   if (!feature?.enabled) return null;
@@ -53,7 +59,7 @@ export default function ClubMembershipModal({
   }, [isOpen]);
 
   const matchingTariffs = useMemo(() => {
-    const active = tariffs.filter((tariff) => tariff.isActive !== false);
+    const active = tariffs.filter(isTariffActive);
     const matched = active.filter((tariff) => tariff.features?.[featureKey]?.enabled === true);
     return matched.length > 0 ? matched : active;
   }, [tariffs, featureKey]);

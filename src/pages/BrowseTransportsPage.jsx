@@ -8,8 +8,10 @@ export default function BrowseTransportsPage() {
   const location = useLocation();
   const orderData = location.state || {};
   const fromOrder = orderData.fromOrder || false;
+  const fromNeedProfile = orderData.fromNeedProfile || false;
   const orderId = orderData.orderId || null;
   const orderInfo = orderData.orderInfo || null;
+  const needInfo = orderData.needInfo || null;
   const initialFilters = orderData.filters || {};
 
   const [transports, setTransports] = useState([]);
@@ -24,7 +26,7 @@ export default function BrowseTransportsPage() {
   const [fromRegion, setFromRegion] = useState(initialFilters.fromRegion?.toString() || '');
   const [fromCity, setFromCity] = useState(initialFilters.fromCity?.toString() || '');
   const [vehicleType, setVehicleType] = useState(initialFilters.vehicleType || '');
-  const [maxWeight, setMaxWeight] = useState('');
+  const [maxWeight, setMaxWeight] = useState(initialFilters.maxWeight?.toString() || '');
 
   useEffect(() => {
     loadStaticData();
@@ -178,6 +180,48 @@ export default function BrowseTransportsPage() {
           </div>
           <p style={{ margin: '10px 0 0', fontSize: '13px', fontStyle: 'italic' }}>
             Filter'lar yukingiz ma'lumotlariga asosan to'ldirildi. O'zgartirishingiz mumkin.
+          </p>
+        </div>
+      )}
+
+      {fromNeedProfile && needInfo && (
+        <div style={{
+          padding: '15px',
+          backgroundColor: '#ecfdf5',
+          border: '1px solid #bbf7d0',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          color: '#14532d'
+        }}>
+          <strong style={{ fontSize: '16px' }}>
+            Yukchi ehtiyoji bo'yicha mashina qidirilmoqda
+          </strong>
+          <div style={{
+            fontSize: '14px',
+            padding: '10px',
+            backgroundColor: 'rgba(255,255,255,0.65)',
+            borderRadius: '4px',
+            marginTop: '8px'
+          }}>
+            <p style={{ margin: '4px 0' }}>
+              <strong>Profil:</strong> {needInfo.title || 'Yukchi ehtiyoji'}
+            </p>
+            <p style={{ margin: '4px 0' }}>
+              <strong>Kunlik reja:</strong> {needInfo.cargoCountPerDay || 1} ta yuk
+            </p>
+            {needInfo.vehicleType && (
+              <p style={{ margin: '4px 0' }}>
+                <strong>Mashina:</strong> {needInfo.vehicleType}
+              </p>
+            )}
+            {needInfo.maxWeight && (
+              <p style={{ margin: '4px 0' }}>
+                <strong>Sig'im:</strong> {needInfo.maxWeight} t
+              </p>
+            )}
+          </div>
+          <p style={{ margin: '10px 0 0', fontSize: '13px', fontStyle: 'italic' }}>
+            Filterlar yukchi ehtiyojidan to'ldirildi. Kerak bo'lsa o'zgartiring.
           </p>
         </div>
       )}

@@ -14,11 +14,14 @@ import {
   adminListTariffs,
   adminAssignUserTariff,
   adminCancelUserTariff,
+  adminGetCargoOwnerNeedProfile,
+  adminUpdateCargoOwnerNeedProfile,
   deleteOrder,
   getLocationsAndVehicles,
   getUserMe,
 } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
+import CargoOwnerNeedProfileCard from '../components/CargoOwnerNeedProfileCard';
 
 const ROLE_OPTIONS = [
   { value: 'driver', label: 'Haydovchi' },
@@ -101,6 +104,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   const [tariffs, setTariffs] = useState([]);
   const [freeLimits, setFreeLimits] = useState(null);
   const [staticData, setStaticData] = useState(null);
+  const [needProfile, setNeedProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -111,6 +115,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [savingRole, setSavingRole] = useState(false);
+  const [savingNeedProfile, setSavingNeedProfile] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -136,6 +141,16 @@ export default function AdminDriverDetailPage({ mobile = false }) {
         adminGetTariffFreeLimits(),
       ]);
       if (d.code === 200) setDriver(d.result);
+      if (d.code === 200 && d.result?.type === 'factory') {
+        try {
+          const profileResponse = await adminGetCargoOwnerNeedProfile(id);
+          if (profileResponse.code === 200) setNeedProfile(profileResponse.result);
+        } catch (_) {
+          setNeedProfile(null);
+        }
+      } else {
+        setNeedProfile(null);
+      }
       if (o.code === 200) setOffers(o.result || []);
       if (s.code === 200) setStaticData(s.result);
       if (t.code === 200) setTariffs(t.result || []);
@@ -240,6 +255,23 @@ export default function AdminDriverDetailPage({ mobile = false }) {
       }
     } catch (e) {
       showError(e.response?.data?.message || e.message || 'Xatolik');
+    }
+  };
+
+  const handleSaveNeedProfile = async (payload) => {
+    setSavingNeedProfile(true);
+    try {
+      const response = await adminUpdateCargoOwnerNeedProfile(id, payload);
+      if (response.code === 200) {
+        setNeedProfile(response.result);
+        showSuccess('Yukchi ehtiyoji saqlandi');
+      } else {
+        showError(response.message || 'Ehtiyoj saqlanmadi');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Ehtiyoj saqlanmadi');
+    } finally {
+      setSavingNeedProfile(false);
     }
   };
 
@@ -485,59 +517,68 @@ export default function AdminDriverDetailPage({ mobile = false }) {
       )}
 
       {isCargoOwner && (
-        <div style={cardStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-            <div>
-              <h3 style={{ margin: 0 }}>Yuklar ({driver.ordersCount ?? ownerOrders.length})</h3>
-              <div style={{ color: '#666', fontSize: 13, marginTop: 4 }}>
-                Yuk egasi nomidan yaratilgan va platformaga chiqarilgan yuklar.
+        <>
+          <CargoOwnerNeedProfileCard
+            profile={needProfile}
+            staticData={staticData}
+            saving={savingNeedProfile}
+            onSave={handleSaveNeedProfile}
+          />
+
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <div>
+                <h3 style={{ margin: 0 }}>Yuklar ({driver.ordersCount ?? ownerOrders.length})</h3>
+                <div style={{ color: '#666', fontSize: 13, marginTop: 4 }}>
+                  Yuk egasi nomidan yaratilgan va platformaga chiqarilgan yuklar.
+                </div>
               </div>
+              {driver.isLinked ? (
+                <button onClick={() => setShowOwnerOrderModal(true)} style={smallBtnStyle}>
+                  + Yuk qo'shish
+                </button>
+              ) : (
+                <span style={{ color: '#888', fontSize: 13 }}>Yuk qo'shish uchun avval botga ulansin</span>
+              )}
             </div>
-            {driver.isLinked ? (
-              <button onClick={() => setShowOwnerOrderModal(true)} style={smallBtnStyle}>
-                + Yuk qo'shish
-              </button>
+
+            {ownerOrders.length === 0 ? (
+              <div style={{ color: '#888', marginTop: 12 }}>Hozircha yuk qo'shilmagan.</div>
             ) : (
-              <span style={{ color: '#888', fontSize: 13 }}>Yuk qo'shish uchun avval botga ulansin</span>
+              <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+                {ownerOrders.map((order) => (
+                  <div key={order.id} style={offerRowStyle}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700 }}>
+                        {order.fromCity || '—'} → {order.toCity || '—'}
+                      </div>
+                      <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
+                        {order.cargoName || 'Yuk'} · {order.vehicleType || 'Mashina turi ko\'rsatilmagan'} · {order.weightKg ? `${order.weightKg} t` : 'vazn yo\'q'} · {formatMoney(order.priceUzs)}
+                      </div>
+                      <div style={{ color: '#777', fontSize: 12, marginTop: 4 }}>
+                        {order.additionalPhone ? `Telefon: +${order.additionalPhone} · ` : ''}
+                        {order.createdTime ? `Yaratildi: ${fmtDate(order.createdTime)}` : ''}
+                      </div>
+                      {order.description && (
+                        <div style={{ color: '#666', fontSize: 12, marginTop: 4 }}>
+                          {order.description}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                      <span style={badge(order.status === 'appointed' ? '#1ba353' : '#1976d2')}>
+                        {order.status === 'appointed' ? 'Biriktirilgan' : order.status || 'new'}
+                      </span>
+                      <button onClick={() => handleDeleteOwnerOrder(order.id)} style={dangerBtnCompactStyle}>
+                        O'chirish
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-
-          {ownerOrders.length === 0 ? (
-            <div style={{ color: '#888', marginTop: 12 }}>Hozircha yuk qo'shilmagan.</div>
-          ) : (
-            <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-              {ownerOrders.map((order) => (
-                <div key={order.id} style={offerRowStyle}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700 }}>
-                      {order.fromCity || '—'} → {order.toCity || '—'}
-                    </div>
-                    <div style={{ color: '#555', fontSize: 13, marginTop: 4 }}>
-                      {order.cargoName || 'Yuk'} · {order.vehicleType || 'Mashina turi ko\'rsatilmagan'} · {order.weightKg ? `${order.weightKg} t` : 'vazn yo\'q'} · {formatMoney(order.priceUzs)}
-                    </div>
-                    <div style={{ color: '#777', fontSize: 12, marginTop: 4 }}>
-                      {order.additionalPhone ? `Telefon: +${order.additionalPhone} · ` : ''}
-                      {order.createdTime ? `Yaratildi: ${fmtDate(order.createdTime)}` : ''}
-                    </div>
-                    {order.description && (
-                      <div style={{ color: '#666', fontSize: 12, marginTop: 4 }}>
-                        {order.description}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                    <span style={badge(order.status === 'appointed' ? '#1ba353' : '#1976d2')}>
-                      {order.status === 'appointed' ? 'Biriktirilgan' : order.status || 'new'}
-                    </span>
-                    <button onClick={() => handleDeleteOwnerOrder(order.id)} style={dangerBtnCompactStyle}>
-                      O'chirish
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        </>
       )}
 
       <div style={{ marginTop: 16 }}>
@@ -674,7 +715,12 @@ function SubscriptionBox({ driver, tariffs, freeLimits, onAssign, onCancel }) {
 }
 
 function SubscriptionModal({ userId, tariffs, onClose, onSuccess }) {
-  const activeTariffs = tariffs.filter((tariff) => tariff.isActive !== false);
+  const isTariffActive = (tariff) => {
+    if (tariff?.isActive === true || tariff?.active === true) return true;
+    if (tariff?.isActive === false || tariff?.active === false) return false;
+    return true;
+  };
+  const activeTariffs = tariffs.filter(isTariffActive);
   const [tariffId, setTariffId] = useState(activeTariffs[0]?.id || tariffs[0]?.id || '');
   const [durationDays, setDurationDays] = useState('');
   const [expiresDate, setExpiresDate] = useState('');
@@ -730,7 +776,7 @@ function SubscriptionModal({ userId, tariffs, onClose, onSuccess }) {
               {tariffs.map((tariff) => (
                 <option key={tariff.id} value={tariff.id}>
                   {tariff.name} · {Number(tariff.priceUzs || 0).toLocaleString('ru-RU')} {tariff.currency}
-                  {tariff.isActive === false ? " (o'chirilgan)" : ''}
+                  {!isTariffActive(tariff) ? " (o'chirilgan)" : ''}
                 </option>
               ))}
             </select>

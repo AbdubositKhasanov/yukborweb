@@ -45,8 +45,6 @@ const UserbotManagementPage = lazy(() => import('../pages/UserbotManagementPage'
 function RoleBasedHome() {
   const { isAuthenticated, user, userRole, loading } = useMobileAuth();
 
-  console.log('[RoleBasedHome] isAuthenticated:', isAuthenticated, 'userRole:', userRole);
-
   // Auth hali tekshirilayotgan bo'lsa — loader
   if (loading) return <MobileLoading fullScreen />;
 
@@ -61,7 +59,6 @@ function RoleBasedHome() {
 
   const defaultPath = getDefaultMobilePath(userRole, user?.navigation);
   if (defaultPath !== '/mobile') {
-    console.log('[RoleBasedHome] Redirecting', userRole, 'to', defaultPath);
     return <Navigate to={defaultPath} replace />;
   }
 
@@ -104,7 +101,7 @@ function MobileAppContent() {
   const { isAuthenticated, user, userRole, loading, needsRoleSelection } = useMobileAuth();
 
   // Telegram Mini App back button — navigate(-1) instead of closing app
-  useTelegramBackButton();
+  useTelegramBackButton(userRole, user?.navigation);
 
   // Reset scroll position and track page view when route changes
   useEffect(() => {

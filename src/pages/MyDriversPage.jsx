@@ -122,7 +122,7 @@ export default function MyDriversPage() {
         // Success - update only this driver's status in local state (no reload!)
         setDrivers(prevDrivers =>
           prevDrivers.map(driver =>
-            driver.chatId === driverId
+            String(driver.chatId || driver.id || driver._id) === String(driverId)
               ? { ...driver, driverCurrentStatus: status }
               : driver
           )
@@ -425,9 +425,16 @@ export default function MyDriversPage() {
 function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatusText, onStatusUpdate, onAddTransport, onEditTransport, onCopyLink }) {
   const transportForm = driver.driverTransportForm;
   const isOnline = driver.driverCurrentStatus === true;
-  const hasTransport = transportForm && (transportForm.loc1 || transportForm.vehicleType || transportForm.maxWeight);
+  const hasTransport = transportForm && (
+    transportForm.loc1 ||
+    transportForm.vehicleType ||
+    transportForm.maxWeight ||
+    transportForm.stateNumber ||
+    transportForm.additionalPhone
+  );
   const isDriver = (driver.type || 'driver') === 'driver';
   const isRegistered = driver.isRegistered === true || Boolean(driver.chatId);
+  const driverReference = driver.chatId || driver.id || driver._id;
   
   // Local state for optimistic update - initialized from driverCurrentStatus
   const [isActive, setIsActive] = useState(driver.driverCurrentStatus === true);
@@ -447,7 +454,7 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
     setUpdatingStatus(true);
 
     try {
-      await onStatusUpdate(driver.chatId, newStatus);
+      await onStatusUpdate(driverReference, newStatus);
       // Success - keep the new status (parent state already updated)
     } catch (error) {
       // Error - revert to previous status
@@ -483,7 +490,7 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
           }}>
             {isRegistered ? 'Ro\'yxatdan o\'tgan' : 'Hali ro\'yxatdan o\'tmagan'}
           </span>
-          {isDriver && isRegistered && (
+          {isDriver && hasTransport && (
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -542,7 +549,7 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
           color: '#7a5200',
           fontSize: 13,
         }}>
-          Bu hamkor hali bot/saytda ro'yxatdan o'tmagan. Link yuboring yoki telefon bilan ro'yxatdan o'tganda avtomatik ulanadi.
+          Bu hamkor hali bot/saytda ro'yxatdan o'tmagan. Siz baribir transport ma'lumotlarini boshqarishingiz mumkin; link yuborilsa keyin avtomatik ulanadi.
           {driver.deepLink && (
             <button
               type="button"
@@ -669,7 +676,6 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
             type="button"
             className="btn btn-secondary"
             onClick={() => onAddTransport(driver)}
-            disabled={!isRegistered}
             style={{
               width: '100%',
               padding: '12px',
@@ -678,11 +684,9 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              opacity: isRegistered ? 1 : 0.65,
-              cursor: isRegistered ? 'pointer' : 'not-allowed',
             }}
           >
-            <span>+</span> {isRegistered ? 'Transport qo\'shish' : 'Ro\'yxatdan o\'tgach transport qo\'shiladi'}
+            <span>+</span> Transport qo'shish
           </button>
         </div>
       ) : (
@@ -703,7 +707,7 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
       )}
 
       {/* Driver Status Toggle */}
-      {isDriver && isRegistered && (
+      {isDriver && hasTransport && (
       <div style={{
         marginBottom: '15px',
         padding: '14px',

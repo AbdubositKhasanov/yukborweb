@@ -68,12 +68,12 @@ export default function MobileDriverDetail() {
     try {
       setStatusUpdating(true);
       const response = await updateCounterpartyDriverStatus(
-        driver.chatId || driver.id,
+        driver.chatId || driver.id || driver._id,
         newStatus
       );
 
       if (response.code === 200) {
-        setDriver((prev) => ({ ...prev, isBusy: !newStatus }));
+        setDriver((prev) => ({ ...prev, driverCurrentStatus: newStatus, isBusy: !newStatus }));
       }
     } catch (error) {
       console.error('Failed to update status:', error);
@@ -176,7 +176,7 @@ export default function MobileDriverDetail() {
       };
 
       let response;
-      const driverId = driver.chatId || driver.id;
+      const driverId = driver.chatId || driver.id || driver._id;
       const transportForm = driver.transport || driver.driverTransportForm;
       if (hasExistingTransport && transportForm?.id) {
         response = await updateCounterpartyTransportForm(transportForm.id, driverId, payload);
@@ -225,8 +225,9 @@ export default function MobileDriverDetail() {
     );
   }
 
-  const isOnline = driver.isActive || driver.is_active;
-  const isBusy = driver.isBusy || driver.is_busy;
+  const isRegistered = driver.isRegistered === true || Boolean(driver.chatId);
+  const isOnline = driver.driverCurrentStatus === true || driver.isActive || driver.is_active;
+  const isBusy = !isOnline;
   const balance = driver.balance ?? 0;
 
   return (
@@ -325,29 +326,40 @@ export default function MobileDriverDetail() {
         {/* Status toggle */}
         <div className="m-detail-section">
           <h2 className="m-detail-section-title">Holat</h2>
-          <div className="m-segmented" style={{ opacity: statusUpdating ? 0.6 : 1 }}>
-            <button
-              className={`m-segmented-btn ${!isBusy ? 'active' : ''}`}
-              onClick={() => handleStatusToggle(true)}
-              disabled={statusUpdating}
-            >
-              Bo'sh
-            </button>
-            <button
-              className={`m-segmented-btn ${isBusy ? 'active' : ''}`}
-              onClick={() => handleStatusToggle(false)}
-              disabled={statusUpdating}
-            >
-              Band
-            </button>
-          </div>
+          {hasTransport ? (
+            <div className="m-segmented" style={{ opacity: statusUpdating ? 0.6 : 1 }}>
+              <button
+                className={`m-segmented-btn ${!isBusy ? 'active' : ''}`}
+                onClick={() => handleStatusToggle(true)}
+                disabled={statusUpdating}
+              >
+                Bo'sh
+              </button>
+              <button
+                className={`m-segmented-btn ${isBusy ? 'active' : ''}`}
+                onClick={() => handleStatusToggle(false)}
+                disabled={statusUpdating}
+              >
+                Band
+              </button>
+            </div>
+          ) : (
+            <div style={{ padding: 16, background: 'var(--m-bg)', borderRadius: 8, color: 'var(--m-text-muted)' }}>
+              Holatni boshqarish uchun avval transport ma'lumotini qo'shing.
+            </div>
+          )}
         </div>
       </main>
 
       {/* Find cargo action */}
       <div className="m-action-bar">
-        <button className="m-btn m-btn-primary m-btn-lg" onClick={handleFindCargo} style={{ flex: 1 }}>
-          🔍 Yuk topish
+        <button
+          className="m-btn m-btn-primary m-btn-lg"
+          onClick={handleFindCargo}
+          disabled={!isRegistered}
+          style={{ flex: 1, opacity: isRegistered ? 1 : 0.6 }}
+        >
+          {isRegistered ? '🔍 Yuk topish' : 'Ro\'yxatdan o\'tgach yuk taklif qilinadi'}
         </button>
       </div>
 

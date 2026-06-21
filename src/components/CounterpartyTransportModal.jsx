@@ -92,16 +92,17 @@ export default function CounterpartyTransportModal({
       };
 
       let response;
+      const driverReference = driver.chatId || driver.id || driver._id;
 
       if (mode === 'create') {
-        response = await createCounterpartyTransport(driver.chatId, transportData);
+        response = await createCounterpartyTransport(driverReference, transportData);
       } else {
         // Edit mode - update the transport form
         const formId = driver.driverTransportForm?.id;
         if (!formId) {
           throw new Error('Transport form ID topilmadi');
         }
-        response = await updateCounterpartyTransportForm(formId, driver.chatId, transportData);
+        response = await updateCounterpartyTransportForm(formId, driverReference, transportData);
       }
 
       if (response.code === 200) {

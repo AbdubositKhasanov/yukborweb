@@ -23,6 +23,8 @@ export default function MobileTransportSearch() {
   // Desktop pattern: state = { fromOrder: true, orderId, orderInfo: {...}, filters: {...} }
   const fromOrder = location.state?.fromOrder ? location.state.orderInfo : location.state?.order || null;
   const fromOrderId = location.state?.orderId || null;
+  const fromNeedProfile = location.state?.fromNeedProfile === true;
+  const needInfo = location.state?.needInfo || null;
 
   // Filter state - matches Desktop BrowseTransportsPage.jsx
   const initialFilters = location.state?.filters || {};
@@ -31,7 +33,7 @@ export default function MobileTransportSearch() {
     fromRegion: initialFilters.fromRegion?.toString() || '',
     fromCity: initialFilters.fromCity?.toString() || '',
     vehicleType: initialFilters.vehicleType || '',
-    maxWeight: '',
+    maxWeight: initialFilters.maxWeight?.toString() || '',
   });
   const [activeFilters, setActiveFilters] = useState([]);
 
@@ -238,6 +240,17 @@ export default function MobileTransportSearch() {
           {fromOrder && (
             <div style={{ padding: '12px 16px', background: '#e3f2fd', fontSize: 14 }}>
               📦 {fromOrder.cargoName || fromOrder.cargo_name} uchun transport qidirish
+            </div>
+          )}
+
+          {fromNeedProfile && needInfo && (
+            <div style={{ padding: '12px 16px', background: '#dcfce7', fontSize: 14, color: '#14532d' }}>
+              🚚 {needInfo.title || 'Yukchi ehtiyoji'} bo'yicha mashina qidirish
+              <div style={{ fontSize: 12, marginTop: 4 }}>
+                {needInfo.cargoCountPerDay || 1} ta yuk/kun
+                {needInfo.vehicleType ? ` · ${needInfo.vehicleType}` : ''}
+                {needInfo.maxWeight ? ` · ${needInfo.maxWeight} t` : ''}
+              </div>
             </div>
           )}
 
