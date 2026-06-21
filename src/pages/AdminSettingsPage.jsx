@@ -245,8 +245,8 @@ export default function AdminSettingsPage({ mobile = false }) {
     savePatch('freeLimits', {
       freeLimits: {
         freeHarbingerCreateLimit: Math.max(0, toNumber(forms.freeLimits.freeHarbingerCreateLimit, 0)),
-        freeOrderShowLimit: Math.max(1, toNumber(forms.freeLimits.freeOrderShowLimit, 1)),
-        defaultCarShowLimit: Math.max(1, toNumber(forms.freeLimits.defaultCarShowLimit, 1)),
+        freeOrderShowLimit: Math.max(0, toNumber(forms.freeLimits.freeOrderShowLimit, 0)),
+        defaultCarShowLimit: Math.max(0, toNumber(forms.freeLimits.defaultCarShowLimit, 0)),
       },
     }, 'Bepul limitlar saqlandi');
   };
@@ -431,7 +431,7 @@ export default function AdminSettingsPage({ mobile = false }) {
                 Yuk ko'rish
                 <input
                   type="number"
-                  min="1"
+                  min="0"
                   value={forms.freeLimits.freeOrderShowLimit}
                   onChange={(e) => updateForm('freeLimits', { freeOrderShowLimit: e.target.value })}
                   style={inputStyle}
@@ -441,7 +441,7 @@ export default function AdminSettingsPage({ mobile = false }) {
                 Mashina ko'rish
                 <input
                   type="number"
-                  min="1"
+                  min="0"
                   value={forms.freeLimits.defaultCarShowLimit}
                   onChange={(e) => updateForm('freeLimits', { defaultCarShowLimit: e.target.value })}
                   style={inputStyle}

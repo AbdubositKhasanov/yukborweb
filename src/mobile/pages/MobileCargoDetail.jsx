@@ -74,6 +74,12 @@ export default function MobileCargoDetail() {
   const loadCargo = async () => {
     try {
       setLoading(true);
+      setContactPhone(null);
+      setContactTelegramUsername(null);
+      setContactChatId(null);
+      setContactOwnerName(null);
+      setContactLoaded(false);
+      setContactLoading(false);
       const response = await getCargoDetails(id);
       if (response.code === 200) {
         setCargo(response.result);
@@ -86,13 +92,6 @@ export default function MobileCargoDetail() {
       setLoading(false);
     }
   };
-
-  // Auto-load contact info when authenticated
-  useEffect(() => {
-    if (isAuthenticated && id && !contactLoaded) {
-      loadContact();
-    }
-  }, [isAuthenticated, id]);
 
   const loadContact = async () => {
     try {
@@ -321,8 +320,20 @@ export default function MobileCargoDetail() {
         {isAuthenticated && contactLoading && (
           <div className="m-detail-section">
             <div style={{ textAlign: 'center', padding: 16, color: 'var(--m-text-muted)' }}>
-              Yuklanmoqda...
+              Telefon yuklanmoqda...
             </div>
+          </div>
+        )}
+        {isAuthenticated && !contactLoading && !contactLoaded && (
+          <div className="m-detail-section">
+            <h2 className="m-detail-section-title">📱 Bog'lanish</h2>
+            <button
+              className="m-btn m-btn-primary m-btn-lg"
+              onClick={loadContact}
+              style={{ width: '100%' }}
+            >
+              Telefon raqamni ko'rish
+            </button>
           </div>
         )}
         {contactLoaded && contactPhone && (

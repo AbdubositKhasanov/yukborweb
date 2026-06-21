@@ -395,7 +395,7 @@ export const getCargoDetails = async (id) => {
 
 export const requestCargoPhone = async (id) => {
   // Don't cache phone requests
-  const response = await apiClient.get(`/cargo/${id}`);
+  const response = await apiClient.get(`/cargo/${id}`, { params: { phoneAccess: true } });
   return response.data;
 };
 

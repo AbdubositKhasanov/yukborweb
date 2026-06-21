@@ -206,16 +206,16 @@ export default function AdminTariffsPage({ mobile = false }) {
     try {
       const payload = {
         freeHarbingerCreateLimit: Math.max(0, parseInt(freeLimitForm.freeHarbingerCreateLimit, 10) || 0),
-        freeOrderShowLimit: Math.max(1, parseInt(freeLimitForm.freeOrderShowLimit, 10) || 1),
-        defaultCarShowLimit: Math.max(1, parseInt(freeLimitForm.defaultCarShowLimit, 10) || 1),
+        freeOrderShowLimit: Math.max(0, parseInt(freeLimitForm.freeOrderShowLimit, 10) || 0),
+        defaultCarShowLimit: Math.max(0, parseInt(freeLimitForm.defaultCarShowLimit, 10) || 0),
       };
       const response = await adminUpdateTariffFreeLimits(payload);
       if (response.code === 200) {
         setFreeLimits(response.result);
         setFreeLimitForm({
           freeHarbingerCreateLimit: response.result.freeHarbingerCreateLimit ?? 0,
-          freeOrderShowLimit: response.result.freeOrderShowLimit ?? 1,
-          defaultCarShowLimit: response.result.defaultCarShowLimit ?? 1,
+          freeOrderShowLimit: response.result.freeOrderShowLimit ?? 0,
+          defaultCarShowLimit: response.result.defaultCarShowLimit ?? 0,
         });
         showSuccess('Bepul limitlar yangilandi');
       } else {
@@ -255,7 +255,7 @@ export default function AdminTariffsPage({ mobile = false }) {
               <div>
                 <h3 style={{ margin: 0 }}>Bepul limitlar</h3>
                 <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 13 }}>
-                  Bu qiymatlar tarif sotib olmagan foydalanuvchilarga qo'llanadi. Xabarchi uchun 0 = butunlay yopiq.
+                  Bu qiymatlar tarif sotib olmagan foydalanuvchilarga qo'llanadi. 0 = bepul foydalanish yopiq.
                 </p>
               </div>
               <form onSubmit={handleFreeLimitSubmit} style={{ display: 'grid', gap: 10, marginTop: 12 }}>
@@ -275,7 +275,7 @@ export default function AdminTariffsPage({ mobile = false }) {
                     <input
                       type="number"
                       value={freeLimitForm.freeOrderShowLimit}
-                      min="1"
+                      min="0"
                       onChange={(e) => setFreeLimitForm({ ...freeLimitForm, freeOrderShowLimit: e.target.value })}
                       style={inputStyle}
                     />
@@ -285,7 +285,7 @@ export default function AdminTariffsPage({ mobile = false }) {
                     <input
                       type="number"
                       value={freeLimitForm.defaultCarShowLimit}
-                      min="1"
+                      min="0"
                       onChange={(e) => setFreeLimitForm({ ...freeLimitForm, defaultCarShowLimit: e.target.value })}
                       style={inputStyle}
                     />
