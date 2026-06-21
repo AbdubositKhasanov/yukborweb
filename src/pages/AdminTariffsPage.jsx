@@ -373,11 +373,12 @@ export default function AdminTariffsPage({ mobile = false }) {
                 <label style={labelStyle}>
                   Muddat (kun)
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={form.durationDays}
-                    onChange={(e) => setForm({ ...form, durationDays: e.target.value })}
+                    onChange={(e) => setForm({ ...form, durationDays: e.target.value.replace(/\D/g, '') })}
                     style={inputStyle}
-                    min="1"
                     placeholder="Bo'sh = muddatsiz"
                   />
                 </label>

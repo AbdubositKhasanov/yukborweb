@@ -808,11 +808,12 @@ function SubscriptionModal({ userId, tariffs, currentSubscription, onClose, onSu
           <label style={labelStyle}>
             Muddat override (kun)
             <input
-              type="number"
-              min="1"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={durationDays}
               onChange={(e) => {
-                setDurationDays(e.target.value);
+                setDurationDays(e.target.value.replace(/\D/g, ''));
                 setExpiresDate('');
               }}
               style={inputStyle}
