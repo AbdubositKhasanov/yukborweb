@@ -9,6 +9,10 @@ import { trackLogout, setAnalyticsUserProperties } from '../../services/analytic
 const MobileAuthContext = createContext(null);
 const MOBILE_AUTH_CLEARED_EVENT = 'mobile-auth-token-cleared';
 const MOBILE_AUTH_TIMEOUT_MS = 15_000;
+// Loop guard: 401 -> token-cleared -> qayta login zanjiri cheksiz aylanib,
+// serverga daqiqasiga o'nlab login so'rovi yubormasligi uchun.
+const MOBILE_LOGIN_MAX_ATTEMPTS = 5;
+const MOBILE_LOGIN_WINDOW_MS = 60_000;
 
 const withMobileAuthTimeout = (promise, message) => {
   let timeoutId;
@@ -67,6 +71,7 @@ export function MobileAuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
   const loadingRef = useRef(false);
+  const loginAttemptsRef = useRef([]); // so'nggi login urinishlari (loop guard)
 
   const clearUserState = useCallback(() => {
     setIsAuthenticated(false);
@@ -104,6 +109,22 @@ export function MobileAuthProvider({ children }) {
       clearUserState();
       return false;
     }
+
+    // Loop guard: agar biror so'rov doimiy 401 berib, qayta-qayta login chaqirilsa,
+    // daqiqasiga MOBILE_LOGIN_MAX_ATTEMPTS dan oshmaymiz — aks holda bitta klient
+    // serverni login so'rovlari bilan to'ldirib, IP rate-limitga tushiradi.
+    const now = Date.now();
+    loginAttemptsRef.current = loginAttemptsRef.current.filter(
+      (t) => now - t < MOBILE_LOGIN_WINDOW_MS
+    );
+    if (loginAttemptsRef.current.length >= MOBILE_LOGIN_MAX_ATTEMPTS) {
+      setAuthError(
+        'Avtorizatsiyada muammo. Iltimos, ilovani yopib, Telegram orqali qaytadan oching.'
+      );
+      clearUserState();
+      return false;
+    }
+    loginAttemptsRef.current.push(now);
 
     const response = await withMobileAuthTimeout(
       loginTelegramMiniApp(initData),
