@@ -7,15 +7,18 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getTransportDetails } from '../../services/api';
 import { formatTimeAgo } from '../../utils/formatTime';
 import { getTelegramProfileLink } from '../../utils/telegramLinks';
+import { goToTariffs, openPremiumUpgrade, openSupportForPurchase } from '../../utils/premiumUpgrade';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import MobileLoading from '../components/MobileLoading';
+
+const PHONE_UPGRADE_MESSAGE = 'Transport telefon raqamini ko\'rish uchun tarif kerak yoki bepul limitingiz tugagan.';
 
 export default function MobileTransportDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useMobileAuth();
+  const { isAuthenticated, user } = useMobileAuth();
 
   const fromOrder = location.state?.order;
 
@@ -68,6 +71,14 @@ export default function MobileTransportDetail() {
         setContactTelegramUsername(response.result.telegramUsername || null);
         setContactChatId(response.result.chatId || null);
         setContactOwnerName(response.result.ownerName || response.result.owner_name || null);
+        if (!phone) {
+          openPremiumUpgrade({
+            featureKey: 'viewTransportPhone',
+            message: PHONE_UPGRADE_MESSAGE,
+            currentLimit: user?.featureLimits?.viewTransportPhone,
+            source: 'mobile-transport-detail',
+          });
+        }
       }
     } catch (err) {
       // silently fail
@@ -230,8 +241,32 @@ export default function MobileTransportDetail() {
         )}
         {contactLoaded && !contactPhone && (
           <div className="m-detail-section">
-            <div style={{ padding: 12, background: '#fff3cd', borderRadius: 8, color: '#856404' }}>
-              🔒 Telefon raqamni ko'rish uchun ruxsat yo'q
+            <div style={{ padding: 14, background: '#fff7ed', borderRadius: 10, color: '#7c2d12', border: '1px solid #fed7aa' }}>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>🔒 Telefon ko'rish limiti tugagan</div>
+              <div style={{ fontSize: 14, lineHeight: 1.45, marginBottom: 12 }}>
+                {PHONE_UPGRADE_MESSAGE} Mos tarifni tanlasangiz, telefon raqamlar avtomatik ochiladi.
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <button
+                  type="button"
+                  className="m-btn m-btn-primary"
+                  onClick={() => goToTariffs('viewTransportPhone')}
+                >
+                  Tariflarni ko'rish
+                </button>
+                <button
+                  type="button"
+                  className="m-btn"
+                  onClick={() => openSupportForPurchase({
+                    featureKey: 'viewTransportPhone',
+                    reason: PHONE_UPGRADE_MESSAGE,
+                    user,
+                  })}
+                  style={{ background: '#fff', border: '1px solid #fed7aa', color: '#7c2d12' }}
+                >
+                  Supportga yozish
+                </button>
+              </div>
             </div>
           </div>
         )}

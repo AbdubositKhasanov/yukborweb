@@ -124,7 +124,7 @@ export default function TariffsPage({ mobile = false }) {
         <div style={cardStyle}>
           <h3 style={{ marginTop: 0 }}>Tariflar hozircha ko&apos;rinmayapti</h3>
           <p style={{ color: '#555' }}>Supportga yozing, admin sizga mos tarifni ulab beradi.</p>
-          <button className="btn btn-primary" onClick={() => openSupportForPurchase({ featureKey, reason })}>
+          <button className="btn btn-primary" onClick={() => openSupportForPurchase({ featureKey, reason, user: currentUser })}>
             Supportga yozish
           </button>
         </div>
@@ -156,7 +156,7 @@ export default function TariffsPage({ mobile = false }) {
                 </div>
                 <button
                   className="btn btn-primary"
-                  onClick={() => openSupportForPurchase({ tariff, featureKey, reason })}
+                  onClick={() => openSupportForPurchase({ tariff, featureKey, reason, user: currentUser })}
                   style={{ width: '100%' }}
                 >
                   Sotib olish uchun yozish

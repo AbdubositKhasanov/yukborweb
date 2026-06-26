@@ -14,19 +14,28 @@ export const FEATURE_LABELS = {
 export const inferPremiumFeature = (message = '') => {
   const text = String(message).toLowerCase();
   if (text.includes('xabarch') || text.includes('harbinger')) return 'createHarbinger';
-  if (text.includes('telefon') || text.includes('phone')) return 'viewCargoPhone';
+  if (text.includes('transport') && (text.includes('telefon') || text.includes('phone'))) return 'viewTransportPhone';
+  if (text.includes('telefon') || text.includes('phone') || text.includes('cargo') || text.includes('yuk')) return 'viewCargoPhone';
   if (text.includes('taklif') || text.includes('haydovchi')) return 'offerToDriver';
   return 'createHarbinger';
 };
 
 export const isPremiumUpgradeError = (message = '') => {
   const text = String(message).toLowerCase();
+  const normalized = text
+    .replace(/[‘’`]/g, "'")
+    .replace(/yo‘q/g, "yo'q")
+    .replace(/yo’q/g, "yo'q");
   return (
-    text.includes('premium') ||
-    text.includes('tarif') ||
-    text.includes('limit') ||
-    text.includes('xabarch') ||
-    text.includes('harbinger')
+    normalized.includes('premium') ||
+    normalized.includes('tarif') ||
+    normalized.includes('limit') ||
+    normalized.includes('xabarch') ||
+    normalized.includes('harbinger') ||
+    normalized.includes("ruxsat yo'q") ||
+    normalized.includes('ruxsat yoq') ||
+    normalized.includes('permission') ||
+    normalized.includes('forbidden')
   );
 };
 
@@ -46,18 +55,28 @@ export const goToTariffs = (featureKey = 'createHarbinger') => {
   window.location.href = getTariffsPath(featureKey);
 };
 
-export const buildPurchaseMessage = ({ tariff, featureKey, reason } = {}) => {
+const getPurchaseUserId = (user) => (
+  user?.chatId ||
+  user?.userId ||
+  user?.id ||
+  user?._id ||
+  null
+);
+
+export const buildPurchaseMessage = ({ tariff, featureKey, reason, user } = {}) => {
   const feature = FEATURE_LABELS[featureKey] || 'Premium funksiya';
   const tariffText = tariff ? `"${tariff.name}" tarifini` : 'premium tarifni';
+  const userId = getPurchaseUserId(user);
   return [
     `Salom. Men YukBor platformasida ${tariffText} sotib olmoqchiman.`,
+    userId ? `User ID: ${userId}.` : null,
     `Kerakli funksiya: ${feature}.`,
     reason ? `Sabab: ${reason}` : null,
   ].filter(Boolean).join('\n');
 };
 
-export const openSupportForPurchase = async ({ tariff, featureKey, reason } = {}) => {
-  const text = buildPurchaseMessage({ tariff, featureKey, reason });
+export const openSupportForPurchase = async ({ tariff, featureKey, reason, user } = {}) => {
+  const text = buildPurchaseMessage({ tariff, featureKey, reason, user });
   try {
     await navigator.clipboard?.writeText(text);
   } catch {

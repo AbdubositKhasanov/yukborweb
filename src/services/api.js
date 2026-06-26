@@ -94,6 +94,37 @@ const apiClient = axios.create({
   },
 });
 
+const getApiErrorMessage = (data) => {
+  if (typeof data === 'string') return data;
+  return data?.message || '';
+};
+
+const inferFeatureFromRequest = (config, message = '') => {
+  const url = String(config?.url || '').toLowerCase();
+  const params = config?.params || {};
+  if (params.phoneAccess === true || params.phoneAccess === 'true') return 'viewCargoPhone';
+  if (url.includes('/transport/')) return 'viewTransportPhone';
+  if (url.includes('/cargo/')) return 'viewCargoPhone';
+  if (url.includes('/harbinger')) return 'createHarbinger';
+  if (url.includes('/offer')) return 'offerToDriver';
+  return inferPremiumFeature(message || url);
+};
+
+const isLikelyPremiumAccessRequest = (config) => {
+  const url = String(config?.url || '').toLowerCase();
+  const params = config?.params || {};
+  return (
+    params.phoneAccess === true ||
+    params.phoneAccess === 'true' ||
+    url.includes('/cargo/') ||
+    url.includes('/transport/') ||
+    url.includes('/harbinger') ||
+    url.includes('/offer') ||
+    url.includes('/create/order') ||
+    url.includes('/create/transport')
+  );
+};
+
 /**
  * Request interceptor - Add auth token and security headers
  */
@@ -136,6 +167,7 @@ apiClient.interceptors.response.use(
     // Handle specific error cases
     if (error.response) {
       const { status, data } = error.response;
+      const message = getApiErrorMessage(data);
 
       switch (status) {
         case 401:
@@ -152,14 +184,14 @@ apiClient.interceptors.response.use(
           break;
 
         case 403:
-          if (isPremiumUpgradeError(data?.message)) {
+          if (isPremiumUpgradeError(message) && isLikelyPremiumAccessRequest(error.config)) {
             openPremiumUpgrade({
-              featureKey: inferPremiumFeature(data?.message),
-              message: data?.message,
+              featureKey: inferFeatureFromRequest(error.config, message),
+              message,
               source: 'api',
             });
           } else {
-            showError(data?.message || 'Sizda bu amalni bajarish uchun ruxsat yo\'q');
+            showError(message || 'Sizda bu amalni bajarish uchun ruxsat yo\'q');
           }
           break;
 
@@ -176,7 +208,7 @@ apiClient.interceptors.response.use(
           break;
 
         default:
-          showError(data?.message || 'Xatolik yuz berdi');
+          showError(message || 'Xatolik yuz berdi');
       }
     } else if (error.request) {
       // Network error

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { getPublicTariffs } from '../services/api';
+import { getPublicTariffs, getUserMe } from '../services/api';
 import {
   FEATURE_LABELS,
   goToTariffs,
@@ -35,16 +35,24 @@ export default function ClubMembershipModal({
   currentLimit,
 }) {
   const [tariffs, setTariffs] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
     setLoading(true);
-    getPublicTariffs()
-      .then((response) => {
-        if (!cancelled && response.code === 200) {
-          setTariffs(response.result || []);
+    Promise.allSettled([
+      getPublicTariffs(),
+      localStorage.getItem('authToken') ? getUserMe() : Promise.resolve(null),
+    ])
+      .then(([tariffsResult, userResult]) => {
+        if (cancelled) return;
+        if (tariffsResult.status === 'fulfilled' && tariffsResult.value.code === 200) {
+          setTariffs(tariffsResult.value.result || []);
+        }
+        if (userResult.status === 'fulfilled' && userResult.value?.code === 200) {
+          setCurrentUser(userResult.value.result || null);
         }
       })
       .catch(() => {
@@ -70,7 +78,7 @@ export default function ClubMembershipModal({
   const reason = message || `${featureLabel} uchun premium tarif kerak.`;
 
   const handleBuy = async (tariff) => {
-    await openSupportForPurchase({ tariff, featureKey, reason });
+    await openSupportForPurchase({ tariff, featureKey, reason, user: currentUser });
     onClose();
   };
 

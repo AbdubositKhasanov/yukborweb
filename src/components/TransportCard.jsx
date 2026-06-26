@@ -96,6 +96,7 @@ export default function TransportCard({ transport }) {
         telegramUsername={telegramUsername}
         chatId={contactChatId}
         ownerName={contactOwnerName}
+        featureKey="viewTransportPhone"
       />
     </>
   );

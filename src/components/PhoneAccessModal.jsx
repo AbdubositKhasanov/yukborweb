@@ -1,9 +1,22 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { trackPhoneView, trackPhoneRequest } from '../services/analytics';
+import { getUserMe } from '../services/api';
 import { getTelegramProfileLink } from '../utils/telegramLinks';
 import { goToTariffs, openSupportForPurchase } from '../utils/premiumUpgrade';
 
-export default function PhoneAccessModal({ isOpen, onClose, type, message, phone, telegramUsername, chatId, ownerName }) {
+export default function PhoneAccessModal({
+  isOpen,
+  onClose,
+  type,
+  message,
+  phone,
+  telegramUsername,
+  chatId,
+  ownerName,
+  featureKey = 'viewCargoPhone',
+}) {
+  const [currentUser, setCurrentUser] = useState(null);
+
   useEffect(() => {
     if (!isOpen) return;
     if (type === 'success') trackPhoneView();
@@ -11,6 +24,23 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
     else if (type === 'permission_denied') trackPhoneRequest('permission_denied');
     else if (type === 'unauthorized') trackPhoneRequest('unauthorized');
   }, [isOpen, type]);
+
+  useEffect(() => {
+    if (!isOpen || !localStorage.getItem('authToken')) return;
+    let cancelled = false;
+    getUserMe()
+      .then((response) => {
+        if (!cancelled && response.code === 200) {
+          setCurrentUser(response.result || null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCurrentUser(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -43,15 +73,16 @@ export default function PhoneAccessModal({ isOpen, onClose, type, message, phone
               </button>
               <button
                 className="btn btn-secondary"
-                onClick={() => goToTariffs('viewCargoPhone')}
+                onClick={() => goToTariffs(featureKey)}
               >
                 Tariflarni ko'rish
               </button>
               <button
                 className="btn btn-primary"
                 onClick={() => openSupportForPurchase({
-                  featureKey: 'viewCargoPhone',
+                  featureKey,
                   reason: message || 'Telefon raqamni ko\'rish uchun premium kerak.',
+                  user: currentUser,
                 })}
               >
                 Sotib olish

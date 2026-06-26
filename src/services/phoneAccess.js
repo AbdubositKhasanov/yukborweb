@@ -1,4 +1,7 @@
 import { showError } from '../utils/toast';
+import { isPremiumUpgradeError } from '../utils/premiumUpgrade';
+
+const PHONE_UPGRADE_MESSAGE = 'Telefon raqamni ko\'rish uchun tarif kerak yoki bepul limitingiz tugagan.';
 
 /**
  * Generic phone access handler
@@ -29,9 +32,9 @@ export const handlePhoneAccess = async (apiFunc, id) => {
       } else {
         return {
           success: true,
-          type: 'permission_denied',
+          type: 'premium_required',
           phone: null,
-          message: 'Sizda ushbu telefon raqamni ko\'rish uchun ruxsat yo\'q',
+          message: PHONE_UPGRADE_MESSAGE,
         };
       }
     } else {
@@ -45,6 +48,13 @@ export const handlePhoneAccess = async (apiFunc, id) => {
     }
   } catch (error) {
     const errorMessage = error.response?.data?.message || 'Xatolik yuz berdi';
+    if (error.response?.status === 403 && isPremiumUpgradeError(errorMessage)) {
+      return {
+        success: false,
+        type: 'premium_required',
+        message: errorMessage || PHONE_UPGRADE_MESSAGE,
+      };
+    }
     showError(errorMessage);
     return {
       success: false,
