@@ -431,6 +431,12 @@ export const requestCargoPhone = async (id) => {
   return response.data;
 };
 
+export const markCargoDispatcher = async (id, reason = '') => {
+  const response = await apiClient.post(`/cargo/${id}/mark-dispatcher`, { reason });
+  apiCache.invalidate('orders');
+  return response.data;
+};
+
 // ============================================
 // TRANSPORT DETAILS
 // ============================================
@@ -990,6 +996,26 @@ export const adminBlockPremiumOrderChat = async (chatId, reason = 'admin manual 
 
 export const adminUnblockPremiumOrderChat = async (chatId) => {
   const response = await apiClient.post(`/admin/premium-orders/${chatId}/unblock`);
+  return response.data;
+};
+
+export const adminListSenderBlacklist = async (params = {}) => {
+  const response = await apiClient.get('/admin/sender-blacklist', { params });
+  return response.data;
+};
+
+export const adminCreateSenderBlacklist = async (payload) => {
+  const response = await apiClient.post('/admin/sender-blacklist', payload);
+  return response.data;
+};
+
+export const adminUpdateSenderBlacklist = async (id, payload) => {
+  const response = await apiClient.put(`/admin/sender-blacklist/${id}`, payload);
+  return response.data;
+};
+
+export const adminDeleteSenderBlacklist = async (id) => {
+  const response = await apiClient.delete(`/admin/sender-blacklist/${id}`);
   return response.data;
 };
 

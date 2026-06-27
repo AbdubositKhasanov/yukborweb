@@ -18,6 +18,17 @@ import CargoOwnerToggle from '../../components/CargoOwnerToggle';
 import LocationSelector from '../../components/LocationSelector';
 import { showError, showSuccess } from '../../utils/toast';
 
+const SENDER_FILTER_STORAGE_KEY = 'cargoSenderFilter';
+const SENDER_FILTERS = ['all', 'cargo_owner_only'];
+
+function initialSenderFilter() {
+  return 'cargo_owner_only';
+}
+
+function orderTypeParam(senderFilter) {
+  return senderFilter === 'all' ? undefined : senderFilter;
+}
+
 export default function MobileHome() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,11 +75,7 @@ export default function MobileHome() {
   const [creatingHarbinger, setCreatingHarbinger] = useState(false);
   const [harbingerCreatedForCurrentSearch, setHarbingerCreatedForCurrentSearch] = useState(false);
   const [showClubModal, setShowClubModal] = useState(false);
-  const [cargoOwnerOnly, setCargoOwnerOnly] = useState(
-    (() => {
-      try { return localStorage.getItem('cargoOwnerOnly') === 'true'; } catch { return false; }
-    })()
-  );
+  const [senderFilter, setSenderFilter] = useState(initialSenderFilter);
 
   // UI state
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -158,7 +165,7 @@ export default function MobileHome() {
       vehicleType: searchState.vehicleType || '',
       minWeight: searchState.minWeight || '',
       maxWeight: searchState.maxWeight || '',
-      cargoOwnerOnly: Boolean(searchState.cargoOwnerOnly),
+      senderFilter: searchState.senderFilter || 'all',
     });
   };
 
@@ -173,13 +180,13 @@ export default function MobileHome() {
         searchState.vehicleType ||
         searchState.minWeight ||
         searchState.maxWeight ||
-        searchState.cargoOwnerOnly
+        (searchState.senderFilter || 'all') !== 'all'
     );
   };
 
   useEffect(() => {
     setHarbingerCreatedForCurrentSearch(false);
-  }, [filters, cargoOwnerOnly]);
+  }, [filters, senderFilter]);
 
   // Load cargos - branches based on search mode
   const loadCargos = useCallback(async () => {
@@ -187,9 +194,9 @@ export default function MobileHome() {
 
     try {
       let response;
-      const orderTypeParam = cargoOwnerOnly ? 'cargo_owner_only' : undefined;
+      const selectedOrderType = orderTypeParam(senderFilter);
       if (searchMode === 'simple' && textQuery.trim()) {
-        response = await textSearchCargos(textQuery.trim(), page, orderTypeParam);
+        response = await textSearchCargos(textQuery.trim(), page, selectedOrderType);
       } else {
         response = await searchCargos({
           fromCountry: filters.fromCountry || undefined,
@@ -201,7 +208,7 @@ export default function MobileHome() {
           vehicleType: filters.vehicleType || undefined,
           minWeight: filters.minWeight || undefined,
           maxWeight: filters.maxWeight || undefined,
-          orderType: orderTypeParam,
+          orderType: selectedOrderType,
           page,
         });
       }
@@ -215,7 +222,7 @@ export default function MobileHome() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, page, searchMode, textQuery, cargoOwnerOnly]);
+  }, [filters, page, searchMode, textQuery, senderFilter]);
 
   // Initial load
   useEffect(() => {
@@ -232,10 +239,12 @@ export default function MobileHome() {
     }
   }, [page, searchTrigger]);
 
-  const handleToggleCargoOwnerOnly = (value) => {
-    setCargoOwnerOnly(value);
+  const handleSenderFilterChange = (value) => {
+    const nextValue = SENDER_FILTERS.includes(value) ? value : 'cargo_owner_only';
+    setSenderFilter(nextValue);
     try {
-      localStorage.setItem('cargoOwnerOnly', value ? 'true' : 'false');
+      localStorage.setItem(SENDER_FILTER_STORAGE_KEY, nextValue);
+      localStorage.setItem('cargoOwnerOnly', nextValue === 'cargo_owner_only' ? 'true' : 'false');
     } catch (_) {
       // ignore
     }
@@ -270,7 +279,7 @@ export default function MobileHome() {
     setSearchMode('advanced');
     setTextQuery('');
 
-    const currentSearchState = { ...filters, cargoOwnerOnly };
+    const currentSearchState = { ...filters, senderFilter };
     const currentSearchKey = buildSearchKey(currentSearchState);
     if (currentSearchKey !== searchSnapshotKey) {
       setHarbingerCreatedForCurrentSearch(false);
@@ -298,6 +307,7 @@ export default function MobileHome() {
       minWeight: '',
       maxWeight: '',
     });
+    handleSenderFilterChange('cargo_owner_only');
     setActiveFilters([]);
     setHasSearched(false);
     setSearchSnapshotKey('');
@@ -329,12 +339,13 @@ export default function MobileHome() {
     }
     setFilters(newFilters);
     setActiveFilters(buildActiveFilters(newFilters));
-    const currentSearchKey = buildSearchKey(newFilters);
+    const currentSearchState = { ...newFilters, senderFilter };
+    const currentSearchKey = buildSearchKey(currentSearchState);
     if (currentSearchKey !== searchSnapshotKey) {
       setHarbingerCreatedForCurrentSearch(false);
     }
     setSearchSnapshotKey(currentSearchKey);
-    setHasSearched(hasSelectedSearchOptions(newFilters));
+    setHasSearched(hasSelectedSearchOptions(currentSearchState));
     setPage(0);
     setIsInitialLoad(true); // Trigger reload
   };
@@ -420,7 +431,7 @@ export default function MobileHome() {
         minWeight: Number.isNaN(parsedMinWeight) ? null : parsedMinWeight,
         maxWeight: Number.isNaN(parsedMaxWeight) ? null : parsedMaxWeight,
         vehicleTypeId: selectedVehicleType?.id || null,
-        orderTypePreference: cargoOwnerOnly ? 'cargo_owner_only' : 'any',
+        orderTypePreference: senderFilter === 'all' ? 'any' : senderFilter,
       };
 
       const response = await createHarbinger(harbingerData);
@@ -516,8 +527,8 @@ export default function MobileHome() {
 
         <div style={{ padding: '10px 12px' }}>
           <CargoOwnerToggle
-            checked={cargoOwnerOnly}
-            onChange={handleToggleCargoOwnerOnly}
+            value={senderFilter}
+            onValueChange={handleSenderFilterChange}
           />
         </div>
 

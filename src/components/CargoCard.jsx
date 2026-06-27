@@ -271,6 +271,7 @@ export default function CargoCard({
           telegramUsername={telegramUsername}
           chatId={contactChatId}
           ownerName={contactOwnerName}
+          cargoId={cargo.id}
           featureKey="viewCargoPhone"
         />
       )}

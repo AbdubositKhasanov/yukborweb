@@ -8,6 +8,17 @@ import ClubMembershipModal from '../components/ClubMembershipModal';
 import LocationSelector from '../components/LocationSelector';
 import { showError, showSuccess } from '../utils/toast';
 
+const SENDER_FILTER_STORAGE_KEY = 'cargoSenderFilter';
+const SENDER_FILTERS = ['all', 'cargo_owner_only'];
+
+function initialSenderFilter() {
+  return 'cargo_owner_only';
+}
+
+function orderTypeParam(senderFilter) {
+  return senderFilter === 'all' ? undefined : senderFilter;
+}
+
 export default function SearchPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,9 +59,7 @@ export default function SearchPage() {
   const [vehicleType, setVehicleType] = useState(initialFilters.vehicleType || '');
   const [minWeight, setMinWeight] = useState('');
   const [maxWeight, setMaxWeight] = useState(initialFilters.maxWeight?.toString() || '');
-  const [cargoOwnerOnly, setCargoOwnerOnly] = useState(
-    localStorage.getItem('cargoOwnerOnly') === 'true'
-  );
+  const [senderFilter, setSenderFilter] = useState(initialSenderFilter);
 
   useEffect(() => {
     loadUserData();
@@ -134,7 +143,7 @@ export default function SearchPage() {
         vehicleType: vehicleType || undefined,
         minWeight: minWeight || undefined,
         maxWeight: maxWeight || undefined,
-        orderType: cargoOwnerOnly ? 'cargo_owner_only' : undefined,
+        orderType: orderTypeParam(senderFilter),
         page
       };
 
@@ -150,7 +159,7 @@ export default function SearchPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fromCountry, fromRegion, fromCity, toCountry, toRegion, toCity, vehicleType, minWeight, maxWeight, cargoOwnerOnly, page]);
+  }, [fromCountry, fromRegion, fromCity, toCountry, toRegion, toCity, vehicleType, minWeight, maxWeight, senderFilter, page]);
 
   const loadTextSearch = useCallback(async () => {
     if (!textQuery.trim()) return;
@@ -158,7 +167,7 @@ export default function SearchPage() {
     setError(null);
 
     try {
-      const response = await textSearchCargos(textQuery.trim(), page, cargoOwnerOnly ? 'cargo_owner_only' : undefined);
+      const response = await textSearchCargos(textQuery.trim(), page, orderTypeParam(senderFilter));
       if (response.code === 200) {
         setCargos(response.result || []);
       } else {
@@ -170,7 +179,7 @@ export default function SearchPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [textQuery, page, cargoOwnerOnly]);
+  }, [textQuery, page, senderFilter]);
 
   const buildSearchKey = (searchState) => {
     return JSON.stringify({
@@ -183,7 +192,7 @@ export default function SearchPage() {
       vehicleType: searchState.vehicleType || '',
       minWeight: searchState.minWeight || '',
       maxWeight: searchState.maxWeight || '',
-      cargoOwnerOnly: Boolean(searchState.cargoOwnerOnly),
+      senderFilter: searchState.senderFilter || 'all',
     });
   };
 
@@ -198,7 +207,7 @@ export default function SearchPage() {
         searchState.vehicleType ||
         searchState.minWeight ||
         searchState.maxWeight ||
-        searchState.cargoOwnerOnly
+        (searchState.senderFilter || 'all') !== 'all'
     );
   };
 
@@ -214,7 +223,7 @@ export default function SearchPage() {
     vehicleType,
     minWeight,
     maxWeight,
-    cargoOwnerOnly,
+    senderFilter,
   ]);
 
   const handleRefresh = () => {
@@ -247,7 +256,7 @@ export default function SearchPage() {
       vehicleType,
       minWeight,
       maxWeight,
-      cargoOwnerOnly,
+      senderFilter,
     };
     const currentSearchKey = buildSearchKey(currentSearchState);
 
@@ -272,6 +281,7 @@ export default function SearchPage() {
     setVehicleType('');
     setMinWeight('');
     setMaxWeight('');
+    handleSenderFilterChange('cargo_owner_only');
     setPage(0);
     setHasSearched(false);
     setSearchSnapshotKey('');
@@ -280,10 +290,12 @@ export default function SearchPage() {
     setSearchTrigger((t) => t + 1);
   };
 
-  const handleToggleCargoOwnerOnly = (value) => {
-    setCargoOwnerOnly(value);
+  const handleSenderFilterChange = (value) => {
+    const nextValue = SENDER_FILTERS.includes(value) ? value : 'cargo_owner_only';
+    setSenderFilter(nextValue);
     try {
-      localStorage.setItem('cargoOwnerOnly', value ? 'true' : 'false');
+      localStorage.setItem(SENDER_FILTER_STORAGE_KEY, nextValue);
+      localStorage.setItem('cargoOwnerOnly', nextValue === 'cargo_owner_only' ? 'true' : 'false');
     } catch (_) {
       // storage mavjud bo'lmasa — silently o'tkazib yuborish
     }
@@ -388,7 +400,7 @@ export default function SearchPage() {
         minWeight: Number.isNaN(parsedMinWeight) ? null : parsedMinWeight,
         maxWeight: Number.isNaN(parsedMaxWeight) ? null : parsedMaxWeight,
         vehicleTypeId: selectedVehicleType?.id || null,
-        orderTypePreference: cargoOwnerOnly ? 'cargo_owner_only' : 'any',
+        orderTypePreference: senderFilter === 'all' ? 'any' : senderFilter,
       };
 
       const response = await createHarbinger(harbingerData);
@@ -632,8 +644,8 @@ export default function SearchPage() {
           )}
           <div style={{ marginTop: '12px' }}>
             <CargoOwnerToggle
-              checked={cargoOwnerOnly}
-              onChange={handleToggleCargoOwnerOnly}
+              value={senderFilter}
+              onValueChange={handleSenderFilterChange}
             />
           </div>
         </div>
@@ -709,8 +721,8 @@ export default function SearchPage() {
 
             <div className="form-group" style={{ marginTop: '12px' }}>
               <CargoOwnerToggle
-                checked={cargoOwnerOnly}
-                onChange={handleToggleCargoOwnerOnly}
+                value={senderFilter}
+                onValueChange={handleSenderFilterChange}
               />
             </div>
 

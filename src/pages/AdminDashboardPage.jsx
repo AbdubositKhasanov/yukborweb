@@ -46,6 +46,12 @@ const ADMIN_LINKS = [
     description: 'Userbot servis holati, monitoring va akkauntlar.',
   },
   {
+    section: 'adminSenderBlacklist',
+    label: 'Dispetcher blacklist',
+    path: '/admin/sender-blacklist',
+    description: "Yuk egasi filteridan chiqariladigan logist/dispetcher akkauntlar.",
+  },
+  {
     section: 'adminSettings',
     label: 'Sozlamalar',
     path: '/admin/settings',

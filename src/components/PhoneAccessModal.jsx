@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { trackPhoneView, trackPhoneRequest } from '../services/analytics';
-import { getUserMe } from '../services/api';
+import { getUserMe, markCargoDispatcher } from '../services/api';
 import { getTelegramProfileLink } from '../utils/telegramLinks';
 import { goToTariffs, openSupportForPurchase } from '../utils/premiumUpgrade';
 
@@ -13,9 +13,14 @@ export default function PhoneAccessModal({
   telegramUsername,
   chatId,
   ownerName,
+  cargoId,
+  onMarkedDispatcher,
   featureKey = 'viewCargoPhone',
 }) {
   const [currentUser, setCurrentUser] = useState(null);
+  const [marking, setMarking] = useState(false);
+  const [marked, setMarked] = useState(false);
+  const [markError, setMarkError] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -43,6 +48,26 @@ export default function PhoneAccessModal({
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const handleMarkDispatcher = async () => {
+    if (!cargoId || marked || marking) return;
+    if (!window.confirm("Bu kontakt dispetcher/logist ekan deb belgilaysizmi? Keyin Yuk egasi filterida ko'rinmaydi.")) return;
+    setMarking(true);
+    setMarkError('');
+    try {
+      const response = await markCargoDispatcher(cargoId, 'Telefon ko‘rilgandan keyin user dispetcher deb belgiladi');
+      if (response.code === 200) {
+        setMarked(true);
+        onMarkedDispatcher?.(response.result);
+      } else {
+        setMarkError(response.message || 'Belgilashda xatolik');
+      }
+    } catch (error) {
+      setMarkError(error.response?.data?.message || error.message || 'Belgilashda xatolik');
+    } finally {
+      setMarking(false);
+    }
+  };
 
   const renderContent = () => {
     switch (type) {
@@ -156,10 +181,29 @@ export default function PhoneAccessModal({
                   💬 Telegram
                 </a>
               )}
+              {cargoId && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleMarkDispatcher}
+                  disabled={marking || marked}
+                >
+                  {marked ? 'Belgilandi' : marking ? 'Belgilanmoqda...' : 'Bu dispetcher'}
+                </button>
+              )}
               <button className="btn btn-secondary" onClick={onClose}>
                 Yopish
               </button>
             </div>
+            {marked && (
+              <div style={{ marginTop: 12, color: '#155724', fontSize: 13, fontWeight: 700 }}>
+                Bu akkaunt Yuk egasi filteridan chiqarildi.
+              </div>
+            )}
+            {markError && (
+              <div style={{ marginTop: 12, color: '#dc3545', fontSize: 13 }}>
+                {markError}
+              </div>
+            )}
           </div>
         );
 

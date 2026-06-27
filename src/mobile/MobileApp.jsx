@@ -39,6 +39,7 @@ const AdminTariffsPage = lazy(() => import('../pages/AdminTariffsPage'));
 const AdminSettingsPage = lazy(() => import('../pages/AdminSettingsPage'));
 const AdminBroadcastsPage = lazy(() => import('../pages/AdminBroadcastsPage'));
 const AdminPremiumOrdersPage = lazy(() => import('../pages/AdminPremiumOrdersPage'));
+const AdminSenderBlacklistPage = lazy(() => import('../pages/AdminSenderBlacklistPage'));
 const UserbotManagementPage = lazy(() => import('../pages/UserbotManagementPage'));
 
 // Role-based default page redirect
@@ -334,6 +335,14 @@ function MobileAppContent() {
             element={
               <MobileProtectedRoute>
                 <AdminPremiumOrdersPage mobile />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/sender-blacklist"
+            element={
+              <MobileProtectedRoute>
+                <AdminSenderBlacklistPage mobile />
               </MobileProtectedRoute>
             }
           />

@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getCargoDetails, requestCargoPhone, getUserMe, getMyInvitedUsers, offerForDriver } from '../../services/api';
+import { getCargoDetails, requestCargoPhone, getUserMe, getMyInvitedUsers, offerForDriver, markCargoDispatcher } from '../../services/api';
 import { formatTimeAgo } from '../../utils/formatTime';
 import { formatOrderPrice } from '../../utils/orderText';
 import { buildOriginalCargoMessage, PRIVATE_GROUP_MESSAGE_NOTE } from '../../utils/originalMessage';
@@ -34,6 +34,9 @@ export default function MobileCargoDetail() {
   const [contactOwnerName, setContactOwnerName] = useState(null);
   const [contactLoaded, setContactLoaded] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
+  const [dispatcherMarking, setDispatcherMarking] = useState(false);
+  const [dispatcherMarked, setDispatcherMarked] = useState(false);
+  const [dispatcherMarkError, setDispatcherMarkError] = useState('');
 
   // User and permission state
   const [permissions, setPermissions] = useState(null);
@@ -85,6 +88,8 @@ export default function MobileCargoDetail() {
       setContactOwnerName(null);
       setContactLoaded(false);
       setContactLoading(false);
+      setDispatcherMarked(false);
+      setDispatcherMarkError('');
       const response = await getCargoDetails(id);
       if (response.code === 200) {
         setCargo(response.result);
@@ -122,6 +127,25 @@ export default function MobileCargoDetail() {
     } finally {
       setContactLoaded(true);
       setContactLoading(false);
+    }
+  };
+
+  const handleMarkDispatcher = async () => {
+    if (!id || dispatcherMarked || dispatcherMarking) return;
+    if (!window.confirm("Bu kontakt dispetcher/logist ekan deb belgilaysizmi? Keyin Yuk egasi filterida ko'rinmaydi.")) return;
+    setDispatcherMarking(true);
+    setDispatcherMarkError('');
+    try {
+      const response = await markCargoDispatcher(id, 'Telefon ko‘rilgandan keyin user dispetcher deb belgiladi');
+      if (response.code === 200) {
+        setDispatcherMarked(true);
+      } else {
+        setDispatcherMarkError(response.message || 'Belgilashda xatolik');
+      }
+    } catch (error) {
+      setDispatcherMarkError(error.response?.data?.message || error.message || 'Belgilashda xatolik');
+    } finally {
+      setDispatcherMarking(false);
     }
   };
 
@@ -383,6 +407,25 @@ export default function MobileCargoDetail() {
                 </a>
               )}
             </div>
+            <button
+              type="button"
+              className="m-btn m-btn-full"
+              onClick={handleMarkDispatcher}
+              disabled={dispatcherMarking || dispatcherMarked}
+              style={{
+                marginTop: 10,
+                background: dispatcherMarked ? '#e8f5e9' : '#fff',
+                border: '1px solid #d7dde5',
+                color: dispatcherMarked ? '#155724' : '#334155',
+              }}
+            >
+              {dispatcherMarked ? 'Dispetcher deb belgilandi' : dispatcherMarking ? 'Belgilanmoqda...' : 'Bu dispetcher/logist'}
+            </button>
+            {dispatcherMarkError && (
+              <div style={{ marginTop: 8, color: '#dc3545', fontSize: 13 }}>
+                {dispatcherMarkError}
+              </div>
+            )}
           </div>
         )}
         {contactLoaded && !contactPhone && (
