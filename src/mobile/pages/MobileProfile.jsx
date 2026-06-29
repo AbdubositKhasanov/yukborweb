@@ -23,6 +23,7 @@ const ADMIN_PROFILE_LINKS = [
   { section: 'adminBroadcasts', label: 'Admin: broadcast', path: '/mobile/admin/broadcasts' },
   { section: 'adminPremiumOrders', label: 'Admin: premium yuklar', path: '/mobile/admin/premium-orders' },
   { section: 'adminUserbots', label: 'Admin: userbotlar', path: '/mobile/admin/userbots' },
+  { section: 'adminHarbingers', label: 'Admin: xabarchilar', path: '/mobile/admin/harbingers' },
 ];
 
 const normalizeMobileRole = (userType) => {
@@ -157,6 +158,10 @@ export default function MobileProfile() {
     if (!Array.isArray(adminSections)) return true;
     return adminSections.includes(link.section);
   });
+  const roleSections = user?.navigation?.roleSections;
+  const showHarbingersLink = (
+    userRole === 'driver' || userRole === 'logist'
+  ) && (!Array.isArray(roleSections) || roleSections.includes('myHarbingers'));
 
   return (
     <>
@@ -258,6 +263,16 @@ export default function MobileProfile() {
                 onViewTariffs={() => navigate('/mobile/tariffs')}
                 style={{ marginTop: 16 }}
               />
+
+              {showHarbingersLink && (
+                <button
+                  className="m-btn m-btn-secondary m-btn-full"
+                  onClick={() => navigate('/mobile/my-harbingers')}
+                  style={{ marginTop: 16 }}
+                >
+                  📣 Xabarchilarim
+                </button>
+              )}
 
               {/* Admin tools */}
               {user?.isAdmin && visibleAdminLinks.length > 0 && (

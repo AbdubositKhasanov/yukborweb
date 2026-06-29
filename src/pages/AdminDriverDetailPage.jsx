@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   adminGetDriver,
   adminGetDriverOffers,
-  adminCreateHarbingerForDriver,
+  adminCreateHarbingerForUser,
+  adminDeleteHarbinger,
   adminCreateTransportForDriver,
   adminCreateOrderForOwner,
   adminDeleteDriver,
@@ -239,6 +240,22 @@ export default function AdminDriverDetailPage({ mobile = false }) {
     }
   };
 
+  const handleDeleteHarbinger = async (harbingerId) => {
+    if (!harbingerId) return;
+    if (!confirm("Bu xabarchini o'chirasizmi?")) return;
+    try {
+      const r = await adminDeleteHarbinger(harbingerId);
+      if (r.code === 200) {
+        showSuccess("Xabarchi o'chirildi");
+        loadAll();
+      } else {
+        showError(r.message || 'Xatolik');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Xatolik');
+    }
+  };
+
   const handleCancelSubscription = async () => {
     if (!driver?.subscription) return;
     if (!confirm("Foydalanuvchining tarifini bekor qilasizmi?")) return;
@@ -283,6 +300,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   const acceptanceRate = s.sent > 0 ? Math.round((s.accepted / s.sent) * 100) : 0;
   const isDriver = driver.type === 'driver';
   const isCargoOwner = driver.type === 'factory';
+  const canManageHarbingers = ['driver', 'logist'].includes(driver.type);
   const backPath = backPathForRole(driver.type, mobile);
   const ownerOrders = driver.ownerOrders || [];
   const activeOwnerOrders = ownerOrders.filter((order) => !['closed', 'cancelled', 'appointed'].includes(order.status)).length;
@@ -416,30 +434,6 @@ export default function AdminDriverDetailPage({ mobile = false }) {
             )}
           </div>
 
-          {/* Habarchi */}
-          <div style={cardStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0 }}>Habarchilar ({driver.harbingers?.length ?? 0})</h3>
-              {driver.isLinked && (
-                <button onClick={() => setShowHarbingerModal(true)} style={smallBtnStyle}>
-                  + Yangi habarchi
-                </button>
-              )}
-            </div>
-            {driver.harbingers && driver.harbingers.length > 0 ? (
-              <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-                {driver.harbingers.map((h) => (
-                  <div key={h.id} style={{ background: '#f9f9f9', padding: 10, borderRadius: 6, fontSize: 14 }}>
-                    <div>🛣 {h.loc1 || '—'} → {h.loc2 || 'har qayoq'}</div>
-                    <div>⚖️ {h.maxWeight?.value ? `${h.maxWeight.value} tonna gacha` : 'har qanday vazn'}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ color: '#888', marginTop: 8 }}>Hozircha habarchi yoq — yuk yuborilmaydi.</div>
-            )}
-          </div>
-
           {/* Offers history */}
           <div style={cardStyle}>
             <h3 style={{ marginTop: 0 }}>Takliflar tarixi ({offers.length})</h3>
@@ -512,6 +506,41 @@ export default function AdminDriverDetailPage({ mobile = false }) {
         </>
       )}
 
+      {canManageHarbingers && (
+        <div style={cardStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <h3 style={{ margin: 0 }}>Xabarchilar ({driver.harbingers?.length ?? 0})</h3>
+            {driver.isLinked && (
+              <button onClick={() => setShowHarbingerModal(true)} style={smallBtnStyle}>
+                + Yangi xabarchi
+              </button>
+            )}
+          </div>
+          {driver.harbingers && driver.harbingers.length > 0 ? (
+            <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+              {driver.harbingers.map((h) => (
+                <div key={h.id} style={{ background: '#f9f9f9', padding: 10, borderRadius: 6, fontSize: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+                    <div>
+                      <div>🛣 {h.loc1 || '—'} → {h.loc2 || 'har qayoq'}</div>
+                      <div>⚖️ {h.maxWeight?.value ? `${h.maxWeight.value} tonna gacha` : 'har qanday vazn'}</div>
+                      <div style={{ color: '#777', fontSize: 12, marginTop: 3 }}>
+                        {h.orderTypePreference === 'cargo_owner_only' ? 'Faqat yuk egasi' : 'Barcha buyurtmalar'}
+                      </div>
+                    </div>
+                    <button onClick={() => handleDeleteHarbinger(h.id)} style={dangerBtnCompactStyle}>
+                      O&apos;chirish
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: '#888', marginTop: 8 }}>Hozircha xabarchi yoq — mos yuklar yuborilmaydi.</div>
+          )}
+        </div>
+      )}
+
       {isCargoOwner && (
         <>
           <CargoOwnerNeedProfileCard
@@ -529,17 +558,17 @@ export default function AdminDriverDetailPage({ mobile = false }) {
                   Yuk egasi nomidan yaratilgan va platformaga chiqarilgan yuklar.
                 </div>
               </div>
-              {driver.isLinked ? (
-                <button onClick={() => setShowOwnerOrderModal(true)} style={smallBtnStyle}>
-                  + Yuk qo'shish
-                </button>
-              ) : (
-                <span style={{ color: '#888', fontSize: 13 }}>Yuk qo'shish uchun avval botga ulansin</span>
-              )}
+	              {driver.isLinked ? (
+	                <button onClick={() => setShowOwnerOrderModal(true)} style={smallBtnStyle}>
+	                  + Yuk qo&apos;shish
+	                </button>
+	              ) : (
+	                <span style={{ color: '#888', fontSize: 13 }}>Yuk qo&apos;shish uchun avval botga ulansin</span>
+	              )}
             </div>
 
             {ownerOrders.length === 0 ? (
-              <div style={{ color: '#888', marginTop: 12 }}>Hozircha yuk qo'shilmagan.</div>
+	              <div style={{ color: '#888', marginTop: 12 }}>Hozircha yuk qo&apos;shilmagan.</div>
             ) : (
               <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
                 {ownerOrders.map((order) => (
@@ -565,9 +594,9 @@ export default function AdminDriverDetailPage({ mobile = false }) {
                       <span style={badge(order.status === 'appointed' ? '#1ba353' : '#1976d2')}>
                         {order.status === 'appointed' ? 'Biriktirilgan' : order.status || 'new'}
                       </span>
-                      <button onClick={() => handleDeleteOwnerOrder(order.id)} style={dangerBtnCompactStyle}>
-                        O'chirish
-                      </button>
+	                      <button onClick={() => handleDeleteOwnerOrder(order.id)} style={dangerBtnCompactStyle}>
+	                        O&apos;chirish
+	                      </button>
                     </div>
                   </div>
                 ))}
@@ -607,9 +636,9 @@ export default function AdminDriverDetailPage({ mobile = false }) {
         />
       )}
 
-      {isDriver && showHarbingerModal && (
+      {canManageHarbingers && showHarbingerModal && (
         <HarbingerModal
-          driverId={id}
+          userId={id}
           staticData={staticData}
           onClose={() => setShowHarbingerModal(false)}
           onSuccess={() => {
@@ -690,7 +719,7 @@ function SubscriptionModal({ userId, tariffs, currentSubscription, onClose, onSu
     }
     setDurationDays(selectedTariff.durationDays ? String(selectedTariff.durationDays) : '');
     setExpiresDate('');
-  }, [selectedTariff?.id, selectedTariff?.durationDays]);
+  }, [selectedTariff]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -724,6 +753,7 @@ function SubscriptionModal({ userId, tariffs, currentSubscription, onClose, onSu
       onClick={onClose}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
       <div
         style={modalContentStyle}
         role="dialog"
@@ -800,7 +830,7 @@ function SubscriptionModal({ userId, tariffs, currentSubscription, onClose, onSu
 }
 
 // ===== Harbinger Modal =====
-function HarbingerModal({ driverId, staticData, onClose, onSuccess }) {
+function HarbingerModal({ userId, staticData, onClose, onSuccess }) {
   const [fromCountry, setFromCountry] = useState('');
   const [fromRegion, setFromRegion] = useState('');
   const [fromCity, setFromCity] = useState('');
@@ -831,7 +861,7 @@ function HarbingerModal({ driverId, staticData, onClose, onSuccess }) {
         vehicleTypeId: vehicleTypeId ? parseInt(vehicleTypeId) : null,
         orderTypePreference,
       };
-      const r = await adminCreateHarbingerForDriver(driverId, data);
+      const r = await adminCreateHarbingerForUser(userId, data);
       if (r.code === 200) {
         showSuccess("Habarchi yaratildi");
         onSuccess();
@@ -1127,13 +1157,14 @@ function OwnerOrderModal({ userId, owner, staticData, onClose, onSuccess }) {
       onClick={onClose}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
       <div
         style={modalContentStyle}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 style={{ marginTop: 0 }}>Yuk egasi uchun yuk qo'shish</h3>
+        <h3 style={{ marginTop: 0 }}>Yuk egasi uchun yuk qo&apos;shish</h3>
         <form onSubmit={handleSubmit}>
           <label style={labelStyle}>
             Yuk nomi
@@ -1201,7 +1232,7 @@ function OwnerOrderModal({ userId, owner, staticData, onClose, onSuccess }) {
               <input type="number" step="0.1" min="0" value={weight} onChange={(e) => setWeight(e.target.value)} style={inputStyle} placeholder="20" />
             </label>
             <label style={labelStyle}>
-              Narx (so'm)
+              Narx (so&apos;m)
               <input type="number" min="0" value={priceUzs} onChange={(e) => setPriceUzs(e.target.value)} style={inputStyle} placeholder="Kelishiladi" />
             </label>
           </div>

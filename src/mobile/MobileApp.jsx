@@ -28,6 +28,7 @@ const MobileMyDrivers = lazy(() => import('./pages/MobileMyDrivers'));
 const MobileDriverDetail = lazy(() => import('./pages/MobileDriverDetail'));
 const MobileProfile = lazy(() => import('./pages/MobileProfile'));
 const MobileMyTransports = lazy(() => import('./pages/MobileMyTransports'));
+const MobileMyHarbingers = lazy(() => import('./pages/MobileMyHarbingers'));
 const MobileCreateTransport = lazy(() => import('./pages/MobileCreateTransport'));
 const MobileMyListings = lazy(() => import('./pages/MobileMyListings'));
 const TariffsPage = lazy(() => import('../pages/TariffsPage'));
@@ -40,6 +41,7 @@ const AdminSettingsPage = lazy(() => import('../pages/AdminSettingsPage'));
 const AdminBroadcastsPage = lazy(() => import('../pages/AdminBroadcastsPage'));
 const AdminPremiumOrdersPage = lazy(() => import('../pages/AdminPremiumOrdersPage'));
 const AdminSenderBlacklistPage = lazy(() => import('../pages/AdminSenderBlacklistPage'));
+const AdminHarbingersPage = lazy(() => import('../pages/AdminHarbingersPage'));
 const UserbotManagementPage = lazy(() => import('../pages/UserbotManagementPage'));
 
 // Role-based default page redirect
@@ -125,7 +127,7 @@ function MobileAppContent() {
     if (userRole === 'driver') {
       if (path === '/status') return 'home';
       if (path === '/yuklar' || path.startsWith('/cargo')) return 'search';
-      if (path.startsWith('/my-transports')) return 'orders';
+      if (path.startsWith('/my-transports') || path.startsWith('/my-harbingers')) return 'orders';
       if (path.startsWith('/profile')) return 'profile';
     } else if (userRole === 'factory') {
       if (path.startsWith('/orders') || path.startsWith('/order/')) return 'home';
@@ -138,7 +140,7 @@ function MobileAppContent() {
       if (path === '' || path === '/' || path === '/yuklar' || path.startsWith('/cargo')) return 'home';
       if (path.startsWith('/transports') || path.startsWith('/transport/')) return 'transports';
       if (path.startsWith('/drivers') || path.startsWith('/driver/')) return 'drivers';
-      if (path.startsWith('/my-listings') || path.startsWith('/orders') || path.startsWith('/order/') || path.startsWith('/my-transports') || path.startsWith('/create')) return 'listings';
+      if (path.startsWith('/my-listings') || path.startsWith('/orders') || path.startsWith('/order/') || path.startsWith('/my-transports') || path.startsWith('/my-harbingers') || path.startsWith('/create')) return 'listings';
       if (path.startsWith('/profile')) return 'profile';
     }
 
@@ -257,6 +259,14 @@ function MobileAppContent() {
             }
           />
           <Route
+            path="/my-harbingers"
+            element={
+              <MobileProtectedRoute>
+                <MobileMyHarbingers />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
             path="/create-transport"
             element={
               <MobileProtectedRoute>
@@ -343,6 +353,14 @@ function MobileAppContent() {
             element={
               <MobileProtectedRoute>
                 <AdminSenderBlacklistPage mobile />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/harbingers"
+            element={
+              <MobileProtectedRoute>
+                <AdminHarbingersPage mobile />
               </MobileProtectedRoute>
             }
           />

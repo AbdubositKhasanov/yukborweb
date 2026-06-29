@@ -913,6 +913,27 @@ export const adminCreateHarbingerForDriver = async (driverId, harbinger) => {
   return response.data;
 };
 
+export const adminCreateHarbingerForUser = async (userId, harbinger) => {
+  const response = await apiClient.post(`/admin/users/${userId}/harbingers`, harbinger);
+  return response.data;
+};
+
+export const adminListHarbingers = async (params = {}) => {
+  const queryParams = {};
+  if (params.search) queryParams.search = params.search;
+  if (params.role && params.role !== 'all') queryParams.role = params.role;
+  if (params.page !== undefined) queryParams.page = params.page;
+  if (params.size !== undefined) queryParams.size = params.size;
+  const response = await apiClient.get('/admin/harbingers', { params: queryParams });
+  return response.data;
+};
+
+export const adminDeleteHarbinger = async (id) => {
+  const response = await apiClient.delete(`/admin/harbingers/${id}`);
+  apiCache.invalidate('harbingers');
+  return response.data;
+};
+
 export const adminCreateTransportForDriver = async (driverId, transport) => {
   const response = await apiClient.post(`/admin/drivers/${driverId}/transports`, transport);
   return response.data;
@@ -968,10 +989,11 @@ export const adminSendGroupAnnouncementNow = async (pin = false) => {
   return response.data;
 };
 
-export const adminUploadMedia = async (file, type = 'PHOTO') => {
+export const adminUploadMedia = async (file, type = 'PHOTO', options = {}) => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('type', type);
+  if (options.uploadToAllBots) formData.append('uploadToAllBots', 'true');
   const response = await apiClient.post('/admin/media/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000,

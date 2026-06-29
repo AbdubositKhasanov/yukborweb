@@ -43,6 +43,7 @@ export default function AdminMediaUpload({
   accept,
   disabled = false,
   successMessage = 'Media yuklandi',
+  uploadToAllBots = false,
   onManualChange,
   onUploaded,
 }) {
@@ -61,7 +62,7 @@ export default function AdminMediaUpload({
 
     setUploading(true);
     try {
-      const response = await adminUploadMedia(file, type);
+      const response = await adminUploadMedia(file, type, { uploadToAllBots });
       if (response.code === 200 && response.result?.fileId) {
         await onUploaded?.(response.result);
         if (successMessage) showSuccess(successMessage);

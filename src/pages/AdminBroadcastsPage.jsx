@@ -58,6 +58,7 @@ function toForm(item) {
     textTemplate: item.textTemplate || '',
     contentType: item.contentType || 'TEXT',
     mediaFileId: item.mediaFileId || '',
+    mediaFileIdsByBot: item.mediaFileIdsByBot || item.fileIdsByBot || {},
     parseMode: item.parseMode || 'HTML',
     targetFilter: {
       language: item.targetFilter?.language || '',
@@ -89,6 +90,7 @@ function formToPayload(form) {
     textTemplate: form.textTemplate,
     contentType: form.contentType,
     mediaFileId: form.mediaFileId.trim() || null,
+    mediaFileIdsByBot: form.mediaFileIdsByBot || {},
     parseMode: form.parseMode,
     targetFilter: {
       language: form.targetFilter.language || null,
@@ -284,13 +286,18 @@ export default function AdminBroadcastsPage({ mobile = false }) {
       ...form,
       contentType: media.contentType || form.contentType,
       mediaFileId: media.fileId,
+      mediaFileIdsByBot: media.fileIdsByBot || {},
     };
     setForm(nextForm);
     setSaving(true);
     try {
       const response = await adminUpdateScheduledBroadcast(selected.id, formToPayload(nextForm));
       if (response.code === 200) {
-        showSuccess('Media yuklandi va reja saqlandi');
+        if ((media.failedBotLabels || []).length > 0) {
+          showError(`Media ${media.uploadedBotCount || 1}/${media.botCount || 1} botga yuklandi. Qo'shimcha botlarni /start qilib qayta yuklang.`);
+        } else {
+          showSuccess('Media barcha botlarga yuklandi va reja saqlandi');
+        }
         await loadAll(response.result.id);
       } else {
         showError(response.message || 'Media yuklandi, lekin reja saqlanmadi');
@@ -503,7 +510,8 @@ export default function AdminBroadcastsPage({ mobile = false }) {
                         label="Broadcast media"
                         disabled={saving}
                         successMessage=""
-                        onManualChange={(mediaFileId) => updateForm({ mediaFileId })}
+                        uploadToAllBots
+                        onManualChange={(mediaFileId) => updateForm({ mediaFileId, mediaFileIdsByBot: {} })}
                         onUploaded={handleMediaUploaded}
                       />
                     </div>

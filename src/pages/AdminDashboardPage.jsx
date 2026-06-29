@@ -52,6 +52,12 @@ const ADMIN_LINKS = [
     description: "Yuk egasi filteridan chiqariladigan logist/dispetcher akkauntlar.",
   },
   {
+    section: 'adminHarbingers',
+    label: 'Xabarchilar',
+    path: '/admin/harbingers',
+    description: "Foydalanuvchi xabarchilarini ko'rish, egasiga o'tish va o'chirish.",
+  },
+  {
     section: 'adminSettings',
     label: 'Sozlamalar',
     path: '/admin/settings',

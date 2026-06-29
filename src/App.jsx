@@ -36,6 +36,7 @@ const AdminSettingsPage = lazy(() => import('./pages/AdminSettingsPage'));
 const AdminBroadcastsPage = lazy(() => import('./pages/AdminBroadcastsPage'));
 const AdminPremiumOrdersPage = lazy(() => import('./pages/AdminPremiumOrdersPage'));
 const AdminSenderBlacklistPage = lazy(() => import('./pages/AdminSenderBlacklistPage'));
+const AdminHarbingersPage = lazy(() => import('./pages/AdminHarbingersPage'));
 const TariffsPage = lazy(() => import('./pages/TariffsPage'));
 
 function AdminRoute({ children, isAuthenticated }) {
@@ -274,6 +275,14 @@ function AppContent() {
             element={
               <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminSenderBlacklistPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/harbingers"
+            element={
+              <AdminRoute isAuthenticated={isAuthenticated}>
+                <AdminHarbingersPage />
               </AdminRoute>
             }
           />

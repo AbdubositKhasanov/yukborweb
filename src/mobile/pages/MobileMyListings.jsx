@@ -5,9 +5,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopBar from '../components/TopBar';
+import { useMobileAuth } from '../context/MobileAuthContext';
 
 export default function MobileMyListings() {
   const navigate = useNavigate();
+  const { user } = useMobileAuth();
+  const visibleSections = user?.navigation?.roleSections;
+  const showHarbingers = !Array.isArray(visibleSections) || visibleSections.includes('myHarbingers');
 
   return (
     <>
@@ -24,7 +28,7 @@ export default function MobileMyListings() {
               gap: 16,
               width: '100%',
               padding: 20,
-              background: 'var(--m-card-bg)',
+              background: 'var(--m-bg-card)',
               border: '1px solid var(--m-border)',
               borderRadius: 12,
               marginBottom: 12,
@@ -64,11 +68,12 @@ export default function MobileMyListings() {
               gap: 16,
               width: '100%',
               padding: 20,
-              background: 'var(--m-card-bg)',
+              background: 'var(--m-bg-card)',
               border: '1px solid var(--m-border)',
               borderRadius: 12,
               cursor: 'pointer',
               textAlign: 'left',
+              marginBottom: showHarbingers ? 12 : 0,
             }}
           >
             <div style={{
@@ -93,6 +98,46 @@ export default function MobileMyListings() {
             </div>
             <span style={{ fontSize: 20, color: 'var(--m-text-muted)' }}>→</span>
           </button>
+
+          {showHarbingers && (
+            <button
+              onClick={() => navigate('/mobile/my-harbingers')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+                width: '100%',
+                padding: 20,
+                background: 'var(--m-bg-card)',
+                border: '1px solid var(--m-border)',
+                borderRadius: 12,
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{
+                width: 56,
+                height: 56,
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #F9AB00, #FDD663)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 28,
+              }}>
+                📣
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 17, color: 'var(--m-text)', marginBottom: 4 }}>
+                  Xabarchilarim
+                </div>
+                <div style={{ fontSize: 14, color: 'var(--m-text-secondary)' }}>
+                  Mos yuklar haqida avtomatik xabar olish
+                </div>
+              </div>
+              <span style={{ fontSize: 20, color: 'var(--m-text-muted)' }}>→</span>
+            </button>
+          )}
         </div>
       </main>
     </>

@@ -99,6 +99,7 @@ export default function AdminSettingsPage({ mobile = false }) {
       { label: 'Broadcast', path: `${base}/broadcasts` },
       { label: 'Premium yuklar', path: `${base}/premium-orders` },
       { label: 'Userbotlar', path: `${base}/userbots` },
+      { label: 'Xabarchilar', path: `${base}/harbingers` },
       { label: 'Sozlamalar', path: `${base}/settings` },
     ].filter((item) => item.path);
   }, [mobile]);
