@@ -90,6 +90,8 @@ export default function ProfilePage() {
     }
   };
 
+  const showBalanceCard = userData?.profileBalanceVisible === true;
+
   return (
     <div className="container">
       <h1 className="page-title">Profil</h1>
@@ -121,7 +123,7 @@ export default function ProfilePage() {
                 <strong style={{ color: 'var(--brand-color)' }}>{userData.name || 'Ko\'rsatilmagan'}</strong>
               </p>
               
-              {/* YANGI: Balans bloki - har doim ko'rsatiladi */}
+              {showBalanceCard && (
               <div style={{
                 margin: '10px 0',
                 padding: '20px',
@@ -218,6 +220,7 @@ export default function ProfilePage() {
                   <span style={{ fontSize: '18px' }}>💳</span>
                 </a>
               </div>
+              )}
               
               {userData.type === 'driver' && userData.driverLastLocName && (
                 <p style={{ display: 'flex', justifyContent: 'space-between', margin: '10px 0', padding: '10px', backgroundColor: '#d4edda', borderRadius: '4px' }}>

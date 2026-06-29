@@ -3,7 +3,7 @@
  * Content-first cargo feed with text search + collapsed advanced filters
  * Pagination matches Desktop SearchPage.jsx pattern exactly
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useStaticData } from '../../context/StaticDataContext';
 import { searchCargos, textSearchCargos, createHarbinger, getUserMe } from '../../services/api';
@@ -19,10 +19,40 @@ import LocationSelector from '../../components/LocationSelector';
 import { showError, showSuccess } from '../../utils/toast';
 
 const SENDER_FILTER_STORAGE_KEY = 'cargoSenderFilter';
+const MOBILE_CARGO_FEED_STATE_KEY = 'mobileCargoFeedState';
+const MOBILE_CARGO_FEED_RESTORE_KEY = 'mobileCargoFeedRestorePending';
 const SENDER_FILTERS = ['all', 'cargo_owner_only'];
 
-function initialSenderFilter() {
-  return 'cargo_owner_only';
+function normalizeSenderFilter(value) {
+  return SENDER_FILTERS.includes(value) ? value : 'cargo_owner_only';
+}
+
+function readMobileCargoFeedState() {
+  try {
+    if (sessionStorage.getItem(MOBILE_CARGO_FEED_RESTORE_KEY) !== 'true') return null;
+    const raw = sessionStorage.getItem(MOBILE_CARGO_FEED_STATE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (_) {
+    return null;
+  } finally {
+    try {
+      sessionStorage.removeItem(MOBILE_CARGO_FEED_RESTORE_KEY);
+      sessionStorage.removeItem(MOBILE_CARGO_FEED_STATE_KEY);
+    } catch (_) {
+      // ignore
+    }
+  }
+}
+
+function writeMobileCargoFeedState(state) {
+  try {
+    sessionStorage.setItem(MOBILE_CARGO_FEED_STATE_KEY, JSON.stringify(state));
+    sessionStorage.setItem(MOBILE_CARGO_FEED_RESTORE_KEY, 'true');
+  } catch (_) {
+    // ignore
+  }
 }
 
 function orderTypeParam(senderFilter) {
@@ -40,17 +70,18 @@ export default function MobileHome() {
   const driverId = location.state?.driverId || null;
   const driverName = location.state?.driverName || null;
   const driverFilters = location.state?.filters || {};
+  const restoredFeedState = useMemo(() => readMobileCargoFeedState(), []);
 
   // Permissions check
   const [permissions, setPermissions] = useState(null);
   const [featureLimits, setFeatureLimits] = useState(null);
 
   // Search mode: 'simple' (text) or 'advanced' (filters)
-  const [searchMode, setSearchMode] = useState(fromDriver ? 'advanced' : 'simple');
-  const [textQuery, setTextQuery] = useState('');
+  const [searchMode, setSearchMode] = useState(restoredFeedState?.searchMode || (fromDriver ? 'advanced' : 'simple'));
+  const [textQuery, setTextQuery] = useState(restoredFeedState?.textQuery || '');
 
   // Filter state - pre-fill from driver filters if available
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState(() => ({
     fromCountry: driverFilters.fromCountry?.toString() || '',
     fromRegion: driverFilters.fromRegion?.toString() || '',
     fromCity: driverFilters.fromCity?.toString() || '',
@@ -60,22 +91,30 @@ export default function MobileHome() {
     vehicleType: driverFilters.vehicleTypeId?.toString() || '',
     minWeight: '',
     maxWeight: driverFilters.maxWeight?.toString() || '',
-  });
-  const [activeFilters, setActiveFilters] = useState([]);
+    ...(restoredFeedState?.filters && typeof restoredFeedState.filters === 'object' ? restoredFeedState.filters : {}),
+  }));
+  const [activeFilters, setActiveFilters] = useState(() => (
+    Array.isArray(restoredFeedState?.activeFilters) ? restoredFeedState.activeFilters : []
+  ));
   const [searchTrigger, setSearchTrigger] = useState(0);
 
   // Data state - matches Desktop SearchPage.jsx exactly
   const [cargos, setCargos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(() => {
+    const restoredPage = Number(restoredFeedState?.page);
+    return Number.isFinite(restoredPage) && restoredPage > 0 ? restoredPage : 0;
+  });
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [searchSnapshotKey, setSearchSnapshotKey] = useState('');
+  const [hasSearched, setHasSearched] = useState(restoredFeedState?.hasSearched === true);
+  const [searchSnapshotKey, setSearchSnapshotKey] = useState(restoredFeedState?.searchSnapshotKey || '');
   const [creatingHarbinger, setCreatingHarbinger] = useState(false);
-  const [harbingerCreatedForCurrentSearch, setHarbingerCreatedForCurrentSearch] = useState(false);
+  const [harbingerCreatedForCurrentSearch, setHarbingerCreatedForCurrentSearch] = useState(
+    restoredFeedState?.harbingerCreatedForCurrentSearch === true
+  );
   const [showClubModal, setShowClubModal] = useState(false);
-  const [senderFilter, setSenderFilter] = useState(initialSenderFilter);
+  const [senderFilter, setSenderFilter] = useState(() => normalizeSenderFilter(restoredFeedState?.senderFilter));
 
   // UI state
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -240,7 +279,7 @@ export default function MobileHome() {
   }, [page, searchTrigger]);
 
   const handleSenderFilterChange = (value) => {
-    const nextValue = SENDER_FILTERS.includes(value) ? value : 'cargo_owner_only';
+    const nextValue = normalizeSenderFilter(value);
     setSenderFilter(nextValue);
     try {
       localStorage.setItem(SENDER_FILTER_STORAGE_KEY, nextValue);
@@ -252,6 +291,35 @@ export default function MobileHome() {
     setIsInitialLoad(false);
     setSearchTrigger((t) => t + 1);
   };
+
+  const handleOpenCargo = useCallback((cargo) => {
+    const cargoId = cargo?.id || cargo?._id;
+    if (!cargoId) return;
+
+    writeMobileCargoFeedState({
+      searchMode,
+      textQuery,
+      filters,
+      activeFilters,
+      page,
+      hasSearched,
+      searchSnapshotKey,
+      harbingerCreatedForCurrentSearch,
+      senderFilter,
+    });
+    navigate(`/mobile/cargo/${cargoId}`);
+  }, [
+    activeFilters,
+    filters,
+    harbingerCreatedForCurrentSearch,
+    hasSearched,
+    navigate,
+    page,
+    searchMode,
+    searchSnapshotKey,
+    senderFilter,
+    textQuery,
+  ]);
 
   // Text search handler
   const handleTextSearch = () => {
@@ -630,6 +698,7 @@ export default function MobileHome() {
                   <CargoListItem
                     key={cargo.id || cargo._id || index}
                     cargo={cargo}
+                    onClick={handleOpenCargo}
                     showOfferButton={fromDriver && !!permissions?.offerToDriver}
                     driverId={driverId}
                     canOffer={!!permissions?.offerToDriver}

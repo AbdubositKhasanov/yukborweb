@@ -34,6 +34,9 @@ const emptyForms = {
     cargoOwnerNeedReminderCheckIntervalMinutes: 5,
     cargoOwnerNeedReminderDailyLimit: 6,
   },
+  profile: {
+    balanceVisible: false,
+  },
   navigation: {
     driver: [],
     logist: [],
@@ -138,6 +141,9 @@ export default function AdminSettingsPage({ mobile = false }) {
         cargoOwnerNeedReminderLeadMinutes: data.automation?.cargoOwnerNeedReminder?.leadMinutes ?? 60,
         cargoOwnerNeedReminderCheckIntervalMinutes: data.automation?.cargoOwnerNeedReminder?.checkIntervalMinutes ?? 5,
         cargoOwnerNeedReminderDailyLimit: data.automation?.cargoOwnerNeedReminder?.dailyLimit ?? 6,
+      },
+      profile: {
+        balanceVisible: data.profile?.balanceVisible === true,
       },
       navigation: {
         driver: normalizeNavigationList(data.navigation?.driver),
@@ -345,6 +351,14 @@ export default function AdminSettingsPage({ mobile = false }) {
     }, 'Avtomatsiya sozlamalari saqlandi');
   };
 
+  const saveProfile = () => {
+    savePatch('profile', {
+      profile: {
+        balanceVisible: forms.profile.balanceVisible === true,
+      },
+    }, 'Profil sozlamalari saqlandi');
+  };
+
   if (!authChecked) return <div style={{ padding: 24 }}>Yuklanmoqda...</div>;
   if (!isAdmin) return <div style={{ padding: 24, color: '#c00' }}>Bu sahifa faqat adminlar uchun.</div>;
 
@@ -504,6 +518,27 @@ export default function AdminSettingsPage({ mobile = false }) {
               disabled={savingSection === 'permissions'}
             >
               {savingSection === 'permissions' ? 'Saqlanmoqda...' : 'Ruxsatlarni saqlash'}
+            </button>
+          </section>
+
+          <section style={cardStyle}>
+            <h3 style={sectionTitleStyle}>Profil</h3>
+            <p style={hintStyle}>Foydalanuvchi profilida ko'rinadigan qo'shimcha kartalarni boshqaring.</p>
+            <label style={switchLabelStyle}>
+              <input
+                type="checkbox"
+                checked={forms.profile.balanceVisible}
+                onChange={(e) => updateForm('profile', { balanceVisible: e.target.checked })}
+              />
+              Balans card ko'rsatilsin
+            </label>
+            <button
+              type="button"
+              style={{ ...primaryBtnStyle, marginTop: 12 }}
+              onClick={saveProfile}
+              disabled={savingSection === 'profile'}
+            >
+              {savingSection === 'profile' ? 'Saqlanmoqda...' : 'Profil sozlamalarini saqlash'}
             </button>
           </section>
 

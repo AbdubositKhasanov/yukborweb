@@ -151,6 +151,7 @@ export default function MobileProfile() {
   }
 
   const balance = user?.balance ?? 0;
+  const showBalanceCard = user?.profileBalanceVisible === true;
   const visibleAdminLinks = ADMIN_PROFILE_LINKS.filter((link) => {
     const adminSections = user?.navigation?.adminSections;
     if (!Array.isArray(adminSections)) return true;
@@ -231,7 +232,7 @@ export default function MobileProfile() {
                 </div>
               </div>
 
-              {/* Balance card */}
+              {showBalanceCard && (
               <div className="m-balance" style={{ marginTop: 16 }}>
                 <div className="m-balance-label">Balans</div>
                 <div
@@ -248,6 +249,7 @@ export default function MobileProfile() {
                   💰 Balansni to'ldirish
                 </button>
               </div>
+              )}
 
               <TariffStatusCard
                 user={user}
