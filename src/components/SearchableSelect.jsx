@@ -11,12 +11,17 @@ export default function SearchableSelect({
   className = '',
   disabled = false,
   maxVisibleOptions = 80,
+  allowCustom = false,
+  selectedLabel = '',
+  onCustomCreate,
+  getCustomCreateLabel = (customValue) => `"${customValue}"ni qo'lda qo'shish`,
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const rootRef = useRef(null);
   const searchRef = useRef(null);
   const selectedValue = value === null || value === undefined ? '' : String(value);
+  const customDisplayLabel = selectedLabel ? String(selectedLabel).trim() : '';
 
   const selectedOption = useMemo(() => {
     return options.find((option) => String(option.value) === selectedValue);
@@ -28,6 +33,13 @@ export default function SearchableSelect({
       : options;
     return source.slice(0, maxVisibleOptions);
   }, [maxVisibleOptions, options, query]);
+
+  const normalizedQuery = query.trim().replace(/\s+/g, ' ');
+  const canCreateCustom = useMemo(() => {
+    if (!allowCustom || !normalizedQuery || normalizedQuery.length < 2) return false;
+    const comparableQuery = normalizedQuery.toLocaleLowerCase('uz');
+    return !options.some((option) => String(option.label || '').trim().toLocaleLowerCase('uz') === comparableQuery);
+  }, [allowCustom, normalizedQuery, options]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -55,6 +67,14 @@ export default function SearchableSelect({
     setOpen(false);
   };
 
+  const handleCustomCreate = () => {
+    if (!canCreateCustom) return;
+    onCustomCreate?.(normalizedQuery);
+    setOpen(false);
+  };
+
+  const hasSelectedDisplay = Boolean(selectedOption || customDisplayLabel);
+
   return (
     <div className="searchable-select" ref={rootRef}>
       <button
@@ -63,8 +83,8 @@ export default function SearchableSelect({
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
-        <span className={selectedOption ? '' : 'searchable-select__placeholder'}>
-          {selectedOption?.label || placeholder}
+        <span className={hasSelectedDisplay ? '' : 'searchable-select__placeholder'}>
+          {selectedOption?.label || customDisplayLabel || placeholder}
         </span>
         <span className="searchable-select__chevron">▾</span>
       </button>
@@ -79,7 +99,10 @@ export default function SearchableSelect({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === 'Enter') event.preventDefault();
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  if (canCreateCustom) handleCustomCreate();
+                }
                 if (event.key === 'Escape') setOpen(false);
               }}
               placeholder={searchPlaceholder}
@@ -95,6 +118,16 @@ export default function SearchableSelect({
               {placeholder}
             </button>
 
+            {canCreateCustom && (
+              <button
+                type="button"
+                className="searchable-select__option searchable-select__option--custom"
+                onClick={handleCustomCreate}
+              >
+                {getCustomCreateLabel(normalizedQuery)}
+              </button>
+            )}
+
             {visibleOptions.map((option) => {
               const optionValue = String(option.value);
               return (
@@ -109,7 +142,7 @@ export default function SearchableSelect({
               );
             })}
 
-            {visibleOptions.length === 0 && (
+            {visibleOptions.length === 0 && !canCreateCustom && (
               <div className="searchable-select__empty">Topilmadi</div>
             )}
           </div>

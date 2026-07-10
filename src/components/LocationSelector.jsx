@@ -2,9 +2,42 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { getLocationsAndVehicles } from '../services/api';
 import SearchableSelect from './SearchableSelect';
 
+const EMPTY_LIST = [];
+
 const toId = (value) => {
   if (value === null || value === undefined || value === '') return '';
   return String(value);
+};
+
+export const CUSTOM_LOCATION_PREFIX = '__custom_location__:';
+
+const normalizeCustomLocationText = (value) => {
+  if (value === null || value === undefined) return '';
+  return String(value).trim().replace(/\s+/g, ' ').slice(0, 120);
+};
+
+export const isCustomLocationValue = (value) => {
+  return typeof value === 'string' && value.startsWith(CUSTOM_LOCATION_PREFIX);
+};
+
+export const makeCustomLocationValue = (value) => {
+  const normalized = normalizeCustomLocationText(value);
+  return normalized ? `${CUSTOM_LOCATION_PREFIX}${normalized}` : '';
+};
+
+export const getCustomLocationText = (value) => {
+  if (!isCustomLocationValue(value)) return '';
+  return normalizeCustomLocationText(value.slice(CUSTOM_LOCATION_PREFIX.length));
+};
+
+export const toOptionalLocationId = (value) => {
+  if (!value || isCustomLocationValue(value)) return null;
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+export const getManualLocationName = (regionValue, cityValue) => {
+  return getCustomLocationText(cityValue) || getCustomLocationText(regionValue);
 };
 
 const findById = (items = [], key, value) => {
@@ -29,6 +62,7 @@ export default function LocationSelector({
   staticData: providedStaticData = null,
   variant = 'desktop',
   error = false,
+  allowCustom = false,
 }) {
   const [localStaticData, setLocalStaticData] = useState(null);
   const [loading, setLoading] = useState(!providedStaticData);
@@ -62,9 +96,13 @@ export default function LocationSelector({
     };
   }, [providedStaticData]);
 
-  const countries = staticData?.countries || [];
-  const regions = staticData?.regions || [];
-  const cities = staticData?.cities || [];
+  const countries = staticData?.countries || EMPTY_LIST;
+  const regions = staticData?.regions || EMPTY_LIST;
+  const cities = staticData?.cities || EMPTY_LIST;
+  const customRegionName = getCustomLocationText(regionValue);
+  const customCityName = getCustomLocationText(cityValue);
+  const manualLocationName = getManualLocationName(regionValue, cityValue);
+  const isCustomRegion = Boolean(customRegionName);
 
   const countryOptions = useMemo(() => {
     return sortByName(countries).map((country) => ({
@@ -92,6 +130,7 @@ export default function LocationSelector({
   const cityOptions = useMemo(() => {
     const selectedCountry = toId(countryValue);
     const selectedRegion = toId(regionValue);
+    const hasSelectedRegion = selectedRegion && !isCustomLocationValue(selectedRegion);
     const selectedCountryRegionIds = new Set(
       selectedCountry
         ? regions
@@ -101,7 +140,7 @@ export default function LocationSelector({
     );
 
     const source = cities.filter((city) => {
-      if (selectedRegion) return String(city.regionId) === selectedRegion;
+      if (hasSelectedRegion) return String(city.regionId) === selectedRegion;
       if (selectedCountry) {
         return String(city.countryId) === selectedCountry || selectedCountryRegionIds.has(String(city.regionId));
       }
@@ -148,6 +187,19 @@ export default function LocationSelector({
     onCityChange?.(nextCityId);
   };
 
+  const handleRegionCustomCreate = (customName) => {
+    const customValue = makeCustomLocationValue(customName);
+    if (!customValue) return;
+    onRegionChange?.(customValue);
+    onCityChange?.('');
+  };
+
+  const handleCityCustomCreate = (customName) => {
+    const customValue = makeCustomLocationValue(customName);
+    if (!customValue) return;
+    onCityChange?.(customValue);
+  };
+
   if (loading) {
     return <div className={groupClassName}>Yuklanmoqda...</div>;
   }
@@ -174,8 +226,11 @@ export default function LocationSelector({
           value={regionValue || ''}
           options={regionOptions}
           placeholder="Viloyat"
-          searchPlaceholder="Viloyat qidirish"
+          searchPlaceholder={allowCustom ? 'Viloyat qidirish yoki yozish' : 'Viloyat qidirish'}
           onChange={handleRegionChange}
+          allowCustom={allowCustom}
+          selectedLabel={customRegionName}
+          onCustomCreate={handleRegionCustomCreate}
         />
 
         <SearchableSelect
@@ -183,10 +238,24 @@ export default function LocationSelector({
           value={cityValue || ''}
           options={cityOptions}
           placeholder="Shahar"
-          searchPlaceholder="Shahar qidirish"
+          searchPlaceholder={allowCustom ? 'Shahar qidirish yoki yozish' : 'Shahar qidirish'}
           onChange={handleCityChange}
+          disabled={isCustomRegion}
+          allowCustom={allowCustom && !isCustomRegion}
+          selectedLabel={customCityName}
+          onCustomCreate={handleCityCustomCreate}
         />
       </div>
+      {allowCustom && manualLocationName && (
+        <div style={{
+          marginTop: 8,
+          color: isMobile ? 'var(--m-text-secondary)' : '#5f6b7a',
+          fontSize: isMobile ? 12 : 13,
+          lineHeight: 1.4,
+        }}>
+          {"Qo'lda kiritildi:"} <strong>{manualLocationName}</strong>
+        </div>
+      )}
     </div>
   );
 }

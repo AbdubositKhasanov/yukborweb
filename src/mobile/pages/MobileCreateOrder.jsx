@@ -9,13 +9,27 @@ import { useStaticData } from '../../context/StaticDataContext';
 import { createOrder, getBroadcastStatus, getLocationsAndVehicles, updateOrderOwnerStatusPrompt } from '../../services/api';
 import { isBroadcastFinished, normalizeBroadcastStatus } from '../../utils/orderText';
 import TopBar from '../components/TopBar';
-import LocationSelector from '../../components/LocationSelector';
+import LocationSelector, { getManualLocationName, toOptionalLocationId } from '../../components/LocationSelector';
 
 const STEPS = [
   { id: 1, title: 'Yuk ma\'lumotlari' },
   { id: 2, title: 'Marshrut' },
   { id: 3, title: 'Narx va izoh' },
 ];
+
+const buildRequestLocation = (countryValue, regionValue, cityValue) => ({
+  cityId: toOptionalLocationId(cityValue),
+  regionId: toOptionalLocationId(regionValue),
+  countryId: toOptionalLocationId(countryValue),
+  customName: getManualLocationName(regionValue, cityValue) || null,
+});
+
+const hasRequiredLocation = (countryValue, regionValue, cityValue) => {
+  return Boolean(
+    toOptionalLocationId(countryValue) &&
+      (toOptionalLocationId(regionValue) || getManualLocationName(regionValue, cityValue))
+  );
+};
 
 export default function MobileCreateOrder() {
   const navigate = useNavigate();
@@ -115,12 +129,12 @@ export default function MobileCreateOrder() {
     }
 
     if (stepNum === 2) {
-      // Desktop requires country + region minimum
-      if (!formData.fromCountry || !formData.fromRegion) {
-        newErrors.fromLocation = 'Qayerdan joylashuvini to\'liq tanlang';
+      // Desktop bilan bir xil: davlat + viloyat yoki qo'lda kiritilgan joy.
+      if (!hasRequiredLocation(formData.fromCountry, formData.fromRegion, formData.fromCity)) {
+        newErrors.fromLocation = 'Qayerdan joylashuvini tanlang yoki yozing';
       }
-      if (!formData.toCountry || !formData.toRegion) {
-        newErrors.toLocation = 'Qayerga joylashuvini to\'liq tanlang';
+      if (!hasRequiredLocation(formData.toCountry, formData.toRegion, formData.toCity)) {
+        newErrors.toLocation = 'Qayerga joylashuvini tanlang yoki yozing';
       }
     }
 
@@ -159,16 +173,8 @@ export default function MobileCreateOrder() {
         cargoName: formData.cargoName.trim(),
         additionalPhone: formData.additionalPhone.trim() || null,
         description: formData.description.trim() || null,
-        fromLocation: {
-          cityId: formData.fromCity ? parseInt(formData.fromCity) : null,
-          regionId: parseInt(formData.fromRegion),
-          countryId: parseInt(formData.fromCountry),
-        },
-        toLocation: {
-          cityId: formData.toCity ? parseInt(formData.toCity) : null,
-          regionId: parseInt(formData.toRegion),
-          countryId: parseInt(formData.toCountry),
-        },
+        fromLocation: buildRequestLocation(formData.fromCountry, formData.fromRegion, formData.fromCity),
+        toLocation: buildRequestLocation(formData.toCountry, formData.toRegion, formData.toCity),
         weight: parseFloat(formData.weight),
         vehicleTypeId: parseInt(formData.vehicleTypeId),
         priceUzs: parseInt(formData.priceUzs),
@@ -588,6 +594,7 @@ export default function MobileCreateOrder() {
               variant="mobile"
               required
               error={Boolean(errors.fromLocation)}
+              allowCustom
             />
             {errors.fromLocation && <p className="m-form-error">{errors.fromLocation}</p>}
 
@@ -605,6 +612,7 @@ export default function MobileCreateOrder() {
               variant="mobile"
               required
               error={Boolean(errors.toLocation)}
+              allowCustom
             />
             {errors.toLocation && <p className="m-form-error">{errors.toLocation}</p>}
           </div>

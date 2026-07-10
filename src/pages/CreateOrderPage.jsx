@@ -2,8 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createOrder, getBroadcastStatus, getLocationsAndVehicles, updateOrderOwnerStatusPrompt } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
-import LocationSelector from '../components/LocationSelector';
+import LocationSelector, { getManualLocationName, toOptionalLocationId } from '../components/LocationSelector';
 import { isBroadcastFinished, normalizeBroadcastStatus } from '../utils/orderText';
+
+const buildRequestLocation = (countryValue, regionValue, cityValue) => ({
+  cityId: toOptionalLocationId(cityValue),
+  regionId: toOptionalLocationId(regionValue),
+  countryId: toOptionalLocationId(countryValue),
+  customName: getManualLocationName(regionValue, cityValue) || null,
+});
+
+const hasRequiredLocation = (countryValue, regionValue, cityValue) => {
+  return Boolean(
+    toOptionalLocationId(countryValue) &&
+      (toOptionalLocationId(regionValue) || getManualLocationName(regionValue, cityValue))
+  );
+};
 
 export default function CreateOrderPage() {
   const navigate = useNavigate();
@@ -90,12 +104,12 @@ export default function CreateOrderPage() {
       newErrors.cargoName = 'Yuk nomini kiriting';
     }
 
-    if (!fromCountry || !fromRegion) {
-      newErrors.fromLocation = 'Qayerdan joylashuvini to\'liq tanlang';
+    if (!hasRequiredLocation(fromCountry, fromRegion, fromCity)) {
+      newErrors.fromLocation = 'Qayerdan joylashuvini tanlang yoki yozing';
     }
 
-    if (!toCountry || !toRegion) {
-      newErrors.toLocation = 'Qayerga joylashuvini to\'liq tanlang';
+    if (!hasRequiredLocation(toCountry, toRegion, toCity)) {
+      newErrors.toLocation = 'Qayerga joylashuvini tanlang yoki yozing';
     }
 
     if (!weight || parseFloat(weight) <= 0) {
@@ -130,16 +144,8 @@ export default function CreateOrderPage() {
         cargoName: cargoName.trim(),
         additionalPhone: additionalPhone.trim() || null,
         description: description.trim() || null,
-        fromLocation: {
-          cityId: parseInt(fromCity),
-          regionId: parseInt(fromRegion),
-          countryId: parseInt(fromCountry),
-        },
-        toLocation: {
-          cityId: parseInt(toCity),
-          regionId: parseInt(toRegion),
-          countryId: parseInt(toCountry),
-        },
+        fromLocation: buildRequestLocation(fromCountry, fromRegion, fromCity),
+        toLocation: buildRequestLocation(toCountry, toRegion, toCity),
         weight: parseFloat(weight),
         vehicleTypeId: parseInt(vehicleTypeId),
         priceUzs: parseInt(priceUzs),
@@ -405,6 +411,8 @@ export default function CreateOrderPage() {
             onRegionChange={setFromRegion}
             onCityChange={setFromCity}
             required={true}
+            allowCustom
+            error={Boolean(errors.fromLocation)}
           />
           {errors.fromLocation && (
             <div className="form-error" style={{ marginTop: '-10px', marginBottom: '15px' }}>
@@ -422,6 +430,8 @@ export default function CreateOrderPage() {
             onRegionChange={setToRegion}
             onCityChange={setToCity}
             required={true}
+            allowCustom
+            error={Boolean(errors.toLocation)}
           />
           {errors.toLocation && (
             <div className="form-error" style={{ marginTop: '-10px', marginBottom: '15px' }}>

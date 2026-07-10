@@ -83,6 +83,15 @@
   background: #eef7ff;
 }
 
+.searchable-select__option--custom {
+  color: #006aa6;
+  font-weight: 700;
+}
+
+.searchable-select__option--custom:hover {
+  background: #e8f6ff;
+}
+
 .searchable-select__empty {
   color: #777;
   font-size: 14px;
