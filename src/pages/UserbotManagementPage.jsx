@@ -324,6 +324,26 @@ export default function UserbotManagementPage() {
         throw new Error(res.message || 'Server guruhlarni belgilamadi');
       }
 
+      // Bulk endpointning o'zi MongoDB'dan qayta o'qigan guruhlarni qaytaradi.
+      // Bu contract bo'lmasa backend hali eski versiyada ishlayotgan bo'ladi.
+      if (!Array.isArray(res.groups)) {
+        throw new Error('Backendning guruh ruxsatlari versiyasi eskirgan');
+      }
+      const bulkKeys = new Set(
+        res.groups.map((group) => `${group.phone}:${group.group_id}`)
+      );
+      const missingFromBulk = groups.filter(
+        (group) => !bulkKeys.has(`${group.phone}:${group.group_id}`)
+      );
+      const unselectedInBulk = res.groups.filter(
+        (group) => !group.can_read || !group.can_send
+      );
+      if (missingFromBulk.length > 0 || unselectedInBulk.length > 0) {
+        throw new Error(
+          `Bulk javobida ${missingFromBulk.length} ta yo'q, ${unselectedInBulk.length} ta belgilanmagan guruh bor`
+        );
+      }
+
       // Lokal state'ni taxminan o'zgartirmaymiz. Oddiy GET bilan qayta o'qish
       // browser refresh qilganda ham aynan shu qiymatlar kelishini kafolatlaydi.
       const verification = await getUserbotGroups(false);
@@ -343,7 +363,7 @@ export default function UserbotManagementPage() {
         unselectedGroups.length > 0
       ) {
         throw new Error(
-          `${missingGroups.length + unselectedGroups.length} ta guruh ruxsati serverda saqlanmadi`
+          `Tekshiruvda ${missingGroups.length} ta yo'q, ${unselectedGroups.length} ta belgilanmagan guruh qaytdi`
         );
       }
 

@@ -46,6 +46,12 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
+            // Admin userbot holati mutable va xavfsizlikka bog'liq. Eski
+            // permission javobini hech qachon service worker'dan bermaymiz.
+            urlPattern: ({ url }) => url.pathname.includes('/api/userbot/'),
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: ({ request }) => request.mode === 'navigate',
             handler: 'NetworkFirst',
             options: {

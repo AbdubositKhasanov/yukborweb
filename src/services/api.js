@@ -840,7 +840,15 @@ export const clearBannedGroups = async (phone = null) => {
  */
 export const getUserbotGroups = async (refresh = false, phone = null) => {
   const response = await apiClient.get('/api/userbot/groups', {
-    params: { refresh, ...(phone ? { phone } : {}) },
+    params: {
+      refresh,
+      ...(phone ? { phone } : {}),
+      _ts: Date.now(),
+    },
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+    },
     timeout: refresh ? 30 * 60 * 1000 : 30000,
   });
   return response.data;
