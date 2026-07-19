@@ -1365,6 +1365,39 @@ export default function UserbotManagementPage() {
                           </a>
                         )}
                       </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '7px',
+                          flexWrap: 'wrap',
+                          marginTop: '10px',
+                        }}
+                      >
+                        <GroupOrderStat
+                          label="Jami yuk"
+                          value={group.orders_total}
+                          color="#0056b3"
+                          background="#e7f1ff"
+                        />
+                        <GroupOrderStat
+                          label="Yuk egasi"
+                          value={group.orders_cargo_owner}
+                          color="#087f5b"
+                          background="#e6fcf5"
+                        />
+                        <GroupOrderStat
+                          label="Logist"
+                          value={group.orders_logist}
+                          color="#9c36b5"
+                          background="#f8f0fc"
+                        />
+                        <GroupOrderStat
+                          label="Noma'lum"
+                          value={group.orders_unknown}
+                          color="#666"
+                          background="#f1f3f5"
+                        />
+                      </div>
                     </div>
 
                     <div
@@ -1878,6 +1911,30 @@ function GroupPermissionToggle({ label, checked, color, disabled, onChange }) {
       />
       {disabled ? 'Saqlanmoqda...' : label}
     </label>
+  );
+}
+
+function GroupOrderStat({ label, value, color, background }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+        padding: '5px 8px',
+        borderRadius: '7px',
+        backgroundColor: background,
+        color,
+        fontSize: '11px',
+        fontWeight: '600',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}:
+      <strong style={{ fontSize: '12px' }}>
+        {Number(value || 0).toLocaleString('uz-UZ')}
+      </strong>
+    </span>
   );
 }
 
