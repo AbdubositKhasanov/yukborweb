@@ -858,6 +858,17 @@ export const updateUserbotGroupPermissions = async ({ phone, groupId, canRead, c
 };
 
 /**
+ * Enable read and send permissions for every managed group.
+ */
+export const selectAllUserbotGroups = async () => {
+  const response = await apiClient.put('/api/userbot/groups/permissions/bulk', {
+    can_read: true,
+    can_send: true,
+  });
+  return response.data;
+};
+
+/**
  * Join the selected userbot to a Telegram group.
  */
 export const joinUserbotGroup = async (phone, group) => {

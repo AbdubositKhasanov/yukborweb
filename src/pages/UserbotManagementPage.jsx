@@ -15,6 +15,7 @@ import {
   updateUserbotGroupPermissions,
   joinUserbotGroup,
   leaveUserbotGroup,
+  selectAllUserbotGroups,
 } from '../services/api';
 
 // ============================================
@@ -76,6 +77,7 @@ export default function UserbotManagementPage() {
   const [joinGroupTarget, setJoinGroupTarget] = useState('');
   const [joinGroupLoading, setJoinGroupLoading] = useState(false);
   const [leavingGroupKey, setLeavingGroupKey] = useState(null);
+  const [selectingAllGroups, setSelectingAllGroups] = useState(false);
 
   // Auto-clear messages
   useEffect(() => {
@@ -303,6 +305,40 @@ export default function UserbotManagementPage() {
       );
     } finally {
       setLeavingGroupKey(null);
+    }
+  };
+
+  const handleSelectAllGroups = async () => {
+    if (
+      !window.confirm(
+        "Barcha guruhlarda xabarlarni o'qish va xabar yuborishni yoqmoqchimisiz?"
+      )
+    ) {
+      return;
+    }
+
+    setSelectingAllGroups(true);
+    try {
+      const res = await selectAllUserbotGroups();
+      if (res.success) {
+        setGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            can_read: true,
+            can_send: true,
+          }))
+        );
+        setSuccessMsg(res.message || 'Barcha guruhlar belgilandi');
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          'Barcha guruhlarni belgilashda xatolik'
+      );
+    } finally {
+      setSelectingAllGroups(false);
     }
   };
 
@@ -1124,6 +1160,27 @@ export default function UserbotManagementPage() {
           </div>
 
           <div className="card" style={{ marginBottom: '16px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '10px',
+                flexWrap: 'wrap',
+                marginBottom: '12px',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '15px' }}>Guruh ruxsatlari</h3>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSelectAllGroups}
+                disabled={selectingAllGroups || groups.length === 0}
+                style={{ padding: '7px 14px', fontSize: '12px' }}
+              >
+                {selectingAllGroups ? 'Belgilanmoqda...' : '✓ Barchasini belgilash'}
+              </button>
+            </div>
             <div
               style={{
                 display: 'grid',
