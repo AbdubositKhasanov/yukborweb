@@ -834,6 +834,54 @@ export const clearBannedGroups = async (phone = null) => {
 };
 
 /**
+ * Get every group connected to userbots and its admin permissions.
+ * @param {boolean} refresh - Sync live Telegram dialogs before returning
+ * @param {string|null} phone - Optional userbot phone filter
+ */
+export const getUserbotGroups = async (refresh = false, phone = null) => {
+  const response = await apiClient.get('/api/userbot/groups', {
+    params: { refresh, ...(phone ? { phone } : {}) },
+    timeout: refresh ? 30 * 60 * 1000 : 30000,
+  });
+  return response.data;
+};
+
+/**
+ * Update read/send permissions for one userbot group.
+ */
+export const updateUserbotGroupPermissions = async ({ phone, groupId, canRead, canSend }) => {
+  const body = { phone, group_id: groupId };
+  if (typeof canRead === 'boolean') body.can_read = canRead;
+  if (typeof canSend === 'boolean') body.can_send = canSend;
+  const response = await apiClient.put('/api/userbot/groups/permissions', body);
+  return response.data;
+};
+
+/**
+ * Join the selected userbot to a Telegram group.
+ */
+export const joinUserbotGroup = async (phone, group) => {
+  const response = await apiClient.post(
+    '/api/userbot/groups/join',
+    { phone, group },
+    { timeout: 30 * 60 * 1000 }
+  );
+  return response.data;
+};
+
+/**
+ * Remove the selected userbot from a Telegram group.
+ */
+export const leaveUserbotGroup = async (phone, groupId) => {
+  const response = await apiClient.post(
+    '/api/userbot/groups/leave',
+    { phone, group_id: groupId },
+    { timeout: 30 * 60 * 1000 }
+  );
+  return response.data;
+};
+
+/**
  * Get group monitoring statistics (admin only)
  */
 export const getGroupMonitoringStats = async () => {

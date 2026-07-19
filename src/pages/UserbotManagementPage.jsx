@@ -11,6 +11,10 @@ import {
   getUserbotHealth,
   getBannedGroups,
   clearBannedGroups,
+  getUserbotGroups,
+  updateUserbotGroupPermissions,
+  joinUserbotGroup,
+  leaveUserbotGroup,
 } from '../services/api';
 
 // ============================================
@@ -21,6 +25,7 @@ const VIEWS = {
   ADD_FORM: 'add_form',
   VERIFY_CODE: 'verify_code',
   VERIFY_PASSWORD: 'verify_password',
+  GROUPS: 'groups',
   MONITORING: 'monitoring',
 };
 
@@ -58,6 +63,19 @@ export default function UserbotManagementPage() {
   const [bannedGroups, setBannedGroups] = useState([]);
   const [bannedLoading, setBannedLoading] = useState(false);
   const [clearingBanned, setClearingBanned] = useState(false);
+
+  // Admin-managed groups
+  const [groups, setGroups] = useState([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupSearch, setGroupSearch] = useState('');
+  const [groupPhoneFilter, setGroupPhoneFilter] = useState('all');
+  const [groupPermissionFilter, setGroupPermissionFilter] = useState('all');
+  const [updatingGroupKey, setUpdatingGroupKey] = useState(null);
+  const [showJoinGroupForm, setShowJoinGroupForm] = useState(false);
+  const [joinGroupPhone, setJoinGroupPhone] = useState('');
+  const [joinGroupTarget, setJoinGroupTarget] = useState('');
+  const [joinGroupLoading, setJoinGroupLoading] = useState(false);
+  const [leavingGroupKey, setLeavingGroupKey] = useState(null);
 
   // Auto-clear messages
   useEffect(() => {
@@ -140,6 +158,151 @@ export default function UserbotManagementPage() {
       setError(err.response?.data?.detail || 'Tozalashda xatolik');
     } finally {
       setClearingBanned(false);
+    }
+  };
+
+  const loadGroups = async (refresh = false) => {
+    setGroupsLoading(true);
+    try {
+      const res = await getUserbotGroups(refresh);
+      if (res.success) {
+        setGroups(res.groups || []);
+        if (refresh) {
+          setSuccessMsg(
+            res.synced_userbots > 0
+              ? `${res.synced_userbots} ta userbot guruhlari yangilandi`
+              : 'Saqlangan guruhlar yuklandi'
+          );
+        }
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          'Guruhlar yuklanmadi'
+      );
+    } finally {
+      setGroupsLoading(false);
+    }
+  };
+
+  const handleOpenGroups = () => {
+    handleCloseMonitoring();
+    setView(VIEWS.GROUPS);
+    loadGroups(true);
+  };
+
+  const handleGroupPermissionChange = async (group, permission, value) => {
+    const key = `${group.phone}:${group.group_id}:${permission}`;
+    setUpdatingGroupKey(key);
+    try {
+      const res = await updateUserbotGroupPermissions({
+        phone: group.phone,
+        groupId: group.group_id,
+        ...(permission === 'can_read' ? { canRead: value } : { canSend: value }),
+      });
+      if (res.success && res.group) {
+        setGroups((prev) =>
+          prev.map((item) =>
+            item.phone === res.group.phone && item.group_id === res.group.group_id
+              ? res.group
+              : item
+          )
+        );
+        setSuccessMsg('Guruh ruxsati saqlandi');
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          'Ruxsatni saqlashda xatolik'
+      );
+    } finally {
+      setUpdatingGroupKey(null);
+    }
+  };
+
+  const replaceGroupInState = (updatedGroup) => {
+    setGroups((prev) => {
+      const exists = prev.some(
+        (item) =>
+          item.phone === updatedGroup.phone && item.group_id === updatedGroup.group_id
+      );
+      if (!exists) return [updatedGroup, ...prev];
+      return prev.map((item) =>
+        item.phone === updatedGroup.phone && item.group_id === updatedGroup.group_id
+          ? updatedGroup
+          : item
+      );
+    });
+  };
+
+  const handleOpenJoinGroupForm = (phone = '', target = '') => {
+    const defaultPhone =
+      phone ||
+      userbots.find((userbot) => userbot.status === 'active')?.phone ||
+      '';
+    setJoinGroupPhone(defaultPhone);
+    setJoinGroupTarget(target);
+    setShowJoinGroupForm(true);
+  };
+
+  const handleJoinGroup = async (event) => {
+    event.preventDefault();
+    if (!joinGroupPhone || !joinGroupTarget.trim()) {
+      setError('Userbot va guruh linkini kiriting');
+      return;
+    }
+
+    setJoinGroupLoading(true);
+    try {
+      const res = await joinUserbotGroup(joinGroupPhone, joinGroupTarget.trim());
+      if (res.success && res.group) {
+        replaceGroupInState(res.group);
+        setSuccessMsg(res.message || "Userbot guruhga qo'shildi");
+        setShowJoinGroupForm(false);
+        setJoinGroupTarget('');
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          "Guruhga qo'shishda xatolik"
+      );
+    } finally {
+      setJoinGroupLoading(false);
+    }
+  };
+
+  const handleLeaveGroup = async (group) => {
+    if (
+      !window.confirm(
+        `${group.phone} userbotni "${group.title}" guruhidan chiqarmoqchimisiz?`
+      )
+    ) {
+      return;
+    }
+
+    const key = `${group.phone}:${group.group_id}`;
+    setLeavingGroupKey(key);
+    try {
+      const res = await leaveUserbotGroup(group.phone, group.group_id);
+      if (res.success && res.group) {
+        replaceGroupInState(res.group);
+        setSuccessMsg(res.message || 'Userbot guruhdan chiqarildi');
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          'Guruhdan chiqarishda xatolik'
+      );
+    } finally {
+      setLeavingGroupKey(null);
     }
   };
 
@@ -280,6 +443,7 @@ export default function UserbotManagementPage() {
   };
 
   const handleOpenMonitoring = () => {
+    if (monitoringPollRef.current) clearInterval(monitoringPollRef.current);
     setView(VIEWS.MONITORING);
     loadMonitoringStats();
     monitoringPollRef.current = setInterval(loadMonitoringStats, 10000);
@@ -367,6 +531,32 @@ export default function UserbotManagementPage() {
 
   const isUserbotView =
     view === VIEWS.USERBOTS || view === VIEWS.ADD_FORM;
+  const activeUserbots = userbots.filter((userbot) => userbot.status === 'active');
+  const userbotPhones = [...new Set(groups.map((group) => group.phone))];
+  const connectedGroups = groups.filter((group) => group.is_available);
+  const readableGroups = connectedGroups.filter((group) => group.can_read).length;
+  const sendableGroups = connectedGroups.filter((group) => group.can_send).length;
+  const disconnectedGroups = groups.filter((group) => !group.is_available).length;
+  const filteredGroups = groups.filter((group) => {
+    if (groupPhoneFilter !== 'all' && group.phone !== groupPhoneFilter) return false;
+    if (groupPermissionFilter === 'read' && (!group.can_read || !group.is_available)) return false;
+    if (groupPermissionFilter === 'send' && (!group.can_send || !group.is_available)) return false;
+    if (groupPermissionFilter === 'inactive' && group.is_available) return false;
+    if (
+      groupPermissionFilter === 'disabled' &&
+      (group.can_read || group.can_send || !group.is_available)
+    ) {
+      return false;
+    }
+
+    const query = groupSearch.trim().toLocaleLowerCase('uz-UZ');
+    if (!query) return true;
+    return [group.title, group.username, group.phone, String(group.group_id)].some((value) =>
+      String(value || '')
+        .toLocaleLowerCase('uz-UZ')
+        .includes(query)
+    );
+  });
 
   // ============================================
   // MAIN RENDER
@@ -420,6 +610,16 @@ export default function UserbotManagementPage() {
         </button>
 
         <button
+          onClick={handleOpenGroups}
+          style={{
+            ...tabBtnStyle,
+            ...(view === VIEWS.GROUPS ? tabBtnActiveStyle : {}),
+          }}
+        >
+          Guruhlar ({connectedGroups.length})
+        </button>
+
+        <button
           onClick={handleOpenMonitoring}
           style={{
             ...tabBtnStyle,
@@ -459,6 +659,26 @@ export default function UserbotManagementPage() {
             >
               {monitoringLoading ? '...' : 'Yangilash'}
             </button>
+          )}
+          {view === VIEWS.GROUPS && (
+            <>
+              <button
+                className="btn btn-secondary"
+                onClick={() => loadGroups(true)}
+                disabled={groupsLoading}
+                style={{ padding: '8px 16px', fontSize: '13px' }}
+              >
+                {groupsLoading ? 'Yangilanmoqda...' : 'Telegramdan yangilash'}
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => handleOpenJoinGroupForm()}
+                disabled={activeUserbots.length === 0}
+                style={{ padding: '8px 16px', fontSize: '13px' }}
+              >
+                + Guruhga qo&apos;shish
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -784,6 +1004,333 @@ export default function UserbotManagementPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* ============================================ */}
+      {/* VIEW: ADMIN-MANAGED GROUPS */}
+      {/* ============================================ */}
+      {view === VIEWS.GROUPS && (
+        <div>
+          {showJoinGroupForm && (
+            <div
+              className="card"
+              style={{ marginBottom: '16px', borderLeft: '4px solid #007bff' }}
+            >
+              <h3 style={{ margin: '0 0 6px', fontSize: '16px' }}>
+                Userbotni Telegram guruhiga qo&apos;shish
+              </h3>
+              <p style={{ margin: '0 0 14px', color: '#777', fontSize: '13px' }}>
+                Public @username yoki private invite-link kiriting.
+              </p>
+              <form onSubmit={handleJoinGroup}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gap: '12px',
+                  }}
+                >
+                  <div>
+                    <label htmlFor="join-group-phone" style={labelStyle}>
+                      Qaysi userbot
+                    </label>
+                    <select
+                      id="join-group-phone"
+                      className="form-input"
+                      value={joinGroupPhone}
+                      onChange={(event) => setJoinGroupPhone(event.target.value)}
+                      style={inputStyle}
+                    >
+                      <option value="">Userbotni tanlang</option>
+                      {userbots.map((userbot) => (
+                        <option
+                          key={userbot.phone}
+                          value={userbot.phone}
+                          disabled={userbot.status !== 'active'}
+                        >
+                          {userbot.phone}
+                          {userbot.status === 'active' ? ' — Aktiv' : ` — ${userbot.status}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="join-group-target" style={labelStyle}>
+                      Guruh username yoki linki
+                    </label>
+                    <input
+                      id="join-group-target"
+                      className="form-input"
+                      type="text"
+                      value={joinGroupTarget}
+                      onChange={(event) => setJoinGroupTarget(event.target.value)}
+                      placeholder="@guruh yoki https://t.me/+..."
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '8px',
+                    marginTop: '14px',
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={joinGroupLoading}
+                    onClick={() => {
+                      setShowJoinGroupForm(false);
+                      setJoinGroupTarget('');
+                    }}
+                  >
+                    Bekor qilish
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={joinGroupLoading || !joinGroupPhone || !joinGroupTarget.trim()}
+                  >
+                    {joinGroupLoading ? "Qo'shilmoqda..." : "Guruhga qo'shish"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: '12px',
+              marginBottom: '16px',
+            }}
+          >
+            <StatCard
+              title="Ulangan guruhlar"
+              value={connectedGroups.length}
+              icon="👥"
+              color="#007bff"
+            />
+            <StatCard title="O'qiladigan" value={readableGroups} icon="📥" color="#28a745" />
+            <StatCard
+              title="Xabar yuboriladigan"
+              value={sendableGroups}
+              icon="📤"
+              color="#6f42c1"
+            />
+          </div>
+
+          <div className="card" style={{ marginBottom: '16px' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '12px',
+                marginBottom: '12px',
+              }}
+            >
+              <div>
+                <label htmlFor="group-search" style={labelStyle}>
+                  Guruh qidirish
+                </label>
+                <input
+                  id="group-search"
+                  className="form-input"
+                  type="search"
+                  value={groupSearch}
+                  onChange={(event) => setGroupSearch(event.target.value)}
+                  placeholder="Nomi, username, ID yoki telefon"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label htmlFor="group-phone-filter" style={labelStyle}>
+                  Userbot
+                </label>
+                <select
+                  id="group-phone-filter"
+                  className="form-input"
+                  value={groupPhoneFilter}
+                  onChange={(event) => setGroupPhoneFilter(event.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="all">Barcha userbotlar</option>
+                  {userbotPhones.map((phone) => (
+                    <option key={phone} value={phone}>
+                      {phone}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {[
+                ['all', `Barchasi (${groups.length})`],
+                ['read', `O'qiladigan (${readableGroups})`],
+                ['send', `Xabar yuboriladigan (${sendableGroups})`],
+                ['inactive', `Ulanmagan (${disconnectedGroups})`],
+                [
+                  'disabled',
+                  `Ikkalasi o'chirilgan (${
+                    connectedGroups.filter((group) => !group.can_read && !group.can_send).length
+                  })`,
+                ],
+              ].map(([filter, label]) => (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setGroupPermissionFilter(filter)}
+                  style={{
+                    ...groupFilterBtnStyle,
+                    ...(groupPermissionFilter === filter ? groupFilterBtnActiveStyle : {}),
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {groupsLoading && groups.length === 0 ? (
+            <div className="loading" style={{ padding: '40px' }}>
+              Telegram guruhlari yuklanmoqda...
+            </div>
+          ) : filteredGroups.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <div style={{ fontSize: '42px', marginBottom: '10px' }}>👥</div>
+              <h3 style={{ margin: '0 0 6px' }}>Guruh topilmadi</h3>
+              <p style={{ margin: 0, color: '#777', fontSize: '14px' }}>
+                Filtrlarni tozalang yoki Telegramdan guruhlarni qayta yangilang.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {filteredGroups.map((group) => {
+                const readKey = `${group.phone}:${group.group_id}:can_read`;
+                const sendKey = `${group.phone}:${group.group_id}:can_send`;
+                const isUpdatingGroup =
+                  updatingGroupKey === readKey || updatingGroupKey === sendKey;
+                return (
+                  <div
+                    key={`${group.phone}:${group.group_id}`}
+                    className="card"
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                      alignItems: 'center',
+                      gap: '16px',
+                      padding: '14px 18px',
+                      opacity: group.is_available ? 1 : 0.7,
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          flexWrap: 'wrap',
+                          marginBottom: '5px',
+                        }}
+                      >
+                        <strong style={{ color: '#222' }}>
+                          {group.title || `Guruh ${group.group_id}`}
+                        </strong>
+                        {!group.is_available && (
+                          <span style={unavailableBadgeStyle}>Hozir ulanmagan</span>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          color: '#777',
+                          fontSize: '12px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <span>{group.phone}</span>
+                        <span>ID: {group.group_id}</span>
+                        {group.username && (
+                          <a
+                            href={`https://t.me/${group.username}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: '#007bff' }}
+                          >
+                            @{group.username}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '10px',
+                        justifyContent: 'flex-end',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <GroupPermissionToggle
+                        label="Xabarlarni o'qish"
+                        checked={group.can_read}
+                        color="#28a745"
+                        disabled={isUpdatingGroup}
+                        onChange={(value) => handleGroupPermissionChange(group, 'can_read', value)}
+                      />
+                      <GroupPermissionToggle
+                        label="Xabar yuborish"
+                        checked={group.can_send}
+                        color="#6f42c1"
+                        disabled={isUpdatingGroup}
+                        onChange={(value) => handleGroupPermissionChange(group, 'can_send', value)}
+                      />
+                      {group.is_available ? (
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          disabled={
+                            leavingGroupKey === `${group.phone}:${group.group_id}` ||
+                            isUpdatingGroup
+                          }
+                          onClick={() => handleLeaveGroup(group)}
+                          style={{ padding: '8px 12px', fontSize: '12px' }}
+                        >
+                          {leavingGroupKey === `${group.phone}:${group.group_id}`
+                            ? 'Chiqarilmoqda...'
+                            : 'Guruhdan chiqarish'}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          disabled={
+                            !activeUserbots.some((userbot) => userbot.phone === group.phone)
+                          }
+                          onClick={() =>
+                            handleOpenJoinGroupForm(
+                              group.phone,
+                              group.username ? `@${group.username}` : ''
+                            )
+                          }
+                          style={{ padding: '8px 12px', fontSize: '12px' }}
+                        >
+                          Qayta qo&apos;shish
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {/* ============================================ */}
@@ -1205,6 +1752,37 @@ function StatItem({ label, value, valueColor }) {
   );
 }
 
+function GroupPermissionToggle({ label, checked, color, disabled, onChange }) {
+  return (
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '8px 10px',
+        border: `1px solid ${checked ? color : '#ddd'}`,
+        borderRadius: '8px',
+        backgroundColor: checked ? `${color}12` : '#f8f9fa',
+        color: checked ? color : '#777',
+        fontSize: '12px',
+        fontWeight: '600',
+        cursor: disabled ? 'wait' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        style={{ accentColor: color, width: '16px', height: '16px' }}
+      />
+      {disabled ? 'Saqlanmoqda...' : label}
+    </label>
+  );
+}
+
 // ============================================
 // STYLES
 // ============================================
@@ -1225,6 +1803,32 @@ const tabBtnActiveStyle = {
   backgroundColor: '#007bff',
   color: '#fff',
   borderColor: '#007bff',
+};
+
+const groupFilterBtnStyle = {
+  padding: '6px 12px',
+  borderRadius: '16px',
+  border: '1px solid #ddd',
+  backgroundColor: '#fff',
+  color: '#666',
+  fontSize: '12px',
+  cursor: 'pointer',
+};
+
+const groupFilterBtnActiveStyle = {
+  backgroundColor: '#e7f1ff',
+  color: '#0056b3',
+  borderColor: '#80bdff',
+  fontWeight: '600',
+};
+
+const unavailableBadgeStyle = {
+  padding: '2px 7px',
+  borderRadius: '10px',
+  backgroundColor: '#e2e3e5',
+  color: '#555',
+  fontSize: '10px',
+  fontWeight: '600',
 };
 
 const labelStyle = {
