@@ -320,16 +320,37 @@ export default function UserbotManagementPage() {
     setSelectingAllGroups(true);
     try {
       const res = await selectAllUserbotGroups();
-      if (res.success) {
-        setGroups((prev) =>
-          prev.map((group) => ({
-            ...group,
-            can_read: true,
-            can_send: true,
-          }))
-        );
-        setSuccessMsg(res.message || 'Barcha guruhlar belgilandi');
+      if (!res.success) {
+        throw new Error(res.message || 'Server guruhlarni belgilamadi');
       }
+
+      // Lokal state'ni taxminan o'zgartirmaymiz. Oddiy GET bilan qayta o'qish
+      // browser refresh qilganda ham aynan shu qiymatlar kelishini kafolatlaydi.
+      const verification = await getUserbotGroups(false);
+      const persistedGroups = verification.groups || [];
+      const persistedKeys = new Set(
+        persistedGroups.map((group) => `${group.phone}:${group.group_id}`)
+      );
+      const missingGroups = groups.filter(
+        (group) => !persistedKeys.has(`${group.phone}:${group.group_id}`)
+      );
+      const unselectedGroups = persistedGroups.filter(
+        (group) => !group.can_read || !group.can_send
+      );
+      if (
+        !verification.success ||
+        missingGroups.length > 0 ||
+        unselectedGroups.length > 0
+      ) {
+        throw new Error(
+          `${missingGroups.length + unselectedGroups.length} ta guruh ruxsati serverda saqlanmadi`
+        );
+      }
+
+      setGroups(persistedGroups);
+      setSuccessMsg(
+        `${persistedGroups.length} ta guruhda o'qish va xabar yuborish saqlandi`
+      );
     } catch (err) {
       setError(
         err.response?.data?.detail ||
