@@ -13,6 +13,7 @@ import {
   clearBannedGroups,
   getUserbotGroups,
   updateUserbotGroupPermissions,
+  joinUserbotGroup,
   autoJoinUserbotGroup,
   leaveUserbotGroup,
   cleanupUnavailableUserbotGroups,
@@ -74,6 +75,7 @@ export default function UserbotManagementPage() {
   const [groupPermissionFilter, setGroupPermissionFilter] = useState('all');
   const [updatingGroupKey, setUpdatingGroupKey] = useState(null);
   const [showJoinGroupForm, setShowJoinGroupForm] = useState(false);
+  const [joinGroupPhone, setJoinGroupPhone] = useState('auto');
   const [joinGroupTarget, setJoinGroupTarget] = useState('');
   const [joinGroupLoading, setJoinGroupLoading] = useState(false);
   const [leavingGroupKey, setLeavingGroupKey] = useState(null);
@@ -243,6 +245,7 @@ export default function UserbotManagementPage() {
   };
 
   const handleOpenJoinGroupForm = (target = '') => {
+    setJoinGroupPhone('auto');
     setJoinGroupTarget(target);
     setShowJoinGroupForm(true);
   };
@@ -256,11 +259,15 @@ export default function UserbotManagementPage() {
 
     setJoinGroupLoading(true);
     try {
-      const res = await autoJoinUserbotGroup(joinGroupTarget.trim());
+      const res =
+        joinGroupPhone === 'auto'
+          ? await autoJoinUserbotGroup(joinGroupTarget.trim())
+          : await joinUserbotGroup(joinGroupPhone, joinGroupTarget.trim());
       if (res.success && res.group) {
         replaceGroupInState(res.group);
         setSuccessMsg(res.message || "Userbot guruhga qo'shildi");
         setShowJoinGroupForm(false);
+        setJoinGroupPhone('auto');
         setJoinGroupTarget('');
       }
     } catch (err) {
@@ -635,6 +642,10 @@ export default function UserbotManagementPage() {
   const activeUserbots = userbots.filter((userbot) => userbot.status === 'active');
   const userbotPhones = [...new Set(groups.map((group) => group.phone))];
   const connectedGroups = groups.filter((group) => group.is_available);
+  const activeGroupCounts = connectedGroups.reduce((counts, group) => {
+    counts[group.phone] = (counts[group.phone] || 0) + 1;
+    return counts;
+  }, {});
   const readableGroups = connectedGroups.filter((group) => group.can_read).length;
   const sendableGroups = connectedGroups.filter((group) => group.can_send).length;
   const disconnectedGroups = groups.filter((group) => !group.is_available).length;
@@ -1130,19 +1141,41 @@ export default function UserbotManagementPage() {
               style={{ marginBottom: '16px', borderLeft: '4px solid #007bff' }}
             >
               <h3 style={{ margin: '0 0 6px', fontSize: '16px' }}>
-                Telegram guruhiga avtomatik qo&apos;shish
+                Userbotni Telegram guruhiga qo&apos;shish
               </h3>
               <p style={{ margin: '0 0 14px', color: '#777', fontSize: '13px' }}>
-                Public @username yoki private invite-link kiriting. O&apos;qilgan va
-                yuborilgan xabarlari eng kam active userbot avtomatik tanlanadi;
-                qolgan userbotlar guruhga qo&apos;shilmaydi.
+                Avtomatik rejim faol guruhlari eng kam akkauntni tanlaydi.
+                Istasangiz aniq active userbotni qo&apos;lda belgilashingiz mumkin.
               </p>
               <form onSubmit={handleJoinGroup}>
                 <div
                   style={{
-                    maxWidth: '680px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gap: '12px',
                   }}
                 >
+                  <div>
+                    <label htmlFor="join-group-phone" style={labelStyle}>
+                      Qaysi userbot
+                    </label>
+                    <select
+                      id="join-group-phone"
+                      className="form-input"
+                      value={joinGroupPhone}
+                      onChange={(event) => setJoinGroupPhone(event.target.value)}
+                      style={inputStyle}
+                    >
+                      <option value="auto">
+                        Avtomatik — guruhlari eng kam akkaunt
+                      </option>
+                      {activeUserbots.map((userbot) => (
+                        <option key={userbot.phone} value={userbot.phone}>
+                          {userbot.phone} — {activeGroupCounts[userbot.phone] || 0} ta guruh
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <label htmlFor="join-group-target" style={labelStyle}>
                       Guruh username yoki linki
@@ -1172,6 +1205,7 @@ export default function UserbotManagementPage() {
                     disabled={joinGroupLoading}
                     onClick={() => {
                       setShowJoinGroupForm(false);
+                      setJoinGroupPhone('auto');
                       setJoinGroupTarget('');
                     }}
                   >
@@ -1183,8 +1217,10 @@ export default function UserbotManagementPage() {
                     disabled={joinGroupLoading || !joinGroupTarget.trim()}
                   >
                     {joinGroupLoading
-                      ? "Eng kam yuklangan userbot tanlanmoqda..."
-                      : "Avtomatik qo'shish"}
+                      ? "Guruhga qo'shilmoqda..."
+                      : joinGroupPhone === 'auto'
+                        ? "Avtomatik qo'shish"
+                        : "Tanlangan userbotni qo'shish"}
                   </button>
                 </div>
               </form>
