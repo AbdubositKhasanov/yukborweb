@@ -889,6 +889,18 @@ export const joinUserbotGroup = async (phone, group) => {
 };
 
 /**
+ * Join only the least active userbot to a Telegram group.
+ */
+export const autoJoinUserbotGroup = async (group) => {
+  const response = await apiClient.post(
+    '/api/userbot/groups/auto-join',
+    { group },
+    { timeout: 30 * 60 * 1000 }
+  );
+  return response.data;
+};
+
+/**
  * Remove the selected userbot from a Telegram group.
  */
 export const leaveUserbotGroup = async (phone, groupId) => {
@@ -897,6 +909,20 @@ export const leaveUserbotGroup = async (phone, groupId) => {
     { phone, group_id: groupId },
     { timeout: 30 * 60 * 1000 }
   );
+  return response.data;
+};
+
+/**
+ * Permanently remove group records that are no longer available in Telegram.
+ */
+export const cleanupUnavailableUserbotGroups = async (phone = null) => {
+  const response = await apiClient.delete('/api/userbot/groups/unavailable', {
+    params: {
+      refresh: true,
+      ...(phone ? { phone } : {}),
+    },
+    timeout: 30 * 60 * 1000,
+  });
   return response.data;
 };
 
