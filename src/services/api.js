@@ -912,6 +912,18 @@ export const getDuplicateUserbotGroups = async (refresh = false) => {
 };
 
 /**
+ * Keep one selected userbot in a duplicated group and remove all other connections.
+ */
+export const resolveDuplicateUserbotGroup = async (groupId, keepPhone) => {
+  const response = await apiClient.post(
+    '/api/userbot/groups/duplicates/resolve',
+    { group_id: groupId, keep_phone: keepPhone },
+    { timeout: 30 * 60 * 1000 }
+  );
+  return response.data;
+};
+
+/**
  * Save multiple Telegram group targets as pending review without joining.
  */
 export const importUserbotGroupJoinQueue = async (groups) => {

@@ -16,6 +16,7 @@ import {
   joinUserbotGroup,
   autoJoinUserbotGroup,
   getDuplicateUserbotGroups,
+  resolveDuplicateUserbotGroup,
   importUserbotGroupJoinQueue,
   getUserbotGroupJoinQueue,
   approveUserbotGroupJoinQueue,
@@ -96,6 +97,8 @@ export default function UserbotManagementPage() {
   const [selectingAllGroups, setSelectingAllGroups] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState([]);
   const [duplicateGroupsLoading, setDuplicateGroupsLoading] = useState(false);
+  const [duplicateKeepPhones, setDuplicateKeepPhones] = useState({});
+  const [resolvingDuplicateGroupId, setResolvingDuplicateGroupId] = useState(null);
   const [groupJoinQueue, setGroupJoinQueue] = useState([]);
   const [groupJoinQueueLoading, setGroupJoinQueueLoading] = useState(false);
   const [groupQueueInput, setGroupQueueInput] = useState('');
@@ -218,7 +221,20 @@ export default function UserbotManagementPage() {
     try {
       const res = await getDuplicateUserbotGroups(refresh);
       if (res.success) {
-        setDuplicateGroups(res.groups || []);
+        const foundGroups = res.groups || [];
+        setDuplicateGroups(foundGroups);
+        setDuplicateKeepPhones((previous) => {
+          const next = {};
+          foundGroups.forEach((duplicate) => {
+            const phones = (duplicate.connections || []).map(
+              (connection) => connection.phone
+            );
+            next[duplicate.group_id] = phones.includes(previous[duplicate.group_id])
+              ? previous[duplicate.group_id]
+              : phones[0] || '';
+          });
+          return next;
+        });
         if (refresh) setSuccessMsg(res.message);
       }
     } catch (err) {
@@ -255,6 +271,58 @@ export default function UserbotManagementPage() {
     setView(VIEWS.GROUPS);
     await loadGroups(true);
     await Promise.all([loadDuplicateGroups(false), loadGroupJoinQueue()]);
+  };
+
+  const handleResolveDuplicateGroup = async (duplicate) => {
+    const connections = duplicate.connections || [];
+    const keepPhone =
+      duplicateKeepPhones[duplicate.group_id] || connections[0]?.phone;
+    if (!keepPhone) {
+      setError('Guruhda qoldiriladigan userbotni tanlang');
+      return;
+    }
+
+    const removePhones = connections
+      .map((connection) => connection.phone)
+      .filter((phone) => phone !== keepPhone);
+    if (
+      !window.confirm(
+        `${duplicate.title || duplicate.group_id}: ${keepPhone} guruhda qoladi. ` +
+          `${removePhones.length} ta boshqa userbot guruhdan chiqarilsinmi?`
+      )
+    ) {
+      return;
+    }
+
+    setResolvingDuplicateGroupId(duplicate.group_id);
+    try {
+      const res = await resolveDuplicateUserbotGroup(
+        duplicate.group_id,
+        keepPhone
+      );
+      await Promise.all([loadGroups(false), loadDuplicateGroups(false)]);
+      if (res.success) {
+        setSuccessMsg(res.message || 'Dublikat ulanishlar olib tashlandi');
+      } else {
+        const failures = (res.failed_connections || [])
+          .map((item) => `${item.phone}: ${item.error}`)
+          .join('; ');
+        setError(
+          `${res.message || 'Ayrim ulanishlarni olib tashlab bo‘lmadi'}` +
+            (failures ? ` — ${failures}` : '')
+        );
+      }
+    } catch (err) {
+      await loadDuplicateGroups(false);
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          'Dublikat ulanishlarni olib tashlashda xatolik'
+      );
+    } finally {
+      setResolvingDuplicateGroupId(null);
+    }
   };
 
   const handleImportGroupQueue = async () => {
@@ -1423,57 +1491,113 @@ export default function UserbotManagementPage() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {duplicateGroups.map((duplicate) => (
-                  <div
-                    key={duplicate.group_id}
-                    style={{
-                      border: '1px solid #f0d58c',
-                      background: '#fffaf0',
-                      borderRadius: '8px',
-                      padding: '10px 12px',
-                    }}
-                  >
+                {duplicateGroups.map((duplicate) => {
+                  const keepPhone =
+                    duplicateKeepPhones[duplicate.group_id] ||
+                    duplicate.connections?.[0]?.phone ||
+                    '';
+                  return (
                     <div
+                      key={duplicate.group_id}
                       style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: '10px',
-                        flexWrap: 'wrap',
+                        border: '1px solid #f0d58c',
+                        background: '#fffaf0',
+                        borderRadius: '8px',
+                        padding: '10px 12px',
                       }}
                     >
-                      <strong>{duplicate.title || `Guruh ${duplicate.group_id}`}</strong>
-                      <span style={{ color: '#856404', fontSize: '12px', fontWeight: '600' }}>
-                        {duplicate.connection_count} ta userbot
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        gap: '8px',
-                        flexWrap: 'wrap',
-                        marginTop: '7px',
-                        color: '#666',
-                        fontSize: '12px',
-                      }}
-                    >
-                      <span>ID: {duplicate.group_id}</span>
-                      {duplicate.username && <span>@{duplicate.username}</span>}
-                      {(duplicate.connections || []).map((connection) => (
-                        <span
-                          key={`${duplicate.group_id}:${connection.phone}`}
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: '10px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <strong>{duplicate.title || `Guruh ${duplicate.group_id}`}</strong>
+                        <span style={{ color: '#856404', fontSize: '12px', fontWeight: '600' }}>
+                          {duplicate.connection_count} ta userbot
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '8px',
+                          flexWrap: 'wrap',
+                          marginTop: '7px',
+                          color: '#666',
+                          fontSize: '12px',
+                        }}
+                      >
+                        <span>ID: {duplicate.group_id}</span>
+                        {duplicate.username && <span>@{duplicate.username}</span>}
+                        {(duplicate.connections || []).map((connection) => (
+                          <span
+                            key={`${duplicate.group_id}:${connection.phone}`}
+                            style={{
+                              padding: '3px 7px',
+                              borderRadius: '12px',
+                              background: '#fff3cd',
+                              color: '#856404',
+                            }}
+                          >
+                            {connection.phone}
+                          </span>
+                        ))}
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '8px',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          marginTop: '10px',
+                        }}
+                      >
+                        <label
+                          htmlFor={`duplicate-keeper-${duplicate.group_id}`}
+                          style={{ color: '#555', fontSize: '12px', fontWeight: '600' }}
+                        >
+                          Guruhda qoldiriladi:
+                        </label>
+                        <select
+                          id={`duplicate-keeper-${duplicate.group_id}`}
+                          value={keepPhone}
+                          onChange={(event) =>
+                            setDuplicateKeepPhones((previous) => ({
+                              ...previous,
+                              [duplicate.group_id]: event.target.value,
+                            }))
+                          }
+                          disabled={resolvingDuplicateGroupId === duplicate.group_id}
                           style={{
-                            padding: '3px 7px',
-                            borderRadius: '12px',
-                            background: '#fff3cd',
-                            color: '#856404',
+                            padding: '7px 9px',
+                            border: '1px solid #d7bd74',
+                            borderRadius: '6px',
+                            background: '#fff',
                           }}
                         >
-                          {connection.phone}
-                        </span>
-                      ))}
+                          {(duplicate.connections || []).map((connection) => (
+                            <option key={connection.phone} value={connection.phone}>
+                              {connection.phone}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          disabled={resolvingDuplicateGroupId === duplicate.group_id}
+                          onClick={() => handleResolveDuplicateGroup(duplicate)}
+                          style={{ padding: '7px 12px', fontSize: '12px' }}
+                        >
+                          {resolvingDuplicateGroupId === duplicate.group_id
+                            ? 'Olib tashlanmoqda...'
+                            : 'Qolgan ulanishlarni olib tashlash'}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
