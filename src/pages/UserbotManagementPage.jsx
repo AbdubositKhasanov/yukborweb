@@ -15,6 +15,11 @@ import {
   updateUserbotGroupPermissions,
   joinUserbotGroup,
   autoJoinUserbotGroup,
+  getDuplicateUserbotGroups,
+  importUserbotGroupJoinQueue,
+  getUserbotGroupJoinQueue,
+  approveUserbotGroupJoinQueue,
+  rejectUserbotGroupJoinQueue,
   leaveUserbotGroup,
   cleanupUnavailableUserbotGroups,
   selectAllUserbotGroups,
@@ -30,6 +35,14 @@ const VIEWS = {
   VERIFY_PASSWORD: 'verify_password',
   GROUPS: 'groups',
   MONITORING: 'monitoring',
+};
+
+const GROUP_QUEUE_STATUS = {
+  pending: { label: 'Tasdiq kutilmoqda', color: '#856404', background: '#fff3cd' },
+  processing: { label: "Qo'shilmoqda", color: '#004085', background: '#cce5ff' },
+  joined: { label: "Qo'shildi", color: '#155724', background: '#d4edda' },
+  rejected: { label: 'Rad etildi', color: '#721c24', background: '#f8d7da' },
+  failed: { label: 'Xatolik', color: '#721c24', background: '#f8d7da' },
 };
 
 export default function UserbotManagementPage() {
@@ -81,6 +94,14 @@ export default function UserbotManagementPage() {
   const [leavingGroupKey, setLeavingGroupKey] = useState(null);
   const [cleaningUnavailableGroups, setCleaningUnavailableGroups] = useState(false);
   const [selectingAllGroups, setSelectingAllGroups] = useState(false);
+  const [duplicateGroups, setDuplicateGroups] = useState([]);
+  const [duplicateGroupsLoading, setDuplicateGroupsLoading] = useState(false);
+  const [groupJoinQueue, setGroupJoinQueue] = useState([]);
+  const [groupJoinQueueLoading, setGroupJoinQueueLoading] = useState(false);
+  const [groupQueueInput, setGroupQueueInput] = useState('');
+  const [groupQueueImporting, setGroupQueueImporting] = useState(false);
+  const [groupQueueActionId, setGroupQueueActionId] = useState(null);
+  const [groupQueuePhones, setGroupQueuePhones] = useState({});
 
   // Auto-clear messages
   useEffect(() => {
@@ -192,10 +213,147 @@ export default function UserbotManagementPage() {
     }
   };
 
-  const handleOpenGroups = () => {
+  const loadDuplicateGroups = async (refresh = false) => {
+    setDuplicateGroupsLoading(true);
+    try {
+      const res = await getDuplicateUserbotGroups(refresh);
+      if (res.success) {
+        setDuplicateGroups(res.groups || []);
+        if (refresh) setSuccessMsg(res.message);
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          'Dublikat guruhlarni topishda xatolik'
+      );
+    } finally {
+      setDuplicateGroupsLoading(false);
+    }
+  };
+
+  const loadGroupJoinQueue = async () => {
+    setGroupJoinQueueLoading(true);
+    try {
+      const res = await getUserbotGroupJoinQueue();
+      if (res.success) setGroupJoinQueue(res.items || []);
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          "Guruhlar navbati yuklanmadi"
+      );
+    } finally {
+      setGroupJoinQueueLoading(false);
+    }
+  };
+
+  const handleOpenGroups = async () => {
     handleCloseMonitoring();
     setView(VIEWS.GROUPS);
-    loadGroups(true);
+    await loadGroups(true);
+    await Promise.all([loadDuplicateGroups(false), loadGroupJoinQueue()]);
+  };
+
+  const handleImportGroupQueue = async () => {
+    const targets = groupQueueInput
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean);
+    if (targets.length === 0) {
+      setError("Kamida bitta @username yoki invite-link kiriting");
+      return;
+    }
+
+    setGroupQueueImporting(true);
+    try {
+      const res = await importUserbotGroupJoinQueue(targets);
+      if (res.success) {
+        await loadGroupJoinQueue();
+        if ((res.invalid || []).length === 0) setGroupQueueInput('');
+        setSuccessMsg(
+          `${res.imported_count || 0} ta yangi guruh bazaga saqlandi, ` +
+            `${res.existing_count || 0} ta avval mavjud`
+        );
+        if ((res.invalid || []).length > 0) {
+          setError(`Noto'g'ri qatorlar: ${res.invalid.join('; ')}`);
+        }
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          "Ro'yxatni bazaga saqlashda xatolik"
+      );
+    } finally {
+      setGroupQueueImporting(false);
+    }
+  };
+
+  const handleApproveGroupQueue = async (item) => {
+    const selectedPhone = groupQueuePhones[item.id] || 'auto';
+    const assignee =
+      selectedPhone === 'auto'
+        ? 'guruhlari eng kam userbot'
+        : selectedPhone;
+    if (
+      !window.confirm(
+        `${item.target} guruhini ${assignee} orqali qo'shishni tasdiqlaysizmi?`
+      )
+    ) {
+      return;
+    }
+
+    setGroupQueueActionId(item.id);
+    try {
+      const res = await approveUserbotGroupJoinQueue(
+        item.id,
+        selectedPhone === 'auto' ? null : selectedPhone
+      );
+      if (res.success) {
+        await Promise.all([
+          loadGroupJoinQueue(),
+          loadGroups(false),
+          loadDuplicateGroups(false),
+        ]);
+        setSuccessMsg(res.message || "Guruh tasdiqlandi va qo'shildi");
+      }
+    } catch (err) {
+      await loadGroupJoinQueue();
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          "Guruhni tasdiqlashda xatolik"
+      );
+    } finally {
+      setGroupQueueActionId(null);
+    }
+  };
+
+  const handleRejectGroupQueue = async (item) => {
+    if (!window.confirm(`${item.target} guruhini qo'shmasdan rad etasizmi?`)) return;
+
+    setGroupQueueActionId(item.id);
+    try {
+      const res = await rejectUserbotGroupJoinQueue(item.id);
+      if (res.success) {
+        await loadGroupJoinQueue();
+        setSuccessMsg(res.message || "Guruh rad etildi");
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          "Guruhni rad etishda xatolik"
+      );
+    } finally {
+      setGroupQueueActionId(null);
+    }
   };
 
   const handleGroupPermissionChange = async (group, permission, value) => {
@@ -1226,6 +1384,272 @@ export default function UserbotManagementPage() {
               </form>
             </div>
           )}
+
+          <div className="card" style={{ marginBottom: '16px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '10px',
+                flexWrap: 'wrap',
+                marginBottom: '12px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: '0 0 4px', fontSize: '15px' }}>
+                  Dublikat guruhlar ({duplicateGroups.length})
+                </h3>
+                <p style={{ margin: 0, color: '#777', fontSize: '12px' }}>
+                  Bir guruhga ikki yoki undan ko&apos;p active userbot ulangan holatlar.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={duplicateGroupsLoading}
+                onClick={() => loadDuplicateGroups(true)}
+                style={{ padding: '7px 14px', fontSize: '12px' }}
+              >
+                {duplicateGroupsLoading ? 'Tekshirilmoqda...' : 'Dublikatlarni topish'}
+              </button>
+            </div>
+
+            {duplicateGroupsLoading && duplicateGroups.length === 0 ? (
+              <div style={{ color: '#777', fontSize: '13px' }}>Tekshirilmoqda...</div>
+            ) : duplicateGroups.length === 0 ? (
+              <div style={{ color: '#28a745', fontSize: '13px' }}>
+                Dublikat active guruh topilmadi.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {duplicateGroups.map((duplicate) => (
+                  <div
+                    key={duplicate.group_id}
+                    style={{
+                      border: '1px solid #f0d58c',
+                      background: '#fffaf0',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: '10px',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <strong>{duplicate.title || `Guruh ${duplicate.group_id}`}</strong>
+                      <span style={{ color: '#856404', fontSize: '12px', fontWeight: '600' }}>
+                        {duplicate.connection_count} ta userbot
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '8px',
+                        flexWrap: 'wrap',
+                        marginTop: '7px',
+                        color: '#666',
+                        fontSize: '12px',
+                      }}
+                    >
+                      <span>ID: {duplicate.group_id}</span>
+                      {duplicate.username && <span>@{duplicate.username}</span>}
+                      {(duplicate.connections || []).map((connection) => (
+                        <span
+                          key={`${duplicate.group_id}:${connection.phone}`}
+                          style={{
+                            padding: '3px 7px',
+                            borderRadius: '12px',
+                            background: '#fff3cd',
+                            color: '#856404',
+                          }}
+                        >
+                          {connection.phone}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card" style={{ marginBottom: '16px', borderLeft: '4px solid #17a2b8' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '10px',
+                flexWrap: 'wrap',
+                marginBottom: '10px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: '0 0 4px', fontSize: '15px' }}>
+                  Guruhlarni tasdiqlash navbati
+                </h3>
+                <p style={{ margin: 0, color: '#777', fontSize: '12px' }}>
+                  Ro&apos;yxat avval bazaga saqlanadi. Siz tasdiqlamaguningizcha userbot
+                  Telegram guruhiga qo&apos;shilmaydi.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={loadGroupJoinQueue}
+                disabled={groupJoinQueueLoading}
+                style={{ padding: '7px 14px', fontSize: '12px' }}
+              >
+                {groupJoinQueueLoading ? 'Yangilanmoqda...' : 'Navbatni yangilash'}
+              </button>
+            </div>
+
+            <label htmlFor="group-queue-input" style={labelStyle}>
+              Har qatorda bitta @username yoki invite-link
+            </label>
+            <textarea
+              id="group-queue-input"
+              className="form-input"
+              value={groupQueueInput}
+              onChange={(event) => setGroupQueueInput(event.target.value)}
+              placeholder={'@birinchi_guruh\nhttps://t.me/+privateInvite\nhttps://t.me/uchinchi_guruh'}
+              style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleImportGroupQueue}
+                disabled={groupQueueImporting || !groupQueueInput.trim()}
+              >
+                {groupQueueImporting ? 'Saqlanmoqda...' : "Ro'yxatni bazaga saqlash"}
+              </button>
+            </div>
+
+            <div style={{ marginTop: '16px' }}>
+              {groupJoinQueueLoading && groupJoinQueue.length === 0 ? (
+                <div style={{ color: '#777', fontSize: '13px' }}>Navbat yuklanmoqda...</div>
+              ) : groupJoinQueue.length === 0 ? (
+                <div style={{ color: '#777', fontSize: '13px' }}>
+                  Hozircha tasdiqlash navbati bo&apos;sh.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {groupJoinQueue.map((item) => {
+                    const statusStyle = GROUP_QUEUE_STATUS[item.status] || {
+                      label: item.status,
+                      color: '#555',
+                      background: '#eee',
+                    };
+                    const reviewable = item.status === 'pending' || item.status === 'failed';
+                    return (
+                      <div
+                        key={item.id}
+                        style={{
+                          border: '1px solid #e6e6e6',
+                          borderRadius: '8px',
+                          padding: '11px 12px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '10px',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <strong style={{ wordBreak: 'break-word' }}>{item.target}</strong>
+                          <span
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              color: statusStyle.color,
+                              background: statusStyle.background,
+                            }}
+                          >
+                            {statusStyle.label}
+                          </span>
+                        </div>
+
+                        {item.error && (
+                          <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '6px' }}>
+                            Xato: {item.error}
+                          </div>
+                        )}
+                        {item.joined_phone && (
+                          <div style={{ color: '#555', fontSize: '12px', marginTop: '6px' }}>
+                            {item.joined_phone} — {item.joined_group_title || item.joined_group_id}
+                          </div>
+                        )}
+
+                        {reviewable && (
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              alignItems: 'center',
+                              gap: '8px',
+                              flexWrap: 'wrap',
+                              marginTop: '10px',
+                            }}
+                          >
+                            <select
+                              className="form-input"
+                              value={groupQueuePhones[item.id] || 'auto'}
+                              onChange={(event) =>
+                                setGroupQueuePhones((previous) => ({
+                                  ...previous,
+                                  [item.id]: event.target.value,
+                                }))
+                              }
+                              disabled={groupQueueActionId === item.id}
+                              style={{ ...inputStyle, width: 'auto', minWidth: '230px' }}
+                            >
+                              <option value="auto">Avtomatik — guruhlari eng kam</option>
+                              {activeUserbots.map((userbot) => (
+                                <option key={userbot.phone} value={userbot.phone}>
+                                  {userbot.phone} — {activeGroupCounts[userbot.phone] || 0} ta guruh
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              disabled={groupQueueActionId === item.id}
+                              onClick={() => handleRejectGroupQueue(item)}
+                              style={{ padding: '7px 11px', fontSize: '12px' }}
+                            >
+                              Rad etish
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              disabled={groupQueueActionId === item.id}
+                              onClick={() => handleApproveGroupQueue(item)}
+                              style={{ padding: '7px 11px', fontSize: '12px' }}
+                            >
+                              {groupQueueActionId === item.id
+                                ? "Qo'shilmoqda..."
+                                : "Tasdiqlash va qo'shish"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
 
           <div
             style={{

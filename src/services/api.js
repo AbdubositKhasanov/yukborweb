@@ -901,6 +901,62 @@ export const autoJoinUserbotGroup = async (group) => {
 };
 
 /**
+ * Find Telegram groups connected to more than one active userbot.
+ */
+export const getDuplicateUserbotGroups = async (refresh = false) => {
+  const response = await apiClient.get('/api/userbot/groups/duplicates', {
+    params: { refresh, _ts: Date.now() },
+    timeout: refresh ? 30 * 60 * 1000 : 30000,
+  });
+  return response.data;
+};
+
+/**
+ * Save multiple Telegram group targets as pending review without joining.
+ */
+export const importUserbotGroupJoinQueue = async (groups) => {
+  const response = await apiClient.post('/api/userbot/groups/join-queue/import', {
+    groups,
+  });
+  return response.data;
+};
+
+/**
+ * Load the admin-reviewed Telegram group join queue.
+ */
+export const getUserbotGroupJoinQueue = async (queueStatus = null) => {
+  const response = await apiClient.get('/api/userbot/groups/join-queue', {
+    params: {
+      ...(queueStatus ? { queue_status: queueStatus } : {}),
+      _ts: Date.now(),
+    },
+  });
+  return response.data;
+};
+
+/**
+ * Approve one queued group and join it with auto selection or a chosen phone.
+ */
+export const approveUserbotGroupJoinQueue = async (itemId, phone = null) => {
+  const response = await apiClient.post(
+    `/api/userbot/groups/join-queue/${itemId}/approve`,
+    { phone },
+    { timeout: 30 * 60 * 1000 }
+  );
+  return response.data;
+};
+
+/**
+ * Reject one queued group without joining Telegram.
+ */
+export const rejectUserbotGroupJoinQueue = async (itemId) => {
+  const response = await apiClient.post(
+    `/api/userbot/groups/join-queue/${itemId}/reject`
+  );
+  return response.data;
+};
+
+/**
  * Remove the selected userbot from a Telegram group.
  */
 export const leaveUserbotGroup = async (phone, groupId) => {
