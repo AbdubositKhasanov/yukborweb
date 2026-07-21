@@ -46,6 +46,20 @@ const GROUP_QUEUE_STATUS = {
   failed: { label: 'Xatolik', color: '#721c24', background: '#f8d7da' },
 };
 
+const getTelegramGroupUrl = (target) => {
+  const value = String(target || '').trim();
+  if (/^@[A-Za-z][A-Za-z0-9_]{3,31}$/.test(value)) {
+    return `https://t.me/${value.slice(1)}`;
+  }
+  if (/^(?:https?:\/\/)?(?:www\.)?(?:t\.me|telegram\.me)\//i.test(value)) {
+    return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+  }
+  if (/^tg:\/\/join\?invite=[A-Za-z0-9_-]+$/i.test(value)) {
+    return value;
+  }
+  return null;
+};
+
 export default function UserbotManagementPage() {
   // Core state
   const [view, setView] = useState(VIEWS.USERBOTS);
@@ -1665,12 +1679,18 @@ export default function UserbotManagementPage() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {groupJoinQueue.map((item) => {
-                    const statusStyle = GROUP_QUEUE_STATUS[item.status] || {
-                      label: item.status,
+                    const normalizedStatus = String(item.status || 'pending')
+                      .trim()
+                      .toLowerCase();
+                    const statusStyle = GROUP_QUEUE_STATUS[normalizedStatus] || {
+                      label: normalizedStatus || 'Tasdiq kutilmoqda',
                       color: '#555',
                       background: '#eee',
                     };
-                    const reviewable = item.status === 'pending' || item.status === 'failed';
+                    const reviewable = !['processing', 'joined', 'rejected'].includes(
+                      normalizedStatus
+                    );
+                    const telegramUrl = getTelegramGroupUrl(item.target);
                     return (
                       <div
                         key={item.id}
@@ -1690,18 +1710,42 @@ export default function UserbotManagementPage() {
                           }}
                         >
                           <strong style={{ wordBreak: 'break-word' }}>{item.target}</strong>
-                          <span
+                          <div
                             style={{
-                              padding: '4px 8px',
-                              borderRadius: '12px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              color: statusStyle.color,
-                              background: statusStyle.background,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '7px',
+                              flexWrap: 'wrap',
                             }}
                           >
-                            {statusStyle.label}
-                          </span>
+                            {telegramUrl && (
+                              <a
+                                href={telegramUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-secondary"
+                                style={{
+                                  padding: '6px 10px',
+                                  fontSize: '12px',
+                                  textDecoration: 'none',
+                                }}
+                              >
+                                Telegramda ochish
+                              </a>
+                            )}
+                            <span
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '12px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                color: statusStyle.color,
+                                background: statusStyle.background,
+                              }}
+                            >
+                              {statusStyle.label}
+                            </span>
+                          </div>
                         </div>
 
                         {item.error && (
