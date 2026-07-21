@@ -41,6 +41,7 @@ const VIEWS = {
 const GROUP_QUEUE_STATUS = {
   pending: { label: 'Tasdiq kutilmoqda', color: '#856404', background: '#fff3cd' },
   processing: { label: "Qo'shilmoqda", color: '#004085', background: '#cce5ff' },
+  requested: { label: "Admin tasdig'i kutilmoqda", color: '#664d03', background: '#fff3cd' },
   joined: { label: "Qo'shildi", color: '#155724', background: '#d4edda' },
   rejected: { label: 'Rad etildi', color: '#721c24', background: '#f8d7da' },
   failed: { label: 'Xatolik', color: '#721c24', background: '#f8d7da' },
@@ -503,8 +504,10 @@ export default function UserbotManagementPage() {
         joinGroupPhone === 'auto'
           ? await autoJoinUserbotGroup(joinGroupTarget.trim())
           : await joinUserbotGroup(joinGroupPhone, joinGroupTarget.trim());
-      if (res.success && res.group) {
-        replaceGroupInState(res.group);
+      if (res.success) {
+        if (res.group && !res.join_requested) {
+          replaceGroupInState(res.group);
+        }
         setSuccessMsg(res.message || "Userbot guruhga qo'shildi");
         setShowJoinGroupForm(false);
         setJoinGroupPhone('auto');
@@ -1687,9 +1690,12 @@ export default function UserbotManagementPage() {
                       color: '#555',
                       background: '#eee',
                     };
-                    const reviewable = !['processing', 'joined', 'rejected'].includes(
-                      normalizedStatus
-                    );
+                    const reviewable = ![
+                      'processing',
+                      'requested',
+                      'joined',
+                      'rejected',
+                    ].includes(normalizedStatus);
                     const telegramUrl = getTelegramGroupUrl(item.target);
                     return (
                       <div
