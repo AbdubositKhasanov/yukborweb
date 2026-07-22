@@ -2028,7 +2028,7 @@ export default function UserbotManagementPage() {
                           background="#e7f1ff"
                         />
                         <GroupOrderStat
-                          label="Yuk egasi"
+                          label="Yukchi yuklari"
                           value={group.orders_cargo_owner}
                           color="#087f5b"
                           background="#e6fcf5"

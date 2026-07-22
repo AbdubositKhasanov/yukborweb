@@ -7,7 +7,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStaticData } from '../../context/StaticDataContext';
 import { createOrder, getBroadcastStatus, getLocationsAndVehicles, updateOrderOwnerStatusPrompt } from '../../services/api';
-import { isBroadcastFinished, normalizeBroadcastStatus } from '../../utils/orderText';
+import {
+  formatBroadcastDeliveryCount,
+  isBroadcastFinished,
+  normalizeBroadcastStatus,
+} from '../../utils/orderText';
 import TopBar from '../components/TopBar';
 import LocationSelector, { getManualLocationName, toOptionalLocationId } from '../../components/LocationSelector';
 
@@ -312,132 +316,18 @@ export default function MobileCreateOrder() {
   const renderBroadcastStatus = () => {
     if (!broadcastStatus) return null;
 
-    const isFailed = broadcastStatus.status === 'failed';
-    const isCompleted = broadcastStatus.status === 'completed';
-    const sentGroups = broadcastStatus.sentGroups || [];
-    const failedGroups = broadcastStatus.failedGroups || [];
-    const totalText = broadcastStatus.totalGroups > 0
-      ? `${broadcastStatus.groupsSent}/${broadcastStatus.totalGroups}`
-      : `${broadcastStatus.groupsSent}`;
-    const titleText = isFailed
-      ? (broadcastStatus.groupsSent > 0
-        ? `⚠️ ${broadcastStatus.groupsSent} ta guruhga yuborildi`
-        : '📡 Guruhlarga tarqatish boshlanmadi')
-      : `✅ ${broadcastStatus.groupsSent} ta guruhga yuborildi`;
-    const subtitleText = isFailed
-      ? 'Tarqatish to\'xtadi.'
-      : (isCompleted ? 'Tarqatish yakunlandi.' : 'Tarqatish davom etyapti.');
-
     return (
       <div style={{
         padding: 14,
         borderRadius: 8,
-        background: isFailed ? '#fff8e1' : '#eef7f0',
+        background: '#eef7f0',
         color: 'var(--m-text)',
         textAlign: 'left',
         marginTop: 16,
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 700, marginBottom: 4, lineHeight: 1.35 }}>
-              {titleText}
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--m-text-secondary)', lineHeight: 1.4 }}>
-              {subtitleText}
-            </div>
-          </div>
-          <div style={{
-            flex: '0 0 auto',
-            padding: '4px 8px',
-            borderRadius: 999,
-            background: isFailed ? 'rgba(251,188,4,0.2)' : 'rgba(52,168,83,0.16)',
-            color: isFailed ? '#856404' : '#137333',
-            fontSize: 12,
-            fontWeight: 700,
-            lineHeight: 1.2,
-          }}>
-            {totalText}
-          </div>
+        <div style={{ fontWeight: 700, lineHeight: 1.35, color: '#137333' }}>
+          ✅ {formatBroadcastDeliveryCount(broadcastStatus)} ta guruhga yuborildi
         </div>
-
-        {sentGroups.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--m-text)', marginBottom: 8 }}>
-              Yuborilgan guruhlar
-            </div>
-            <div style={{
-              maxHeight: 180,
-              overflowY: 'auto',
-              borderTop: '1px solid rgba(52,168,83,0.22)',
-              borderBottom: '1px solid rgba(52,168,83,0.22)',
-            }}>
-              {sentGroups.map((group, index) => {
-                const title = group.title || group.username || `Guruh #${group.groupId || index + 1}`;
-                const username = group.username ? `@${String(group.username).replace(/^@/, '')}` : '';
-
-                return (
-                  <div
-                    key={`${group.groupId || title}-${index}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 8,
-                      padding: '9px 0',
-                      borderBottom: index === sentGroups.length - 1 ? 'none' : '1px solid rgba(52,168,83,0.14)',
-                    }}
-                  >
-                    <span style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: 999,
-                      background: 'var(--m-success)',
-                      flex: '0 0 auto',
-                      marginTop: 6,
-                    }} />
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        lineHeight: 1.35,
-                        color: 'var(--m-text)',
-                        wordBreak: 'break-word',
-                      }}>
-                        {title}
-                      </div>
-                      {username && (
-                        <div style={{
-                          fontSize: 12,
-                          color: 'var(--m-text-secondary)',
-                          marginTop: 2,
-                          wordBreak: 'break-word',
-                        }}>
-                          {username}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {sentGroups.length === 0 && !isFailed && (
-          <div style={{ fontSize: 13, color: 'var(--m-text-secondary)', marginTop: 10 }}>
-            Guruh nomlari yuborilishi bilan chiqadi.
-          </div>
-        )}
-
-        {failedGroups.length > 0 && (
-          <div style={{
-            marginTop: 10,
-            fontSize: 12,
-            color: '#856404',
-            lineHeight: 1.4,
-          }}>
-            {failedGroups.length} ta guruhga yuborilmadi yoki o'tkazib yuborildi.
-          </div>
-        )}
       </div>
     );
   };

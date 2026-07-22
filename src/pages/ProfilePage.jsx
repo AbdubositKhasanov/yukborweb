@@ -271,6 +271,10 @@ export default function ProfilePage() {
                 <strong style={{ color: 'var(--brand-color)' }}>{stats.allOrdersCount}</strong>
               </p>
               <p style={{ display: 'flex', justifyContent: 'space-between', margin: '10px 0' }}>
+                <span>Yukchi yuklari:</span>
+                <strong style={{ color: 'var(--brand-color)' }}>{stats.cargoOwnerOrdersCount || 0}</strong>
+              </p>
+              <p style={{ display: 'flex', justifyContent: 'space-between', margin: '10px 0' }}>
                 <span>So'nggi 24 soat:</span>
                 <strong style={{ color: 'var(--brand-color)' }}>{stats.last24HourOrdersCount}</strong>
               </p>

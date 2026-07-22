@@ -390,6 +390,10 @@ export default function MobileProfile() {
                 <div className="m-stat-label">Jami yuklar</div>
               </div>
               <div className="m-stat-card">
+                <div className="m-stat-value">{stats?.cargoOwnerOrdersCount?.toLocaleString() || 0}</div>
+                <div className="m-stat-label">Yukchi yuklari</div>
+              </div>
+              <div className="m-stat-card">
                 <div className="m-stat-value">{stats?.last24HourOrdersCount || 0}</div>
                 <div className="m-stat-label">24 soatda</div>
               </div>

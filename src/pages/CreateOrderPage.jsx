@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { createOrder, getBroadcastStatus, getLocationsAndVehicles, updateOrderOwnerStatusPrompt } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
 import LocationSelector, { getManualLocationName, toOptionalLocationId } from '../components/LocationSelector';
-import { isBroadcastFinished, normalizeBroadcastStatus } from '../utils/orderText';
+import {
+  formatBroadcastDeliveryCount,
+  isBroadcastFinished,
+  normalizeBroadcastStatus,
+} from '../utils/orderText';
 
 const buildRequestLocation = (countryValue, regionValue, cityValue) => ({
   cityId: toOptionalLocationId(cityValue),
@@ -162,7 +166,7 @@ export default function CreateOrderPage() {
         setOwnerPromptError('');
         showSuccess(
           nextBroadcastStatus
-            ? `Buyurtma yaratildi. ${nextBroadcastStatus.groupsSent} ta guruhga yuborildi`
+            ? `Buyurtma yaratildi. ${formatBroadcastDeliveryCount(nextBroadcastStatus)} ta guruhga yuborildi`
             : 'Buyurtma muvaffaqiyatli yaratildi!'
         );
       } else {
@@ -289,26 +293,18 @@ export default function CreateOrderPage() {
   const renderBroadcastStatus = () => {
     if (!broadcastStatus) return null;
 
-    const isFailed = broadcastStatus.status === 'failed';
-    const isCompleted = broadcastStatus.status === 'completed';
-
     return (
       <div style={{
         marginTop: 16,
         padding: 16,
         borderRadius: 8,
-        backgroundColor: isFailed ? '#fff3cd' : '#d4edda',
-        color: isFailed ? '#856404' : '#155724',
-        border: `1px solid ${isFailed ? '#ffeeba' : '#c3e6cb'}`
+        backgroundColor: '#d4edda',
+        color: '#155724',
+        border: '1px solid #c3e6cb'
       }}>
-        <div style={{ fontWeight: 700, marginBottom: 6 }}>
-          {isFailed ? '📡 Guruhlarga tarqatish boshlanmadi' : `✅ ${broadcastStatus.groupsSent} ta guruhga yuborildi`}
+        <div style={{ fontWeight: 700 }}>
+          ✅ {formatBroadcastDeliveryCount(broadcastStatus)} ta guruhga yuborildi
         </div>
-        {!isFailed && (
-          <div style={{ fontSize: 14 }}>
-            {isCompleted ? 'Tarqatish yakunlandi.' : 'Tarqatish davom etyapti, faqat muvaffaqiyatli yuborilganlar sanaladi.'}
-          </div>
-        )}
       </div>
     );
   };

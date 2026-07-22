@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { broadcastMessage, getBroadcastStatus } from '../services/api';
-import { buildCompactOrderMessage } from '../utils/orderText';
+import {
+  buildCompactOrderMessage,
+  formatBroadcastDeliveryCount,
+} from '../utils/orderText';
 
 export default function BroadcastModal({ isOpen, onClose, order }) {
   const [message, setMessage] = useState('');
@@ -31,8 +34,8 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
             clearInterval(pollRef.current);
             setBroadcasting(false);
           }
-        } catch (err) {
-          console.error('Poll error:', err);
+        } catch (_) {
+          // Texnik xato userga ko'rsatilmaydi; keyingi poll qayta urinadi.
         }
       }, 3000);
 
@@ -67,21 +70,15 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
         setBroadcastId(res.broadcast_id);
         setStatus({
           status: 'in_progress',
-          total_userbots: res.total_userbots,
           total_groups: res.total_groups || 0,
           groups_sent: 0,
-          groups_failed: 0,
-          successful: 0,
-          failed: 0,
-          message: res.message,
-          details: []
         });
       } else {
-        setError(res.message || 'Tarqatishda xatolik');
+        setError('Xabarni guruhlarga yuborib bo‘lmadi');
         setBroadcasting(false);
       }
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
+    } catch (_) {
+      setError('Xabarni guruhlarga yuborib bo‘lmadi');
       setBroadcasting(false);
     }
   };
@@ -165,59 +162,13 @@ export default function BroadcastModal({ isOpen, onClose, order }) {
           <div>
             <div style={{
               padding: '16px', borderRadius: '8px', marginBottom: '16px',
-              backgroundColor: status.status === 'completed' ? '#d4edda' :
-                               status.status === 'failed' ? '#f8d7da' : '#fff3cd',
-              color: status.status === 'completed' ? '#155724' :
-                     status.status === 'failed' ? '#721c24' : '#856404'
+              backgroundColor: '#d4edda',
+              color: '#155724'
             }}>
-              <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: '15px' }}>
-                {status.status === 'in_progress' && 'Tarqatilmoqda...'}
-                {status.status === 'completed' && 'Tarqatish yakunlandi!'}
-                {status.status === 'failed' && 'Tarqatishda xatolik!'}
+              <div style={{ fontWeight: '600', fontSize: '15px' }}>
+                ✅ {formatBroadcastDeliveryCount(status)} ta guruhga yuborildi
               </div>
-                <div style={{ fontSize: '14px' }}>
-                  <p style={{ margin: '4px 0' }}>
-                  Muvaffaqiyatli yuborildi: {status.groups_sent || 0} ta guruh
-                  </p>
-                <p style={{ margin: '4px 0', fontSize: '12px', color: '#6c757d' }}>
-                  Userbotlar: {status.total_userbots} ta
-                </p>
-              </div>
-
-              {status.status === 'in_progress' && (
-                <div style={{
-                  marginTop: '12px', height: '6px', backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: '3px'
-                }}>
-                  <div style={{
-                    height: '100%', borderRadius: '3px', backgroundColor: '#007bff',
-                    width: status.total_groups > 0
-                      ? `${((status.groups_sent || 0) / status.total_groups) * 100}%`
-                      : '0%',
-                    transition: 'width 0.3s ease'
-                  }} />
-                </div>
-              )}
             </div>
-
-            {/* Details per userbot */}
-            {status.details?.some((detail) => (detail.groups_sent || 0) > 0) && (
-              <div style={{ marginBottom: '16px' }}>
-                <h4 style={{ margin: '0 0 8px', fontSize: '14px' }}>Userbotlar:</h4>
-                {status.details.filter((detail) => (detail.groups_sent || 0) > 0).map((detail, i) => (
-                  <div key={i} style={{
-                    padding: '8px 12px', marginBottom: '6px',
-                    backgroundColor: detail.status === 'success' ? '#f0fff0' :
-                                     detail.status === 'failed' ? '#fff0f0' : '#fffff0',
-                    borderRadius: '6px', fontSize: '13px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: '500' }}>{detail.phone}</span>
-                      <span>{detail.groups_sent} guruh</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
 
             <button
               className="btn btn-primary"

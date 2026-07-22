@@ -7,7 +7,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getMyOrder, deleteOrder, getUserMe, broadcastMessage as sendBroadcast, getBroadcastStatus } from '../../services/api';
 import { formatTimeAgo } from '../../utils/formatTime';
-import { buildCompactOrderMessage } from '../../utils/orderText';
+import {
+  buildCompactOrderMessage,
+  formatBroadcastDeliveryCount,
+} from '../../utils/orderText';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
@@ -192,15 +195,13 @@ export default function MobileOrderDetail() {
         setBroadcastId(response.broadcast_id);
         setBroadcastStatus({
           status: 'in_progress',
-          total_userbots: response.total_userbots,
           total_groups: response.total_groups || 0,
           groups_sent: 0,
-          groups_failed: 0,
         });
         // Start polling
         pollBroadcastStatus(response.broadcast_id);
       } else {
-        setBroadcastError(response.message || 'Tarqatishda xatolik');
+        setBroadcastError('Xabarni guruhlarga yuborib bo‘lmadi');
         setBroadcasting(false);
       }
     } catch (error) {
@@ -218,8 +219,8 @@ export default function MobileOrderDetail() {
           clearInterval(poll);
           setBroadcasting(false);
         }
-      } catch (err) {
-        console.error('Poll error:', err);
+      } catch (_) {
+        // Texnik xato userga ko'rsatilmaydi; keyingi poll qayta urinadi.
       }
     }, 3000);
   };
@@ -511,35 +512,12 @@ export default function MobileOrderDetail() {
             <div>
               <div style={{
                 padding: 16, borderRadius: 8, marginBottom: 16,
-                background: broadcastStatus.status === 'completed' ? '#d4edda' :
-                            broadcastStatus.status === 'failed' ? '#f8d7da' : '#fff3cd',
-                color: broadcastStatus.status === 'completed' ? '#155724' :
-                       broadcastStatus.status === 'failed' ? '#721c24' : '#856404'
+                background: '#d4edda',
+                color: '#155724'
               }}>
-                <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>
-                  {broadcastStatus.status === 'in_progress' && '⏳ Tarqatilmoqda...'}
-                  {broadcastStatus.status === 'completed' && '✓ Tarqatish yakunlandi!'}
-                  {broadcastStatus.status === 'failed' && '✗ Tarqatishda xatolik!'}
+                <div style={{ fontWeight: 600, fontSize: 15 }}>
+                  ✅ {formatBroadcastDeliveryCount(broadcastStatus)} ta guruhga yuborildi
                 </div>
-                <div style={{ fontSize: 14 }}>
-                  <p style={{ margin: '4px 0' }}>
-                    Muvaffaqiyatli yuborildi: {broadcastStatus.groups_sent || 0} ta guruh
-                  </p>
-                </div>
-
-                {broadcastStatus.status === 'in_progress' && (
-                  <div style={{
-                    marginTop: 12, height: 6, background: 'rgba(0,0,0,0.1)', borderRadius: 3
-                  }}>
-                    <div style={{
-                      height: '100%', borderRadius: 3, background: '#6f42c1',
-                      width: broadcastStatus.total_groups > 0
-                        ? `${((broadcastStatus.groups_sent || 0) / broadcastStatus.total_groups) * 100}%`
-                        : '0%',
-                      transition: 'width 0.3s ease'
-                    }} />
-                  </div>
-                )}
               </div>
 
               <button
