@@ -100,7 +100,7 @@ export default function MobileMyOrders() {
   };
 
   const handleFindTransportFromNeed = () => {
-    if (!needProfile) return;
+    if (!needProfile || !permissions?.findTransportForOrder) return;
     navigate('/mobile/transports', {
       state: buildCargoOwnerNeedTransportState(needProfile, staticData, true),
     });
@@ -157,10 +157,7 @@ export default function MobileMyOrders() {
   const handleFindTransport = (e, order) => {
     e.stopPropagation();
 
-    if (!permissions?.offerToDriver) {
-      window.alert('Mashina topish uchun sizga ruxsat kerak. Admin bilan bog\'laning.');
-      return;
-    }
+    if (!permissions?.findTransportForOrder) return;
 
     // Build filters from order - matches Desktop MyOrdersPage.jsx
     const filters = {
@@ -330,13 +327,20 @@ export default function MobileMyOrders() {
                 {needProfile?.enabled === false ? "O'chirilgan" : 'Faol'}
               </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: permissions?.findTransportForOrder ? '1fr 1fr' : '1fr',
+              gap: 8,
+              marginTop: 12,
+            }}>
               <button className="m-btn m-btn-secondary" onClick={() => setNeedSheetOpen(true)}>
                 Sozlash
               </button>
-              <button className="m-btn m-btn-primary" onClick={handleFindTransportFromNeed}>
-                Mashina topish
-              </button>
+              {permissions?.findTransportForOrder && (
+                <button className="m-btn m-btn-primary" onClick={handleFindTransportFromNeed}>
+                  Mashina topish
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -412,13 +416,15 @@ export default function MobileMyOrders() {
                   {isActive && (
                     <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '1px solid var(--m-border)' }}>
                       {/* Find transport button */}
-                      <button
-                        className="m-btn m-btn-success"
-                        onClick={(e) => handleFindTransport(e, order)}
-                        style={{ flex: 2, fontSize: 13, padding: '8px 12px' }}
-                      >
-                        🚚 Mashina topish
-                      </button>
+                      {permissions?.findTransportForOrder && (
+                        <button
+                          className="m-btn m-btn-success"
+                          onClick={(e) => handleFindTransport(e, order)}
+                          style={{ flex: 2, fontSize: 13, padding: '8px 12px' }}
+                        >
+                          🚚 Mashina topish
+                        </button>
+                      )}
 
                       {/* Broadcast button - only for internal dispatcher */}
                       {isInternalDispatcher && (
@@ -577,7 +583,7 @@ export default function MobileMyOrders() {
           compact
           saving={savingNeedProfile}
           onSave={handleSaveNeedProfile}
-          onFindTransports={handleFindTransportFromNeed}
+          onFindTransports={permissions?.findTransportForOrder ? handleFindTransportFromNeed : null}
         />
       </BottomSheet>
     </>

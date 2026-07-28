@@ -27,6 +27,8 @@ const MyDriversPage = lazy(() => import('./pages/MyDriversPage'));
 const DriverStatusPage = lazy(() => import('./pages/DriverStatusPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const PlatformLoadsPage = lazy(() => import('./pages/PlatformLoadsPage'));
+const ShippersPage = lazy(() => import('./pages/ShippersPage'));
+const RemindersPage = lazy(() => import('./pages/RemindersPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const UserbotManagementPage = lazy(() => import('./pages/UserbotManagementPage'));
 const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
@@ -71,6 +73,40 @@ function AdminRoute({ children, isAuthenticated }) {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (checking) return <PageSkeleton />;
   if (!isAdmin) return <Navigate to="/" replace />;
+  return children;
+}
+
+function InternalDispatcherRoute({ children, isAuthenticated }) {
+  const [checking, setChecking] = useState(true);
+  const [allowed, setAllowed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const checkAccess = async () => {
+      if (!isAuthenticated) {
+        setChecking(false);
+        return;
+      }
+      try {
+        const response = await getUserMe();
+        if (!cancelled) {
+          setAllowed(response.code === 200 && response.result?.isInternalDispatcher === true);
+        }
+      } catch (_) {
+        if (!cancelled) setAllowed(false);
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    };
+    checkAccess();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (checking) return <PageSkeleton />;
+  if (!allowed) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -175,11 +211,28 @@ function AppContent() {
             }
           />
           <Route
-            path="/platform-loads"
+            path="/internal-loads"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <InternalDispatcherRoute isAuthenticated={isAuthenticated}>
                 <PlatformLoadsPage />
-              </ProtectedRoute>
+              </InternalDispatcherRoute>
+            }
+          />
+          <Route path="/platform-loads" element={<Navigate to="/internal-loads" replace />} />
+          <Route
+            path="/shippers"
+            element={
+              <InternalDispatcherRoute isAuthenticated={isAuthenticated}>
+                <ShippersPage />
+              </InternalDispatcherRoute>
+            }
+          />
+          <Route
+            path="/reminders"
+            element={
+              <InternalDispatcherRoute isAuthenticated={isAuthenticated}>
+                <RemindersPage />
+              </InternalDispatcherRoute>
             }
           />
           <Route

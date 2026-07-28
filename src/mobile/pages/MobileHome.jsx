@@ -6,7 +6,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useStaticData } from '../../context/StaticDataContext';
-import { searchCargos, textSearchCargos, createHarbinger, getUserMe } from '../../services/api';
+import {
+  searchCargos,
+  textSearchCargos,
+  searchPlatformCargos,
+  searchDispatcherCargos,
+  createHarbinger,
+  getUserMe,
+} from '../../services/api';
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
@@ -59,15 +66,24 @@ function orderTypeParam(senderFilter) {
   return senderFilter === 'all' ? undefined : senderFilter;
 }
 
-export default function MobileHome() {
+function normalizeCargoPage(result) {
+  if (Array.isArray(result)) return { items: result, hasMore: false };
+  return {
+    items: Array.isArray(result?.items) ? result.items : [],
+    hasMore: result?.hasMore === true,
+  };
+}
+
+export default function MobileHome({ internalOnly = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { staticData } = useStaticData();
-  const { isAuthenticated, userRole } = useMobileAuth();
+  const { isAuthenticated, userRole, isInternalDispatcher } = useMobileAuth();
 
   // Check for driver context - MUST use same keys as Desktop SearchPage.jsx
   const fromDriver = location.state?.fromDriver === true;
   const driverId = location.state?.driverId || null;
+  const driverReference = location.state?.driverReference || driverId;
   const driverName = location.state?.driverName || null;
   const driverFilters = location.state?.filters || {};
   const restoredFeedState = useMemo(() => readMobileCargoFeedState(), []);
@@ -100,12 +116,15 @@ export default function MobileHome() {
 
   // Data state - matches Desktop SearchPage.jsx exactly
   const [cargos, setCargos] = useState([]);
+  const [internalCargos, setInternalCargos] = useState([]);
+  const [otherCargos, setOtherCargos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(() => {
     const restoredPage = Number(restoredFeedState?.page);
     return Number.isFinite(restoredPage) && restoredPage > 0 ? restoredPage : 0;
   });
+  const [hasMore, setHasMore] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [hasSearched, setHasSearched] = useState(restoredFeedState?.hasSearched === true);
   const [searchSnapshotKey, setSearchSnapshotKey] = useState(restoredFeedState?.searchSnapshotKey || '');
@@ -230,38 +249,75 @@ export default function MobileHome() {
   // Load cargos - branches based on search mode
   const loadCargos = useCallback(async () => {
     setLoading(true);
+    setHasMore(false);
 
     try {
       let response;
       const selectedOrderType = orderTypeParam(senderFilter);
-      if (searchMode === 'simple' && textQuery.trim()) {
+      const searchParams = {
+        fromCountry: filters.fromCountry || undefined,
+        fromRegion: filters.fromRegion || undefined,
+        fromCity: filters.fromCity || undefined,
+        toCountry: filters.toCountry || undefined,
+        toRegion: filters.toRegion || undefined,
+        toCity: filters.toCity || undefined,
+        vehicleType: filters.vehicleType || undefined,
+        minWeight: filters.minWeight || undefined,
+        maxWeight: filters.maxWeight || undefined,
+        orderType: internalOnly ? undefined : selectedOrderType,
+        page,
+        ...(searchMode === 'simple' && textQuery.trim() ? { query: textQuery.trim() } : {}),
+      };
+      if (internalOnly) {
+        response = await searchPlatformCargos(searchParams);
+      } else if (fromDriver && isInternalDispatcher) {
+        response = await searchDispatcherCargos(searchParams);
+      } else if (searchMode === 'simple' && textQuery.trim()) {
         response = await textSearchCargos(textQuery.trim(), page, selectedOrderType);
       } else {
-        response = await searchCargos({
-          fromCountry: filters.fromCountry || undefined,
-          fromRegion: filters.fromRegion || undefined,
-          fromCity: filters.fromCity || undefined,
-          toCountry: filters.toCountry || undefined,
-          toRegion: filters.toRegion || undefined,
-          toCity: filters.toCity || undefined,
-          vehicleType: filters.vehicleType || undefined,
-          minWeight: filters.minWeight || undefined,
-          maxWeight: filters.maxWeight || undefined,
-          orderType: selectedOrderType,
-          page,
-        });
+        response = await searchCargos(searchParams);
       }
 
       if (response.code === 200) {
-        setCargos(response.result || []);
+        if (fromDriver && isInternalDispatcher && !internalOnly) {
+          const internal = response.result?.internalLoads || [];
+          const other = response.result?.otherLoads || [];
+          if (internal.length === 0 && other.length === 0 && page > 0) {
+            setPage((current) => Math.max(0, current - 1));
+            return;
+          }
+          setInternalCargos(internal);
+          setOtherCargos(other);
+          setCargos([...internal, ...other]);
+          setHasMore(response.result?.hasMore === true);
+        } else {
+          const cargoPage = normalizeCargoPage(response.result);
+          if (cargoPage.items.length === 0 && page > 0) {
+            setPage((current) => Math.max(0, current - 1));
+            return;
+          }
+          setInternalCargos([]);
+          setOtherCargos([]);
+          setCargos(cargoPage.items);
+          setHasMore(cargoPage.hasMore);
+        }
+      } else {
+        setHasMore(false);
       }
     } catch (error) {
+      setHasMore(false);
       console.error('Failed to load cargos:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters, page, searchMode, textQuery, senderFilter]);
+  }, [filters, page, searchMode, textQuery, senderFilter, internalOnly, fromDriver, isInternalDispatcher]);
+
+  const handleAssigned = (cargoId) => {
+    setCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
+    setInternalCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
+    setOtherCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
+  };
 
   // Initial load
   useEffect(() => {
@@ -519,10 +575,10 @@ export default function MobileHome() {
 
   return (
     <>
-      <TopBar title="YukBor" />
+      <TopBar title={internalOnly ? 'Ichki yuklar' : 'YukBor'} />
 
       <main className="m-content">
-        {canCreateOrder && (
+        {canCreateOrder && !internalOnly && (
           <div style={{ padding: '10px 12px', background: 'var(--m-card-bg)', borderBottom: '1px solid var(--m-border)' }}>
             <button
               className="m-btn m-btn-primary m-btn-full m-btn-lg"
@@ -593,12 +649,14 @@ export default function MobileHome() {
           </button>
         </div>
 
-        <div style={{ padding: '10px 12px' }}>
-          <CargoOwnerToggle
-            value={senderFilter}
-            onValueChange={handleSenderFilterChange}
-          />
-        </div>
+        {!internalOnly && (
+          <div style={{ padding: '10px 12px' }}>
+            <CargoOwnerToggle
+              value={senderFilter}
+              onValueChange={handleSenderFilterChange}
+            />
+          </div>
+        )}
 
         <PullToRefresh onRefresh={handleRefresh} disabled={loading}>
           {/* Active filter chips - faqat advanced mode da */}
@@ -637,7 +695,7 @@ export default function MobileHome() {
           )}
 
           {/* Harbinger card - faqat advanced mode da */}
-          {searchMode === 'advanced' && hasSearched && (
+          {searchMode === 'advanced' && hasSearched && !loading && cargos.length === 0 && page === 0 && (
             <div
               className="m-card"
               style={{
@@ -693,21 +751,78 @@ export default function MobileHome() {
             </div>
           ) : (
             <>
-              <div className="m-card m-card-list">
-                {cargos.map((cargo, index) => (
-                  <CargoListItem
-                    key={cargo.id || cargo._id || index}
-                    cargo={cargo}
-                    onClick={handleOpenCargo}
-                    showOfferButton={fromDriver && !!permissions?.offerToDriver}
-                    driverId={driverId}
-                    canOffer={!!permissions?.offerToDriver}
-                  />
-                ))}
-              </div>
+              {fromDriver && isInternalDispatcher && !internalOnly ? (
+                <div style={{ display: 'grid', gap: 16, padding: '12px 0' }}>
+                  <section>
+                    <h2 style={{ padding: '0 12px', margin: '0 0 8px', fontSize: 17, color: '#92400e' }}>
+                      ⭐ Ichki yuklar ({internalCargos.length})
+                    </h2>
+                    {internalCargos.length > 0 ? (
+                      <div className="m-card m-card-list">
+                        {internalCargos.map((cargo, index) => (
+                          <CargoListItem
+                            key={cargo.id || cargo._id || index}
+                            cargo={cargo}
+                            onClick={handleOpenCargo}
+                            showOfferButton
+                            driverId={driverId}
+                            driverReference={driverReference}
+                            canOffer
+                            assignDirectly
+                            onAssigned={handleAssigned}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ padding: '14px 16px', color: 'var(--m-text-muted)' }}>Mos ichki yuk topilmadi</div>
+                    )}
+                  </section>
+
+                  <section>
+                    <h2 style={{ padding: '0 12px', margin: '0 0 8px', fontSize: 17, color: '#475569' }}>
+                      Boshqa yuklar ({otherCargos.length})
+                    </h2>
+                    {otherCargos.length > 0 ? (
+                      <div className="m-card m-card-list">
+                        {otherCargos.map((cargo, index) => (
+                          <CargoListItem
+                            key={cargo.id || cargo._id || index}
+                            cargo={cargo}
+                            onClick={handleOpenCargo}
+                            showOfferButton
+                            driverId={driverId}
+                            driverReference={driverReference}
+                            canOffer
+                            assignDirectly
+                            onAssigned={handleAssigned}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ padding: '14px 16px', color: 'var(--m-text-muted)' }}>Mos boshqa yuk topilmadi</div>
+                    )}
+                  </section>
+                </div>
+              ) : (
+                <div className="m-card m-card-list">
+                  {cargos.map((cargo, index) => (
+                    <CargoListItem
+                      key={cargo.id || cargo._id || index}
+                      cargo={cargo}
+                      onClick={handleOpenCargo}
+                      showOfferButton={fromDriver && !!permissions?.offerToDriver}
+                      driverId={driverId}
+                      driverReference={driverReference}
+                      canOffer={!!permissions?.offerToDriver}
+                      showAssignToDriverButton={internalOnly}
+                      onAssigned={handleAssigned}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* Pagination */}
-              <div style={{
+              {(page > 0 || hasMore) && <div style={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -742,24 +857,26 @@ export default function MobileHome() {
                   Sahifa {page + 1}
                 </span>
 
-                <button
-                  onClick={() => setPage(p => p + 1)}
-                  disabled={loading}
-                  style={{
-                    padding: '10px 16px',
-                    fontSize: 14,
-                    fontWeight: 500,
-                    border: '1px solid var(--m-border)',
-                    borderRadius: 8,
-                    background: 'var(--m-card-bg)',
-                    color: 'var(--m-text)',
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    opacity: loading ? 0.5 : 1,
-                  }}
-                >
-                  Keyingi →
-                </button>
-              </div>
+                {hasMore && (
+                  <button
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={loading}
+                    style={{
+                      padding: '10px 16px',
+                      fontSize: 14,
+                      fontWeight: 500,
+                      border: '1px solid var(--m-border)',
+                      borderRadius: 8,
+                      background: 'var(--m-card-bg)',
+                      color: 'var(--m-text)',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      opacity: loading ? 0.5 : 1,
+                    }}
+                  >
+                    Keyingi →
+                  </button>
+                )}
+              </div>}
 
               {/* Loading indicator for pagination */}
               {loading && (

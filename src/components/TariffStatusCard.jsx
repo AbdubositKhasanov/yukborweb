@@ -8,6 +8,7 @@ const FEATURE_ORDER = [
   'createOrder',
   'createTransport',
   'offerToDriver',
+  'findTransportForOrder',
 ];
 
 const DAY_MS = 24 * 60 * 60 * 1000;

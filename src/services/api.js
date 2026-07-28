@@ -332,7 +332,7 @@ export const getUserMe = async () => {
 
 export const textSearchCargos = async (query, page = 0, orderType) => {
   trackSearch('text_search', { query });
-  const params = { query, page };
+  const params = { query, page, withPageInfo: true };
   if (orderType) params.orderType = orderType;
   return cachedGet('/cargos', params, { skipCache: true });
 };
@@ -351,6 +351,7 @@ export const searchCargos = async (filters = {}) => {
     ...(filters.maxWeight && { max_weight: filters.maxWeight }),
     ...(filters.orderType && { orderType: filters.orderType }),
     ...(filters.page !== undefined && { page: filters.page }),
+    withPageInfo: true,
   };
 
   // Qidiruv har doim yangi ma'lumot olishi kerak - keshlamaymiz
@@ -358,7 +359,7 @@ export const searchCargos = async (filters = {}) => {
 };
 
 export const searchPlatformCargos = async (filters = {}) => {
-  trackSearch('platform_cargo', filters);
+  trackSearch('internal_cargo', filters);
   const params = {
     ...(filters.fromCountry && { from_country: filters.fromCountry }),
     ...(filters.fromRegion && { from_region: filters.fromRegion }),
@@ -371,10 +372,100 @@ export const searchPlatformCargos = async (filters = {}) => {
     ...(filters.maxWeight && { max_weight: filters.maxWeight }),
     ...(filters.orderType && { orderType: filters.orderType }),
     ...(filters.page !== undefined && { page: filters.page }),
-    source: 'bot',
+    ...(filters.query && { query: filters.query }),
+    withPageInfo: true,
   };
 
-  return cachedGet('/cargos', params, { skipCache: true });
+  return cachedGet('/internal/cargos', params, { skipCache: true });
+};
+
+export const searchDispatcherCargos = async (filters = {}) => {
+  trackSearch('dispatcher_cargo', filters);
+  const params = {
+    ...(filters.fromCountry && { from_country: filters.fromCountry }),
+    ...(filters.fromRegion && { from_region: filters.fromRegion }),
+    ...(filters.fromCity && { from_city: filters.fromCity }),
+    ...(filters.toCountry && { to_country: filters.toCountry }),
+    ...(filters.toRegion && { to_region: filters.toRegion }),
+    ...(filters.toCity && { to_city: filters.toCity }),
+    ...(filters.vehicleType && { vehicle_type: filters.vehicleType }),
+    ...(filters.minWeight && { min_weight: filters.minWeight }),
+    ...(filters.maxWeight && { max_weight: filters.maxWeight }),
+    ...(filters.orderType && { orderType: filters.orderType }),
+    ...(filters.query && { query: filters.query }),
+    ...(filters.page !== undefined && { page: filters.page }),
+    withPageInfo: true,
+  };
+  return cachedGet('/dispatcher/cargos', params, { skipCache: true });
+};
+
+export const assignOrderToDriver = async (orderId, driverReference) => {
+  const response = await apiClient.post(`/dispatcher/orders/${orderId}/assign`, {
+    driverReference: String(driverReference),
+  });
+  apiCache.invalidate('orders');
+  return response.data;
+};
+
+// INTERNAL DISPATCHER CRM
+export const getShippers = async ({ query = '', status = '', page = 0 } = {}) => {
+  const response = await apiClient.get('/shippers', { params: { query, status, page } });
+  return response.data;
+};
+
+export const getShipper = async (id) => {
+  const response = await apiClient.get(`/shippers/${id}`);
+  return response.data;
+};
+
+export const createShipper = async (payload) => {
+  const response = await apiClient.post('/shippers', payload);
+  return response.data;
+};
+
+export const updateShipper = async (id, payload) => {
+  const response = await apiClient.put(`/shippers/${id}`, payload);
+  return response.data;
+};
+
+export const deleteShipper = async (id) => {
+  const response = await apiClient.delete(`/shippers/${id}`);
+  return response.data;
+};
+
+export const getReminderCenter = async () => {
+  const response = await apiClient.get('/reminders');
+  return response.data;
+};
+
+export const getReminderSummary = async () => {
+  const response = await apiClient.get('/reminders/summary');
+  return response.data;
+};
+
+export const createReminder = async (payload) => {
+  const response = await apiClient.post('/reminders', payload);
+  return response.data;
+};
+
+export const updateReminder = async (id, payload) => {
+  const response = await apiClient.put(`/reminders/${id}`, payload);
+  return response.data;
+};
+
+export const deleteReminder = async (id) => {
+  const response = await apiClient.delete(`/reminders/${id}`);
+  return response.data;
+};
+
+export const markReminderRead = async (id) => {
+  const response = await apiClient.post(`/reminder-notifications/${id}/read`);
+  return response.data;
+};
+
+export const markAllRemindersRead = async () => {
+  const response = await apiClient.post('/reminder-notifications/read-all');
+  return response.data;
 };
 
 export const searchTransports = async (filters = {}) => {

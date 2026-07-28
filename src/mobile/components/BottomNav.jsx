@@ -7,9 +7,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { getMobileTabs } from '../navigationConfig';
 import { PRIMARY_NAV_STATE, shouldReplacePrimaryNav } from '../../utils/navigationHistory';
 
-export default function BottomNav({ activeTab, userRole = 'logist', navigation = null }) {
+export default function BottomNav({ activeTab, userRole = 'logist', navigation = null, isInternalDispatcher = false }) {
   const location = useLocation();
-  const tabs = getMobileTabs(userRole, navigation);
+  const tabs = getMobileTabs(userRole, navigation, isInternalDispatcher);
   const tabPaths = tabs.map((tab) => tab.path);
 
   if (tabs.length === 0) return null;

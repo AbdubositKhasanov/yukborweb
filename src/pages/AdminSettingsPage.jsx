@@ -40,6 +40,7 @@ const emptyForms = {
   navigation: {
     driver: [],
     logist: [],
+    dispatcher: [],
     factory: [],
     notSelected: [],
     admin: [],
@@ -149,6 +150,7 @@ export default function AdminSettingsPage({ mobile = false }) {
       navigation: {
         driver: normalizeNavigationList(data.navigation?.driver),
         logist: normalizeNavigationList(data.navigation?.logist),
+        dispatcher: normalizeNavigationList(data.navigation?.dispatcher),
         factory: normalizeNavigationList(data.navigation?.factory),
         notSelected: normalizeNavigationList(data.navigation?.notSelected),
         admin: normalizeNavigationList(data.navigation?.admin),
@@ -271,6 +273,7 @@ export default function AdminSettingsPage({ mobile = false }) {
       navigation: {
         driver: normalizeNavigationList(forms.navigation.driver),
         logist: normalizeNavigationList(forms.navigation.logist),
+        dispatcher: normalizeNavigationList(forms.navigation.dispatcher),
         factory: normalizeNavigationList(forms.navigation.factory),
         notSelected: normalizeNavigationList(forms.navigation.notSelected),
         admin: normalizeNavigationList(forms.navigation.admin),

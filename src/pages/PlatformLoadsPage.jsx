@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { searchPlatformCargos, offerForDriver, getUserMe } from '../services/api';
+import { searchPlatformCargos } from '../services/api';
 import { useStaticData } from '../context/StaticDataContext';
 import CargoCard from '../components/CargoCard';
 import LocationSelector from '../components/LocationSelector';
@@ -9,7 +9,6 @@ export default function PlatformLoadsPage() {
   const location = useLocation();
   const driverData = location.state || {};
   const fromDriver = driverData.fromDriver || false;
-  const driverId = driverData.driverId || null;
   const driverName = driverData.driverName || null;
   const initialFilters = driverData.filters || {};
 
@@ -19,7 +18,7 @@ export default function PlatformLoadsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
-  const [permissions, setPermissions] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
 
   // Filter states
   const [fromCountry, setFromCountry] = useState(initialFilters.fromCountry?.toString() || '');
@@ -31,21 +30,6 @@ export default function PlatformLoadsPage() {
   const [vehicleType, setVehicleType] = useState(initialFilters.vehicleType || '');
   const [minWeight, setMinWeight] = useState('');
   const [maxWeight, setMaxWeight] = useState(initialFilters.maxWeight?.toString() || '');
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      const response = await getUserMe();
-      if (response.code === 200 && response.result) {
-        setPermissions(response.result.permissions || null);
-      }
-    } catch (err) {
-      console.error('Failed to load user data:', err);
-    }
-  };
 
   useEffect(() => {
     if (staticData) {
@@ -62,6 +46,7 @@ export default function PlatformLoadsPage() {
   const loadCargos = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setHasMore(false);
 
     try {
       const filters = {
@@ -79,11 +64,21 @@ export default function PlatformLoadsPage() {
 
       const response = await searchPlatformCargos(filters);
       if (response.code === 200) {
-        setCargos(response.result);
+        const items = Array.isArray(response.result)
+          ? response.result
+          : response.result?.items || [];
+        if (items.length === 0 && page > 0) {
+          setPage((current) => Math.max(0, current - 1));
+          return;
+        }
+        setCargos(items);
+        setHasMore(response.result?.hasMore === true);
       } else {
+        setHasMore(false);
         setError(response.message || 'Yuklar topilmadi');
       }
     } catch (err) {
+      setHasMore(false);
       setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
@@ -116,6 +111,10 @@ export default function PlatformLoadsPage() {
     loadCargos();
   };
 
+  const handleAssigned = (cargoId) => {
+    setCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
+  };
+
   const filteredFromRegions = staticData?.regions.filter(
     r => r.countryId === parseInt(fromCountry)
   ) || [];
@@ -142,7 +141,7 @@ export default function PlatformLoadsPage() {
         flexWrap: 'wrap',
         gap: '10px'
       }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Platforma yuklari</h1>
+        <h1 className="page-title" style={{ margin: 0 }}>Ichki yuklar</h1>
         <button
           className="btn btn-secondary"
           onClick={handleRefresh}
@@ -174,7 +173,7 @@ export default function PlatformLoadsPage() {
         color: '#004085',
         fontSize: '14px'
       }}>
-        Bu yerda faqat platforma orqali qo'shilgan yuklar ko'rsatiladi.
+        Bu bo‘lim faqat ichki dispetcherlar uchun. Platforma/bot orqali kiritilgan ichki yuklar shu yerda ko‘rsatiladi.
       </div>
 
       {fromDriver && driverName && (
@@ -278,7 +277,7 @@ export default function PlatformLoadsPage() {
       {error && <div className="error-message">{error}</div>}
 
       {!loading && !error && cargos.length === 0 && (
-        <div className="empty-state">Hech qanday platforma yuki topilmadi</div>
+        <div className="empty-state">Hech qanday ichki yuk topilmadi</div>
       )}
 
       {!loading && !error && cargos.length > 0 && (
@@ -288,15 +287,14 @@ export default function PlatformLoadsPage() {
               <CargoCard
                 key={cargo.id}
                 cargo={cargo}
-                showOfferButton={fromDriver}
-                driverId={driverId}
-                canOffer={!!permissions?.offerToDriver}
-                showOfferToDriverButton={!!permissions?.offerToDriver && !fromDriver}
+                showAssignToDriverButton
+                onAssigned={handleAssigned}
+                showOfferToDriverButton={false}
               />
             ))}
           </div>
 
-          <div className="pagination">
+          {(page > 0 || hasMore) && <div className="pagination">
             <button
               className="pagination-button"
               onClick={() => setPage(p => p - 1)}
@@ -306,15 +304,17 @@ export default function PlatformLoadsPage() {
               <span>Oldingi</span>
             </button>
             <span className="pagination-info">Sahifa {page + 1}</span>
-            <button
-              className="pagination-button"
-              onClick={() => setPage(p => p + 1)}
-              disabled={cargos.length === 0}
-            >
-              <span>Keyingi</span>
-              <span>→</span>
-            </button>
-          </div>
+            {hasMore && (
+              <button
+                className="pagination-button"
+                onClick={() => setPage(p => p + 1)}
+                disabled={loading}
+              >
+                <span>Keyingi</span>
+                <span>→</span>
+              </button>
+            )}
+          </div>}
         </>
       )}
     </div>

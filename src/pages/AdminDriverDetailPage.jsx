@@ -327,6 +327,12 @@ export default function AdminDriverDetailPage({ mobile = false }) {
                 @{driver.telegramUsername}
               </a>
             )}
+            {isDriver && driver.driverInfoUpdatedAt && (
+              <div style={{ marginTop: 8, color: '#64748b', fontSize: 12 }}>
+                So&apos;nggi ma&apos;lumot yangilanishi: {fmtDate(driver.driverInfoUpdatedAt)} ·{' '}
+                {driver.driverInfoUpdatedByName || driver.driverInfoUpdatedBy || 'noma\'lum foydalanuvchi'} tomonidan
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
             {driver.isLinked ? (

@@ -9,6 +9,7 @@ export const FEATURE_LABELS = {
   createOrder: 'Yuk e\'loni yaratish',
   createTransport: 'Transport e\'loni yaratish',
   offerToDriver: 'Haydovchiga taklif yuborish',
+  findTransportForOrder: 'Yaratilgan yukka mashina topish',
 };
 
 export const inferPremiumFeature = (message = '') => {

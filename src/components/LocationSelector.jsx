@@ -103,6 +103,7 @@ export default function LocationSelector({
   const customCityName = getCustomLocationText(cityValue);
   const manualLocationName = getManualLocationName(regionValue, cityValue);
   const isCustomRegion = Boolean(customRegionName);
+  const hasSelection = Boolean(countryValue || regionValue || cityValue);
 
   const countryOptions = useMemo(() => {
     return sortByName(countries).map((country) => ({
@@ -200,6 +201,12 @@ export default function LocationSelector({
     onCityChange?.(customValue);
   };
 
+  const handleClearAll = () => {
+    onCountryChange?.('');
+    onRegionChange?.('');
+    onCityChange?.('');
+  };
+
   if (loading) {
     return <div className={groupClassName}>Yuklanmoqda...</div>;
   }
@@ -207,9 +214,16 @@ export default function LocationSelector({
   return (
     <div className={groupClassName}>
       {label && (
-        <label className={labelClassName}>
-          {label} {required && !isMobile && <span style={{ color: 'red' }}>*</span>}
-        </label>
+        <div className="location-selector__heading">
+          <label className={labelClassName}>
+            {label} {required && !isMobile && <span style={{ color: 'red' }}>*</span>}
+          </label>
+          {isMobile && hasSelection && (
+            <button type="button" className="location-selector__clear-all" onClick={handleClearAll}>
+              Hammasini tozalash
+            </button>
+          )}
+        </div>
       )}
       <div className={rowClassName} style={isMobile ? { display: 'grid', gap: 12 } : undefined}>
         <SearchableSelect
@@ -219,6 +233,10 @@ export default function LocationSelector({
           placeholder="Davlat"
           searchPlaceholder="Davlat qidirish"
           onChange={handleCountryChange}
+          clearable
+          clearLabel="Davlatni olib tashlash"
+          mobile={isMobile}
+          selectionTitle="Davlatni tanlang"
         />
 
         <SearchableSelect
@@ -231,6 +249,10 @@ export default function LocationSelector({
           allowCustom={allowCustom}
           selectedLabel={customRegionName}
           onCustomCreate={handleRegionCustomCreate}
+          clearable
+          clearLabel="Viloyatni olib tashlash"
+          mobile={isMobile}
+          selectionTitle="Viloyatni tanlang"
         />
 
         <SearchableSelect
@@ -244,8 +266,17 @@ export default function LocationSelector({
           allowCustom={allowCustom && !isCustomRegion}
           selectedLabel={customCityName}
           onCustomCreate={handleCityCustomCreate}
+          clearable
+          clearLabel="Shaharni olib tashlash"
+          mobile={isMobile}
+          selectionTitle="Shaharni tanlang"
         />
       </div>
+      {isMobile && !hasSelection && (
+        <div className="location-selector__hint">
+          Shaharni bevosita tanlasangiz, davlat va viloyat avtomatik belgilanadi.
+        </div>
+      )}
       {allowCustom && manualLocationName && (
         <div style={{
           marginTop: 8,

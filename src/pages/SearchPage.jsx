@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { searchCargos, textSearchCargos, createHarbinger, getUserMe } from '../services/api';
+import {
+  searchCargos,
+  textSearchCargos,
+  searchDispatcherCargos,
+  createHarbinger,
+  getUserMe,
+} from '../services/api';
 import { useStaticData } from '../context/StaticDataContext';
 import CargoCard from '../components/CargoCard';
 import CargoOwnerToggle from '../components/CargoOwnerToggle';
@@ -19,24 +25,38 @@ function orderTypeParam(senderFilter) {
   return senderFilter === 'all' ? undefined : senderFilter;
 }
 
+function normalizeCargoPage(result) {
+  if (Array.isArray(result)) return { items: result, hasMore: false };
+  return {
+    items: Array.isArray(result?.items) ? result.items : [],
+    hasMore: result?.hasMore === true,
+  };
+}
+
 export default function SearchPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const driverData = location.state || {};
   const fromDriver = driverData.fromDriver || false;
   const driverId = driverData.driverId || null;
+  const driverReference = driverData.driverReference || driverId;
   const driverName = driverData.driverName || null;
   const initialFilters = driverData.filters || {};
 
   const { staticData, loading: staticLoading } = useStaticData();
   const [cargos, setCargos] = useState([]);
+  const [internalCargos, setInternalCargos] = useState([]);
+  const [otherCargos, setOtherCargos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [permissions, setPermissions] = useState(null);
   const [featureLimits, setFeatureLimits] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [userDataLoaded, setUserDataLoaded] = useState(!fromDriver);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
   const [creatingHarbinger, setCreatingHarbinger] = useState(false);
@@ -75,9 +95,12 @@ export default function SearchPage() {
         setFeatureLimits(response.result.featureLimits || null);
         const normalizedRole = String(response.result.type || '').toLowerCase();
         setUserRole(normalizedRole === 'zavod' ? 'factory' : normalizedRole);
+        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
+    } finally {
+      setUserDataLoaded(true);
     }
   };
 
@@ -95,7 +118,7 @@ export default function SearchPage() {
 
   // Initial load - wait for filters to be set before loading
   useEffect(() => {
-    if (isInitialLoad && staticData) {
+    if (isInitialLoad && staticData && userDataLoaded) {
       if (fromDriver) {
         // For driver flow: wait for vehicleType to be set (if vehicleTypeId exists)
         if (initialFilters.vehicleTypeId) {
@@ -115,7 +138,7 @@ export default function SearchPage() {
         setIsInitialLoad(false);
       }
     }
-  }, [staticData, vehicleType, fromDriver, initialFilters.vehicleTypeId, isInitialLoad]);
+  }, [staticData, vehicleType, fromDriver, initialFilters.vehicleTypeId, isInitialLoad, userDataLoaded]);
 
   // Pagination + search trigger — har qanday page o'zgarishda (0 ga qaytganda ham) reload
   useEffect(() => {
@@ -131,6 +154,7 @@ export default function SearchPage() {
   const loadCargos = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setHasMore(false);
 
     try {
       const filters = {
@@ -147,39 +171,100 @@ export default function SearchPage() {
         page
       };
 
-      const response = await searchCargos(filters);
+      const response = fromDriver && isInternalDispatcher
+        ? await searchDispatcherCargos(filters)
+        : await searchCargos(filters);
       if (response.code === 200) {
-        setCargos(response.result);
+        if (fromDriver && isInternalDispatcher) {
+          const internal = response.result?.internalLoads || [];
+          const other = response.result?.otherLoads || [];
+          if (internal.length === 0 && other.length === 0 && page > 0) {
+            setPage((current) => Math.max(0, current - 1));
+            return;
+          }
+          setInternalCargos(internal);
+          setOtherCargos(other);
+          setCargos([...internal, ...other]);
+          setHasMore(response.result?.hasMore === true);
+        } else {
+          const cargoPage = normalizeCargoPage(response.result);
+          if (cargoPage.items.length === 0 && page > 0) {
+            setPage((current) => Math.max(0, current - 1));
+            return;
+          }
+          setInternalCargos([]);
+          setOtherCargos([]);
+          setCargos(cargoPage.items);
+          setHasMore(cargoPage.hasMore);
+        }
       } else {
+        setHasMore(false);
         setError(response.message || 'Yuklar topilmadi');
       }
     } catch (err) {
+      setHasMore(false);
       setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fromCountry, fromRegion, fromCity, toCountry, toRegion, toCity, vehicleType, minWeight, maxWeight, senderFilter, page]);
+  }, [fromCountry, fromRegion, fromCity, toCountry, toRegion, toCity, vehicleType, minWeight, maxWeight, senderFilter, page, fromDriver, isInternalDispatcher]);
 
   const loadTextSearch = useCallback(async () => {
     if (!textQuery.trim()) return;
     setLoading(true);
     setError(null);
+    setHasMore(false);
 
     try {
-      const response = await textSearchCargos(textQuery.trim(), page, orderTypeParam(senderFilter));
+      const response = fromDriver && isInternalDispatcher
+        ? await searchDispatcherCargos({
+          query: textQuery.trim(),
+          page,
+          orderType: orderTypeParam(senderFilter),
+        })
+        : await textSearchCargos(textQuery.trim(), page, orderTypeParam(senderFilter));
       if (response.code === 200) {
-        setCargos(response.result || []);
+        if (fromDriver && isInternalDispatcher) {
+          const internal = response.result?.internalLoads || [];
+          const other = response.result?.otherLoads || [];
+          if (internal.length === 0 && other.length === 0 && page > 0) {
+            setPage((current) => Math.max(0, current - 1));
+            return;
+          }
+          setInternalCargos(internal);
+          setOtherCargos(other);
+          setCargos([...internal, ...other]);
+          setHasMore(response.result?.hasMore === true);
+        } else {
+          const cargoPage = normalizeCargoPage(response.result);
+          if (cargoPage.items.length === 0 && page > 0) {
+            setPage((current) => Math.max(0, current - 1));
+            return;
+          }
+          setInternalCargos([]);
+          setOtherCargos([]);
+          setCargos(cargoPage.items);
+          setHasMore(cargoPage.hasMore);
+        }
       } else {
+        setHasMore(false);
         setError(response.message || 'Yuklar topilmadi');
       }
     } catch (err) {
+      setHasMore(false);
       setError(err.response?.data?.message || err.message || 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [textQuery, page, senderFilter]);
+  }, [textQuery, page, senderFilter, fromDriver, isInternalDispatcher]);
+
+  const handleAssigned = (cargoId) => {
+    setCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
+    setInternalCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
+    setOtherCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
+  };
 
   const buildSearchKey = (searchState) => {
     return JSON.stringify({
@@ -739,7 +824,7 @@ export default function SearchPage() {
       )}
 
       {/* Harbinger card - faqat advanced mode da */}
-      {searchMode === 'advanced' && hasSearched && (
+      {searchMode === 'advanced' && hasSearched && !loading && cargos.length === 0 && page === 0 && (
         <div
           className="card"
           style={{
@@ -791,20 +876,73 @@ export default function SearchPage() {
 
       {!loading && !error && cargos.length > 0 && (
         <>
-          <div className="grid">
-            {cargos.map(cargo => (
-              <CargoCard
-                key={cargo.id}
-                cargo={cargo}
-                showOfferButton={fromDriver}
-                driverId={driverId}
-                canOffer={!!permissions?.offerToDriver}
-                showOfferToDriverButton={!!permissions?.offerToDriver && !fromDriver}
-              />
-            ))}
-          </div>
+          {fromDriver && isInternalDispatcher ? (
+            <>
+              <section style={{ marginBottom: 28 }}>
+                <h2 style={{ fontSize: 20, color: '#92400e', marginBottom: 12 }}>
+                  ⭐ Ichki yuklar ({internalCargos.length})
+                </h2>
+                {internalCargos.length > 0 ? (
+                  <div className="grid">
+                    {internalCargos.map((cargo) => (
+                      <CargoCard
+                        key={cargo.id}
+                        cargo={cargo}
+                        showOfferButton
+                        driverId={driverId}
+                        driverReference={driverReference}
+                        canOffer
+                        assignDirectly
+                        onAssigned={handleAssigned}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state" style={{ padding: 20 }}>Mos ichki yuk topilmadi</div>
+                )}
+              </section>
 
-          <div className="pagination">
+              <section>
+                <h2 style={{ fontSize: 20, color: '#475569', marginBottom: 12 }}>
+                  Boshqa yuklar ({otherCargos.length})
+                </h2>
+                {otherCargos.length > 0 ? (
+                  <div className="grid">
+                    {otherCargos.map((cargo) => (
+                      <CargoCard
+                        key={cargo.id}
+                        cargo={cargo}
+                        showOfferButton
+                        driverId={driverId}
+                        driverReference={driverReference}
+                        canOffer
+                        assignDirectly
+                        onAssigned={handleAssigned}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state" style={{ padding: 20 }}>Mos boshqa yuk topilmadi</div>
+                )}
+              </section>
+            </>
+          ) : (
+            <div className="grid">
+              {cargos.map(cargo => (
+                <CargoCard
+                  key={cargo.id}
+                  cargo={cargo}
+                  showOfferButton={fromDriver}
+                  driverId={driverId}
+                  driverReference={driverReference}
+                  canOffer={!!permissions?.offerToDriver}
+                  showOfferToDriverButton={!!permissions?.offerToDriver && !fromDriver}
+                />
+              ))}
+            </div>
+          )}
+
+          {(page > 0 || hasMore) && <div className="pagination">
             <button
               className="pagination-button"
               onClick={() => setPage(p => p - 1)}
@@ -814,15 +952,17 @@ export default function SearchPage() {
               <span>Oldingi</span>
             </button>
             <span className="pagination-info">Sahifa {page + 1}</span>
-            <button
-              className="pagination-button"
-              onClick={() => setPage(p => p + 1)}
-              disabled={cargos.length === 0}
-            >
-              <span>Keyingi</span>
-              <span>→</span>
-            </button>
-          </div>
+            {hasMore && (
+              <button
+                className="pagination-button"
+                onClick={() => setPage(p => p + 1)}
+                disabled={loading}
+              >
+                <span>Keyingi</span>
+                <span>→</span>
+              </button>
+            )}
+          </div>}
         </>
       )}
 

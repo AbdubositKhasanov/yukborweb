@@ -108,11 +108,7 @@ export default function MobileOrderDetail() {
   };
 
   const handleFindTransport = () => {
-    // MUST match Desktop MyOrdersPage.jsx handleFindTransport EXACTLY
-    if (!permissions?.offerToDriver) {
-      window.alert('Mashina topish uchun sizga ruxsat kerak. Admin bilan bog\'laning.');
-      return;
-    }
+    if (!permissions?.findTransportForOrder) return;
 
     // Build filters from order - matches Desktop
     const filters = {
@@ -379,9 +375,11 @@ export default function MobileOrderDetail() {
                 📞
               </button>
             )}
-            <button className="m-btn m-btn-primary m-btn-lg" onClick={handleFindTransport} style={{ flex: 1 }}>
-              🔍 Transport topish
-            </button>
+            {permissions?.findTransportForOrder && (
+              <button className="m-btn m-btn-primary m-btn-lg" onClick={handleFindTransport} style={{ flex: 1 }}>
+                🔍 Transport topish
+              </button>
+            )}
           </div>
           {isInternalDispatcher && (
             <button

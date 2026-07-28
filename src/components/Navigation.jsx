@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getUserMe } from '../services/api';
 import { PRIMARY_NAV_STATE, shouldReplacePrimaryNav } from '../utils/navigationHistory';
+import ReminderBell from './ReminderBell';
 
 const SECTION = {
   search: 'search',
@@ -15,7 +16,9 @@ const SECTION = {
   createOrder: 'createOrder',
   createTransport: 'createTransport',
   createHarbinger: 'createHarbinger',
-  platformLoads: 'platformLoads',
+  internalLoads: 'platformLoads',
+  shippers: 'shippers',
+  reminders: 'reminders',
   profile: 'profile',
   admin: 'admin',
   adminUsers: 'adminUsers',
@@ -41,7 +44,8 @@ const TAB_CONFIG = {
   logist: [
     { path: '/', label: 'Yuklar', auth: false, section: SECTION.search },
     { path: '/tariffs', label: 'Tariflar', auth: false, section: SECTION.tariffs },
-    { path: '/platform-loads', label: 'Platforma yuklari', auth: true, section: SECTION.platformLoads, requireDispatcher: true },
+    { path: '/internal-loads', label: 'Ichki yuklar', auth: true, section: SECTION.internalLoads, requireDispatcher: true },
+    { path: '/shippers', label: 'Yukchilar', auth: true, section: SECTION.shippers, requireDispatcher: true },
     { path: '/transports', label: 'Transportlar', auth: false, section: SECTION.transports },
     { path: '/my-orders', label: 'Buyurtmalarim', auth: true, section: SECTION.myOrders },
     { path: '/my-drivers', label: 'Hamkorlarim', auth: true, section: SECTION.myPartners },
@@ -148,6 +152,9 @@ export default function Navigation({ isAuthenticated, onLogout }) {
 
   const tabs = getTabs();
   const tabPaths = tabs.map((tab) => tab.path);
+  const reminderVisible = isInternalDispatcher && (
+    !Array.isArray(navigation?.roleSections) || navigation.roleSections.includes(SECTION.reminders)
+  );
 
   return (
     <nav className="navbar">
@@ -160,6 +167,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
         padding: '0 var(--space-lg)',
         gap: 'var(--space-lg)'
       }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div className="navbar-brand">
           <img 
             src="/yukbor-logo.jpg" 
@@ -182,6 +190,8 @@ export default function Navigation({ isAuthenticated, onLogout }) {
           }}>
             YukBor
           </span>
+        </div>
+        {reminderVisible && <ReminderBell />}
         </div>
       
       <div className="navbar-menu">

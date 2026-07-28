@@ -13,6 +13,7 @@ import MobileRoleSelect from './pages/MobileRoleSelect';
 import { trackPageView } from '../services/analytics';
 import useTelegramBackButton from './hooks/useTelegramBackButton';
 import { getDefaultMobilePath } from './navigationConfig';
+import ReminderBell from '../components/ReminderBell';
 import './styles/mobile.css';
 
 // Lazy load mobile pages
@@ -32,6 +33,8 @@ const MobileMyHarbingers = lazy(() => import('./pages/MobileMyHarbingers'));
 const MobileCreateTransport = lazy(() => import('./pages/MobileCreateTransport'));
 const MobileMyListings = lazy(() => import('./pages/MobileMyListings'));
 const TariffsPage = lazy(() => import('../pages/TariffsPage'));
+const ShippersPage = lazy(() => import('../pages/ShippersPage'));
+const RemindersPage = lazy(() => import('../pages/RemindersPage'));
 
 // Admin pages (shared between desktop and mobile — responsive components)
 const AdminUsersPage = lazy(() => import('../pages/AdminDriversPage'));
@@ -99,9 +102,17 @@ function MiniAppUnavailable() {
   );
 }
 
+function MobileInternalLoadsRoute() {
+  const { isInternalDispatcher } = useMobileAuth();
+  if (!isInternalDispatcher) {
+    return <Navigate to="/mobile" replace />;
+  }
+  return <MobileHome internalOnly />;
+}
+
 function MobileAppContent() {
   const location = useLocation();
-  const { isAuthenticated, user, userRole, loading, needsRoleSelection } = useMobileAuth();
+  const { isAuthenticated, user, userRole, isInternalDispatcher, loading, needsRoleSelection } = useMobileAuth();
 
   // Telegram Mini App back button — navigate(-1) instead of closing app
   useTelegramBackButton(userRole, user?.navigation);
@@ -138,6 +149,8 @@ function MobileAppContent() {
     } else {
       // logist (default)
       if (path === '' || path === '/' || path === '/yuklar' || path.startsWith('/cargo')) return 'home';
+      if (path.startsWith('/internal-loads')) return 'internal';
+      if (path.startsWith('/shippers')) return 'shippers';
       if (path.startsWith('/transports') || path.startsWith('/transport/')) return 'transports';
       if (path.startsWith('/drivers') || path.startsWith('/driver/')) return 'drivers';
       if (path.startsWith('/my-listings') || path.startsWith('/orders') || path.startsWith('/order/') || path.startsWith('/my-transports') || path.startsWith('/my-harbingers') || path.startsWith('/create')) return 'listings';
@@ -178,6 +191,30 @@ function MobileAppContent() {
             element={
               <MobileProtectedRoute>
                 <MobileHome />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/internal-loads"
+            element={
+              <MobileProtectedRoute>
+                <MobileInternalLoadsRoute />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/shippers"
+            element={
+              <MobileProtectedRoute>
+                <MobileInternalDispatcherPage><ShippersPage mobile /></MobileInternalDispatcherPage>
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/reminders"
+            element={
+              <MobileProtectedRoute>
+                <MobileInternalDispatcherPage><RemindersPage mobile /></MobileInternalDispatcherPage>
               </MobileProtectedRoute>
             }
           />
@@ -386,16 +423,24 @@ function MobileAppContent() {
         </Routes>
       </Suspense>
 
+      {isInternalDispatcher && user?.navigation?.roleSections?.includes('reminders') && <ReminderBell mobile />}
+
       {showBottomNav && (
         <BottomNav
           key={userRole}
           activeTab={getActiveTab()}
           userRole={userRole}
           navigation={user?.navigation}
+          isInternalDispatcher={isInternalDispatcher}
         />
       )}
     </div>
   );
+}
+
+function MobileInternalDispatcherPage({ children }) {
+  const { isInternalDispatcher } = useMobileAuth();
+  return isInternalDispatcher ? children : <Navigate to="/mobile" replace />;
 }
 
 export default function MobileApp() {

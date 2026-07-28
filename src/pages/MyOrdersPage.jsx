@@ -9,7 +9,6 @@ import {
   updateCargoOwnerNeedProfile,
 } from '../services/api';
 import PhoneShowModal from '../components/PhoneShowModal.jsx';
-import ClubMembershipModal from '../components/ClubMembershipModal';
 import BroadcastModal from '../components/BroadcastModal';
 import CargoOwnerNeedProfileCard, { buildCargoOwnerNeedTransportState } from '../components/CargoOwnerNeedProfileCard';
 import { getOrderStatusText, getOrderStatusClass, hasAppointedDriver } from '../utils/orderStatus';
@@ -26,7 +25,6 @@ export default function MyOrdersPage() {
   const [selectedPhone, setSelectedPhone] = useState(null);
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
   const [permissions, setPermissions] = useState(null);
-  const [showClubModal, setShowClubModal] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastOrder, setBroadcastOrder] = useState(null);
   const [staticData, setStaticData] = useState(null);
@@ -135,11 +133,7 @@ export default function MyOrdersPage() {
   };
 
   const handleFindTransport = (order) => {
-    // Check if user has offer permission
-    if (!permissions?.offerToDriver) {
-      setShowClubModal(true);
-      return;
-    }
+    if (!permissions?.findTransportForOrder) return;
 
     // Order ma'lumotlarini transport qidiruv parametrlariga map qilish
     const filters = {
@@ -236,7 +230,7 @@ export default function MyOrdersPage() {
         staticData={staticData}
         saving={savingNeedProfile}
         onSave={handleSaveNeedProfile}
-        onFindTransports={handleFindTransportFromNeed}
+        onFindTransports={permissions?.findTransportForOrder ? handleFindTransportFromNeed : null}
       />
 
       {orders.length === 0 ? (
@@ -343,7 +337,7 @@ export default function MyOrdersPage() {
               </div>
 
               <div style={{ marginTop: '15px', display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                {!hasAppointedDriver(order.status) && (
+                {permissions?.findTransportForOrder && !hasAppointedDriver(order.status) && (
                   <button
                     className="btn btn-success"
                     onClick={() => handleFindTransport(order)}
@@ -398,13 +392,6 @@ export default function MyOrdersPage() {
           }}
         />
       )}
-
-      <ClubMembershipModal
-        isOpen={showClubModal}
-        onClose={() => setShowClubModal(false)}
-        featureKey="offerToDriver"
-        message="Buyurtma uchun transport topish va taklif yuborish premium tarif orqali ochiladi."
-      />
 
       <BroadcastModal
         isOpen={showBroadcastModal}

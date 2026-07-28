@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { searchMatches } from '../utils/searchText';
+import { registerMobileOverlay } from '../mobile/utils/mobileOverlayHistory';
 import './SearchableSelect.css';
 
 export default function SearchableSelect({
@@ -15,11 +17,16 @@ export default function SearchableSelect({
   selectedLabel = '',
   onCustomCreate,
   getCustomCreateLabel = (customValue) => `"${customValue}"ni qo'lda qo'shish`,
+  clearable = false,
+  clearLabel = 'Tanlovni olib tashlash',
+  mobile = false,
+  selectionTitle = '',
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const rootRef = useRef(null);
   const searchRef = useRef(null);
+  const closeRef = useRef(() => setOpen(false));
   const selectedValue = value === null || value === undefined ? '' : String(value);
   const customDisplayLabel = selectedLabel ? String(selectedLabel).trim() : '';
 
@@ -42,7 +49,7 @@ export default function SearchableSelect({
   }, [allowCustom, normalizedQuery, options]);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || mobile) return undefined;
 
     const handlePointerDown = (event) => {
       if (!rootRef.current?.contains(event.target)) {
@@ -52,7 +59,12 @@ export default function SearchableSelect({
 
     document.addEventListener('mousedown', handlePointerDown);
     return () => document.removeEventListener('mousedown', handlePointerDown);
-  }, [open]);
+  }, [mobile, open]);
+
+  useEffect(() => {
+    if (!open || !mobile) return undefined;
+    return registerMobileOverlay(() => closeRef.current());
+  }, [mobile, open]);
 
   useEffect(() => {
     if (open) {
@@ -75,79 +87,131 @@ export default function SearchableSelect({
 
   const hasSelectedDisplay = Boolean(selectedOption || customDisplayLabel);
 
-  return (
-    <div className="searchable-select" ref={rootRef}>
-      <button
-        type="button"
-        className={`${className} searchable-select__control`.trim()}
-        disabled={disabled}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <span className={hasSelectedDisplay ? '' : 'searchable-select__placeholder'}>
-          {selectedOption?.label || customDisplayLabel || placeholder}
-        </span>
-        <span className="searchable-select__chevron">▾</span>
-      </button>
+  const menuContent = (
+    <>
+      <div className="searchable-select__search-wrap">
+        <input
+          ref={searchRef}
+          type="text"
+          className="searchable-select__search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              if (canCreateCustom) handleCustomCreate();
+            }
+            if (event.key === 'Escape') setOpen(false);
+          }}
+          placeholder={searchPlaceholder}
+        />
+      </div>
 
-      {open && (
-        <div className="searchable-select__menu">
-          <div className="searchable-select__search-wrap">
-            <input
-              ref={searchRef}
-              type="text"
-              className="searchable-select__search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  if (canCreateCustom) handleCustomCreate();
-                }
-                if (event.key === 'Escape') setOpen(false);
-              }}
-              placeholder={searchPlaceholder}
-            />
-          </div>
+      <div className="searchable-select__options">
+        {hasSelectedDisplay && (
+          <button
+            type="button"
+            className="searchable-select__option searchable-select__option--clear"
+            onClick={() => handleSelect('')}
+          >
+            <span aria-hidden="true">✕</span> {clearLabel}
+          </button>
+        )}
 
-          <div className="searchable-select__options">
+        {canCreateCustom && (
+          <button
+            type="button"
+            className="searchable-select__option searchable-select__option--custom"
+            onClick={handleCustomCreate}
+          >
+            {getCustomCreateLabel(normalizedQuery)}
+          </button>
+        )}
+
+        {visibleOptions.map((option) => {
+          const optionValue = String(option.value);
+          return (
             <button
+              key={optionValue}
               type="button"
-              className={`searchable-select__option ${!selectedValue ? 'selected' : ''}`}
-              onClick={() => handleSelect('')}
+              className={`searchable-select__option ${optionValue === selectedValue ? 'selected' : ''}`}
+              onClick={() => handleSelect(optionValue)}
             >
-              {placeholder}
+              <span>{option.label}</span>
+              {optionValue === selectedValue && <span aria-hidden="true">✓</span>}
             </button>
+          );
+        })}
 
-            {canCreateCustom && (
+        {visibleOptions.length === 0 && !canCreateCustom && (
+          <div className="searchable-select__empty">Topilmadi</div>
+        )}
+      </div>
+    </>
+  );
+
+  const mobileMenu = open && mobile && typeof document !== 'undefined'
+    ? createPortal(
+        <div className="searchable-select__mobile-layer" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            className="searchable-select__mobile-backdrop"
+            onClick={() => setOpen(false)}
+            aria-label="Tanlovni yopish"
+          />
+          <div className="searchable-select__mobile-panel">
+            <div className="searchable-select__mobile-header">
               <button
                 type="button"
-                className="searchable-select__option searchable-select__option--custom"
-                onClick={handleCustomCreate}
+                className="searchable-select__mobile-close"
+                onClick={() => setOpen(false)}
+                aria-label="Orqaga"
               >
-                {getCustomCreateLabel(normalizedQuery)}
+                ←
               </button>
-            )}
-
-            {visibleOptions.map((option) => {
-              const optionValue = String(option.value);
-              return (
-                <button
-                  key={optionValue}
-                  type="button"
-                  className={`searchable-select__option ${optionValue === selectedValue ? 'selected' : ''}`}
-                  onClick={() => handleSelect(optionValue)}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-
-            {visibleOptions.length === 0 && !canCreateCustom && (
-              <div className="searchable-select__empty">Topilmadi</div>
-            )}
+              <h2>{selectionTitle || `${placeholder}ni tanlang`}</h2>
+            </div>
+            {menuContent}
           </div>
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <div className={`searchable-select ${mobile ? 'searchable-select--mobile' : ''}`} ref={rootRef}>
+      <div className={`searchable-select__control-wrap ${clearable && hasSelectedDisplay ? 'has-clear' : ''}`}>
+        <button
+          type="button"
+          className={`${className} searchable-select__control`.trim()}
+          disabled={disabled}
+          onClick={() => setOpen((current) => !current)}
+        >
+          <span className={hasSelectedDisplay ? '' : 'searchable-select__placeholder'}>
+            {selectedOption?.label || customDisplayLabel || placeholder}
+          </span>
+          <span className="searchable-select__chevron">▾</span>
+        </button>
+
+        {clearable && hasSelectedDisplay && !disabled && (
+          <button
+            type="button"
+            className="searchable-select__clear"
+            onClick={() => handleSelect('')}
+            aria-label={clearLabel}
+            title={clearLabel}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {open && !mobile && (
+        <div className="searchable-select__menu">
+          {menuContent}
         </div>
       )}
+      {mobileMenu}
     </div>
   );
 }

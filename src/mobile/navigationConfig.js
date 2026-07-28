@@ -14,6 +14,8 @@ export const MOBILE_TAB_CONFIG = {
   ],
   logist: [
     { id: 'home', section: 'search', icon: '📦', label: 'Yuklar', path: '/mobile' },
+    { id: 'internal', section: 'platformLoads', icon: '⭐', label: 'Ichki', path: '/mobile/internal-loads', requireDispatcher: true },
+    { id: 'shippers', section: 'shippers', icon: '🏢', label: 'Yukchilar', path: '/mobile/shippers', requireDispatcher: true },
     { id: 'transports', section: 'transports', icon: '🚚', label: 'Transport', path: '/mobile/transports' },
     { id: 'drivers', section: 'myPartners', icon: '👥', label: 'Hamkor', path: '/mobile/drivers' },
     { id: 'listings', section: 'myListings', icon: '📋', label: "E'lonlarim", path: '/mobile/my-listings' },
@@ -21,11 +23,14 @@ export const MOBILE_TAB_CONFIG = {
   ],
 };
 
-export function getMobileTabs(userRole = 'logist', navigation = null) {
+export function getMobileTabs(userRole = 'logist', navigation = null, isInternalDispatcher = false) {
   const tabs = MOBILE_TAB_CONFIG[userRole] || MOBILE_TAB_CONFIG.logist;
   const visibleSections = navigation?.roleSections;
-  if (!Array.isArray(visibleSections)) return tabs;
-  return tabs.filter((tab) => visibleSections.includes(tab.section));
+  return tabs.filter((tab) => {
+    if (tab.requireDispatcher && !isInternalDispatcher) return false;
+    if (!Array.isArray(visibleSections)) return true;
+    return visibleSections.includes(tab.section);
+  });
 }
 
 export function getDefaultMobilePath(userRole = 'logist', navigation = null) {

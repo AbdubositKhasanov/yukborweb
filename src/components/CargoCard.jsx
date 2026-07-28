@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import PhoneAccessModal from './PhoneAccessModal';
 import { handlePhoneAccess } from '../services/phoneAccess';
-import { requestCargoPhone, offerForDriver } from '../services/api';
+import { requestCargoPhone, offerForDriver, assignOrderToDriver } from '../services/api';
 import ClubMembershipModal from './ClubMembershipModal';
 import OfferToDriverModal from './OfferToDriverModal';
 import PriceInputModal from './PriceInputModal';
+import AssignToDriverModal from './AssignToDriverModal';
 import SenderTypeBadge from './SenderTypeBadge';
 import { formatTimeAgo } from '../utils/formatTime';
 import { formatOrderPrice } from '../utils/orderText';
@@ -14,8 +15,12 @@ export default function CargoCard({
   cargo,
   showOfferButton = false,
   driverId = null,
+  driverReference = null,
   canOffer = false,
-  showOfferToDriverButton = false
+  showOfferToDriverButton = false,
+  showAssignToDriverButton = false,
+  assignDirectly = false,
+  onAssigned = null,
 }) {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState(null);
@@ -32,7 +37,9 @@ export default function CargoCard({
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [showOriginalMessage, setShowOriginalMessage] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
   const hasMessageAction = Boolean(cargo.messageUrl || cargo.messageIsPrivateGroup);
+  const isInternalLoad = cargo.source === 'bot';
 
   const handleRequestPhone = async () => {
     setLoading(true);
@@ -103,14 +110,49 @@ export default function CargoCard({
     }
   };
 
+  const handleDirectAssign = async () => {
+    const reference = driverReference || driverId;
+    if (!reference || !cargo.id) {
+      setOfferError("Biriktirish uchun haydovchi ma'lumoti yetarli emas");
+      return;
+    }
+    if (!window.confirm('Ushbu yukni haydovchiga tasdiqsiz biriktirasizmi?')) return;
+
+    setOffering(true);
+    setOfferError(null);
+    try {
+      const response = await assignOrderToDriver(cargo.id, reference);
+      if (response.code === 200) {
+        setOfferSuccess(true);
+        onAssigned?.(cargo.id);
+      } else {
+        setOfferError(response.message || 'Yukni biriktirib bo\'lmadi');
+      }
+    } catch (error) {
+      setOfferError(error.response?.data?.message || 'Yukni biriktirib bo\'lmadi');
+    } finally {
+      setOffering(false);
+    }
+  };
+
   return (
     <>
-      <div className="card">
+      <div
+        className="card"
+        style={isInternalLoad ? { border: '2px solid #f59e0b', background: '#fffbeb' } : undefined}
+      >
         <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
           <h3 className="card-title" style={{ margin: 0 }}>
             {cargo.cargoName || `${cargo.fromCity || ''} → ${cargo.toCity || ''}`}
           </h3>
-          <SenderTypeBadge senderType={cargo.senderType} />
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {isInternalLoad && (
+              <span style={{ padding: '4px 8px', borderRadius: 999, background: '#f59e0b', color: '#fff', fontSize: 11, fontWeight: 800 }}>
+                ICHKI YUK
+              </span>
+            )}
+            <SenderTypeBadge senderType={cargo.senderType} />
+          </div>
         </div>
         
         <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.8' }}>
@@ -211,7 +253,7 @@ export default function CargoCard({
             color: '#155724',
             fontSize: '14px'
           }}>
-            ✓ Taklif muvaffaqiyatli yuborildi!
+            {assignDirectly ? '✓ Yuk haydovchiga biriktirildi!' : '✓ Taklif muvaffaqiyatli yuborildi!'}
           </div>
         )}
 
@@ -229,7 +271,18 @@ export default function CargoCard({
         )}
 
         <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {showOfferButton && (
+          {showOfferButton && assignDirectly && (
+            <button
+              className="btn btn-success"
+              onClick={handleDirectAssign}
+              disabled={offering || offerSuccess}
+              style={{ width: '100%' }}
+            >
+              {offering ? 'Biriktirilmoqda...' : offerSuccess ? '✓ Biriktirildi' : '✓ Haydovchiga biriktirish'}
+            </button>
+          )}
+
+          {showOfferButton && !assignDirectly && (
             <button
               className="btn btn-success"
               onClick={handleOffer}
@@ -247,6 +300,16 @@ export default function CargoCard({
               style={{ width: '100%' }}
             >
               👤 Haydovchiga taklif
+            </button>
+          )}
+
+          {showAssignToDriverButton && (
+            <button
+              className="btn btn-success"
+              onClick={() => setShowAssignModal(true)}
+              style={{ width: '100%' }}
+            >
+              ✓ Haydovchiga biriktirish
             </button>
           )}
           
@@ -296,6 +359,13 @@ export default function CargoCard({
         cargoName={cargo.cargoName || `${cargo.fromCity || ''} → ${cargo.toCity || ''}`}
         offering={offering}
         offerError={offerError}
+      />
+
+      <AssignToDriverModal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        cargo={cargo}
+        onAssigned={onAssigned}
       />
 
       {showOriginalMessage && (

@@ -7,19 +7,30 @@
  * - Bosh sahifada: BackButton yashiriladi (back bosish app ni yopadi — to'g'ri)
  * - Ichki sahifalarda: BackButton ko'rsatiladi, bosilganda navigate(-1)
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getMobileTabs } from '../navigationConfig';
+import {
+  closeTopMobileOverlay,
+  hasOpenMobileOverlay,
+  subscribeToMobileOverlays,
+} from '../utils/mobileOverlayHistory';
 
 const STATIC_ROOT_PATHS = ['/mobile', '/mobile/'];
 
 export default function useTelegramBackButton(userRole = 'logist', navigation = null) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [overlayCount, setOverlayCount] = useState(0);
   const rootPaths = useMemo(() => {
     const tabPaths = getMobileTabs(userRole, navigation).map((tab) => tab.path);
     return new Set([...STATIC_ROOT_PATHS, ...tabPaths]);
   }, [userRole, navigation]);
+
+  useEffect(() => {
+    setOverlayCount(hasOpenMobileOverlay() ? 1 : 0);
+    return subscribeToMobileOverlays(setOverlayCount);
+  }, []);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -30,7 +41,7 @@ export default function useTelegramBackButton(userRole = 'logist', navigation = 
 
     const isRootPage = rootPaths.has(location.pathname);
 
-    if (isRootPage) {
+    if (isRootPage && overlayCount === 0) {
       // Bosh sahifada back tugmasini yashirish
       backButton.hide();
     } else {
@@ -38,6 +49,7 @@ export default function useTelegramBackButton(userRole = 'logist', navigation = 
       backButton.show();
 
       const handleBack = () => {
+        if (closeTopMobileOverlay()) return;
         navigate(-1);
       };
 
@@ -47,5 +59,5 @@ export default function useTelegramBackButton(userRole = 'logist', navigation = 
         backButton.offClick(handleBack);
       };
     }
-  }, [location.pathname, navigate, rootPaths]);
+  }, [location.pathname, navigate, overlayCount, rootPaths]);
 }

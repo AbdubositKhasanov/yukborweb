@@ -5,6 +5,8 @@ import { formatBalance, getBalanceColor } from '../utils/formatBalance';
 import { showSuccess, showError } from '../utils/toast';
 import ClubMembershipModal from '../components/ClubMembershipModal';
 import CounterpartyTransportModal from '../components/CounterpartyTransportModal';
+import ReminderComposer from '../components/ReminderComposer';
+import '../styles/dispatcher-crm.css';
 
 const ROLE_FILTERS = [
   { key: 'driver', label: 'Haydovchilar' },
@@ -22,6 +24,7 @@ export default function MyDriversPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [permissions, setPermissions] = useState(null);
+  const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
   const [showClubModal, setShowClubModal] = useState(false);
   const [staticData, setStaticData] = useState(null);
   const [showTransportModal, setShowTransportModal] = useState(false);
@@ -33,6 +36,7 @@ export default function MyDriversPage() {
   const [invitePhone, setInvitePhone] = useState('');
   const [inviteRole, setInviteRole] = useState('driver');
   const [inviting, setInviting] = useState(false);
+  const [reminderSubject, setReminderSubject] = useState(null);
 
   useEffect(() => {
     loadDrivers();
@@ -45,6 +49,7 @@ export default function MyDriversPage() {
       const response = await getUserMe();
       if (response.code === 200 && response.result) {
         setPermissions(response.result.permissions || null);
+        setIsInternalDispatcher(response.result.isInternalDispatcher === true);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -81,7 +86,7 @@ export default function MyDriversPage() {
 
   const handleFindOrder = (driver) => {
     // Check if user has offer permission
-    if (!permissions?.offerToDriver) {
+    if (!isInternalDispatcher && !permissions?.offerToDriver) {
       setShowClubModal(true);
       return;
     }
@@ -109,6 +114,7 @@ export default function MyDriversPage() {
       state: {
         fromDriver: true,
         driverId: driver.chatId,
+        driverReference: driver.id || driver._id || driver.chatId,
         driverName: driver.name,
         filters: filters
       }
@@ -320,6 +326,12 @@ export default function MyDriversPage() {
               formatDate={formatDate}
               getStatusColor={getStatusColor}
               getStatusText={getStatusText}
+              canDirectAssign={isInternalDispatcher}
+              onReminder={(item) => setReminderSubject({
+                type: item.type === 'factory' ? 'shipper' : 'driver',
+                id: String(item.id || item._id || item.chatId),
+                name: item.name || item.fullName || item.phone,
+              })}
             />
           ))}
         </div>
@@ -339,6 +351,11 @@ export default function MyDriversPage() {
         staticData={staticData}
         driver={selectedDriver}
         mode={transportModalMode}
+      />
+      <ReminderComposer
+        open={Boolean(reminderSubject)}
+        subject={reminderSubject}
+        onClose={() => setReminderSubject(null)}
       />
 
       {/* Invite Driver Modal */}
@@ -422,7 +439,7 @@ export default function MyDriversPage() {
   );
 }
 
-function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatusText, onStatusUpdate, onAddTransport, onEditTransport, onCopyLink }) {
+function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatusText, onStatusUpdate, onAddTransport, onEditTransport, onCopyLink, canDirectAssign, onReminder }) {
   const transportForm = driver.driverTransportForm;
   const isOnline = driver.driverCurrentStatus === true;
   const hasTransport = transportForm && (
@@ -549,7 +566,7 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
           color: '#7a5200',
           fontSize: 13,
         }}>
-          Bu hamkor hali bot/saytda ro'yxatdan o'tmagan. Siz baribir transport ma'lumotlarini boshqarishingiz mumkin; link yuborilsa keyin avtomatik ulanadi.
+          Bu hamkor hali bot/saytda ro‘yxatdan o‘tmagan. Transportini boshqarish va yukni bevosita biriktirish uchun ro‘yxatdan o‘tishi yoki taklifni qabul qilishi shart emas.
           {driver.deepLink && (
             <button
               type="button"
@@ -696,13 +713,18 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
       )}
 
       {/* Last Update Time */}
-      {transportForm?.time && (
+      {(driver.driverInfoUpdatedAt || transportForm?.time) && (
         <p style={{
           margin: '0 0 15px',
           fontSize: '12px',
           color: '#999'
         }}>
-          So'nggi yangilanish: {formatDate(transportForm.time)}
+          So'nggi yangilanish: {formatDate(driver.driverInfoUpdatedAt || transportForm.time)}
+          {driver.driverInfoUpdatedByName
+            ? ` · ${driver.driverInfoUpdatedByName} tomonidan`
+            : driver.driverInfoUpdatedBy
+              ? ` · ${driver.driverInfoUpdatedBy} tomonidan`
+              : ''}
         </p>
       )}
 
@@ -801,17 +823,29 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
         <button
           className="btn btn-primary"
           onClick={() => onFindOrder(driver)}
-          disabled={!isRegistered}
+          disabled={!isRegistered && !canDirectAssign}
           style={{
             width: '100%',
             padding: '12px',
             fontSize: '15px',
             fontWeight: '600',
-            opacity: isRegistered ? 1 : 0.65,
-            cursor: isRegistered ? 'pointer' : 'not-allowed',
+            opacity: isRegistered || canDirectAssign ? 1 : 0.65,
+            cursor: isRegistered || canDirectAssign ? 'pointer' : 'not-allowed',
           }}
         >
-          {isRegistered ? '🔍 Buyurtma topish' : 'Ro\'yxatdan o\'tgach buyurtma taklif qilinadi'}
+          {isRegistered || canDirectAssign
+            ? '🔍 Buyurtma topish'
+            : 'Ro\'yxatdan o\'tgach buyurtma taklif qilinadi'}
+        </button>
+      )}
+      {canDirectAssign && (
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => onReminder(driver)}
+          style={{ width: '100%', marginTop: 8, padding: 11, color: '#6942ae', background: '#f1ebfc', borderColor: '#dfd2f6' }}
+        >
+          ◷ Qayta bog‘lanish uchun reminder
         </button>
       )}
     </div>

@@ -11,11 +11,14 @@ import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading from '../components/MobileLoading';
 import LocationSelector from '../../components/LocationSelector';
+import { useMobileAuth } from '../context/MobileAuthContext';
+import ReminderComposer from '../../components/ReminderComposer';
 
 export default function MobileDriverDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { staticData } = useStaticData();
+  const { isInternalDispatcher } = useMobileAuth();
 
   const [driver, setDriver] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,6 +39,7 @@ export default function MobileDriverDetail() {
   });
   const [transportLoading, setTransportLoading] = useState(false);
   const [transportError, setTransportError] = useState('');
+  const [reminderOpen, setReminderOpen] = useState(false);
 
   useEffect(() => {
     loadDriver();
@@ -112,7 +116,8 @@ export default function MobileDriverDetail() {
     navigate('/mobile', {
       state: {
         fromDriver: true,          // Key must match Desktop
-        driverId: driver.chatId,   // Must be chatId like Desktop
+        driverId: driver.chatId,
+        driverReference: driver.id || driver._id || driver.chatId,
         driverName: driver.name || driver.fullName || driver.full_name,
         filters: filters,
       },
@@ -283,6 +288,17 @@ export default function MobileDriverDetail() {
           </div>
         </div>
 
+        {driver.driverInfoUpdatedAt && (
+          <div className="m-detail-section">
+            <h2 className="m-detail-section-title">So&apos;nggi yangilanish</h2>
+            <div style={{ padding: 14, background: 'var(--m-bg)', borderRadius: 8, color: 'var(--m-text-secondary)', fontSize: 14 }}>
+              {new Date(driver.driverInfoUpdatedAt).toLocaleString('uz-UZ')}
+              {' · '}
+              {driver.driverInfoUpdatedByName || driver.driverInfoUpdatedBy || 'noma\'lum foydalanuvchi'} tomonidan
+            </div>
+          </div>
+        )}
+
         {/* Transport */}
         <div className="m-detail-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -353,15 +369,35 @@ export default function MobileDriverDetail() {
 
       {/* Find cargo action */}
       <div className="m-action-bar">
+        {isInternalDispatcher && (
+          <button
+            className="m-btn m-btn-secondary m-btn-lg"
+            onClick={() => setReminderOpen(true)}
+            aria-label="Reminder yaratish"
+          >
+            ◷
+          </button>
+        )}
         <button
           className="m-btn m-btn-primary m-btn-lg"
           onClick={handleFindCargo}
-          disabled={!isRegistered}
-          style={{ flex: 1, opacity: isRegistered ? 1 : 0.6 }}
+          disabled={!isRegistered && !isInternalDispatcher}
+          style={{ flex: 1, opacity: isRegistered || isInternalDispatcher ? 1 : 0.6 }}
         >
-          {isRegistered ? '🔍 Yuk topish' : 'Ro\'yxatdan o\'tgach yuk taklif qilinadi'}
+          {isRegistered || isInternalDispatcher
+            ? '🔍 Yuk topish'
+            : 'Ro\'yxatdan o\'tgach yuk taklif qilinadi'}
         </button>
       </div>
+      <ReminderComposer
+        open={reminderOpen}
+        subject={{
+          type: 'driver',
+          id: String(driver.id || driver._id || driver.chatId || id),
+          name: driver.name || driver.fullName || driver.phone,
+        }}
+        onClose={() => setReminderOpen(false)}
+      />
 
       {/* Transport Sheet */}
       <BottomSheet

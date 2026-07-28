@@ -3,6 +3,7 @@
  * Mobile-native modal pattern with Android back button support
  */
 import React, { useEffect, useRef } from 'react';
+import { registerMobileOverlay } from '../utils/mobileOverlayHistory';
 
 export default function BottomSheet({
   isOpen,
@@ -13,13 +14,18 @@ export default function BottomSheet({
   height = 'auto', // 'auto', 'half', 'full'
 }) {
   const sheetRef = useRef(null);
+  const onCloseRef = useRef(onClose);
 
-  // Close on overlay click
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // Keep the sheet in the mobile back stack. Browser/Android and Telegram back
+  // close the sheet before navigating away from the current page.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    return registerMobileOverlay(() => onCloseRef.current?.());
+  }, [isOpen]);
 
   // Close on escape key
   useEffect(() => {
@@ -58,9 +64,11 @@ export default function BottomSheet({
 
   return (
     <>
-      <div
+      <button
+        type="button"
         className={`m-sheet-overlay ${isOpen ? 'open' : ''}`}
-        onClick={handleOverlayClick}
+        onClick={onClose}
+        aria-label="Oynani yopish"
         aria-hidden={!isOpen}
       />
       <div

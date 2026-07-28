@@ -6,18 +6,23 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatTimeAgo } from '../../utils/formatTime';
-import { offerForDriver } from '../../services/api';
+import { offerForDriver, assignOrderToDriver } from '../../services/api';
 import BottomSheet from './BottomSheet';
 import SenderTypeBadge from '../../components/SenderTypeBadge';
 import { buildOriginalCargoMessage, PRIVATE_GROUP_MESSAGE_NOTE } from '../../utils/originalMessage';
 import { canOpenTelegramMessageLink, CONTACT_FALLBACK_MESSAGE } from '../../utils/telegramLinks';
+import AssignToDriverModal from '../../components/AssignToDriverModal';
 
 export default function CargoListItem({
   cargo,
   onClick,
   showOfferButton = false,
   driverId = null,
+  driverReference = null,
   canOffer = false,
+  assignDirectly = false,
+  showAssignToDriverButton = false,
+  onAssigned = null,
 }) {
   const navigate = useNavigate();
   const [offerSheet, setOfferSheet] = useState(false);
@@ -26,6 +31,7 @@ export default function CargoListItem({
   const [offerSuccess, setOfferSuccess] = useState(false);
   const [offerError, setOfferError] = useState('');
   const [messageSheet, setMessageSheet] = useState(false);
+  const [assignModal, setAssignModal] = useState(false);
 
   const handleClick = () => {
     if (onClick) {
@@ -82,6 +88,36 @@ export default function CargoListItem({
     }
   };
 
+  const handleDirectAssign = async (event) => {
+    event.stopPropagation();
+    const reference = driverReference || driverId;
+    if (!reference || !cargo.id) {
+      setOfferError("Biriktirish uchun haydovchi ma'lumoti yetarli emas");
+      return;
+    }
+    if (!window.confirm('Ushbu yukni haydovchiga tasdiqsiz biriktirasizmi?')) return;
+
+    try {
+      setOffering(true);
+      setOfferError('');
+      const response = await assignOrderToDriver(cargo.id, reference);
+      if (response.code === 200) {
+        setOfferSuccess(true);
+        onAssigned?.(cargo.id);
+      } else {
+        const message = response.message || 'Yukni biriktirib bo\'lmadi';
+        setOfferError(message);
+        window.alert(message);
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'Yukni biriktirib bo\'lmadi';
+      setOfferError(message);
+      window.alert(message);
+    } finally {
+      setOffering(false);
+    }
+  };
+
   // Format location
   const formatLocation = (city, region) => {
     if (city) return city;
@@ -104,10 +140,15 @@ export default function CargoListItem({
   const hasMessageAction = Boolean(cargo.messageUrl || cargo.messageIsPrivateGroup);
   const canOpenMessageLink = canOpenTelegramMessageLink(cargo.messageUrl);
   const hasLeadingMeta = Boolean(cargo.vehicleType || cargo.priceUzs);
+  const isInternalLoad = cargo.source === 'bot';
 
   return (
     <>
-      <div className="m-list-item m-card-tap" onClick={handleClick}>
+      <div
+        className="m-list-item m-card-tap"
+        onClick={handleClick}
+        style={isInternalLoad ? { borderLeft: '4px solid #f59e0b', background: '#fffbeb' } : undefined}
+      >
         <div className="m-list-item-content">
           <p className="m-list-item-title" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span>
@@ -115,6 +156,11 @@ export default function CargoListItem({
               {cargo.weight && ` ${cargo.weight}t`}
             </span>
             <SenderTypeBadge senderType={cargo.senderType} />
+            {isInternalLoad && (
+              <span style={{ padding: '3px 6px', borderRadius: 999, background: '#f59e0b', color: '#fff', fontSize: 10, fontWeight: 800 }}>
+                ICHKI
+              </span>
+            )}
           </p>
           <p className="m-list-item-subtitle">
             {fromLocation} → {toLocation}
@@ -158,7 +204,27 @@ export default function CargoListItem({
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-          {showOfferButton ? (
+          {showAssignToDriverButton ? (
+            <button
+              className="m-btn m-btn-success"
+              onClick={(event) => {
+                event.stopPropagation();
+                setAssignModal(true);
+              }}
+              style={{ padding: '6px 10px', fontSize: 12, minHeight: 32 }}
+            >
+              ✓ Biriktirish
+            </button>
+          ) : showOfferButton && assignDirectly ? (
+            <button
+              className="m-btn m-btn-success"
+              onClick={handleDirectAssign}
+              disabled={offering || offerSuccess}
+              style={{ padding: '6px 10px', fontSize: 12, minHeight: 32 }}
+            >
+              {offering ? '...' : offerSuccess ? '✓' : '✓ Biriktirish'}
+            </button>
+          ) : showOfferButton ? (
             <button
               className="m-btn m-btn-success"
               onClick={handleOfferClick}
@@ -228,6 +294,13 @@ export default function CargoListItem({
           )}
         </div>
       </BottomSheet>
+
+      <AssignToDriverModal
+        isOpen={assignModal}
+        onClose={() => setAssignModal(false)}
+        cargo={cargo}
+        onAssigned={onAssigned}
+      />
 
       <BottomSheet
         isOpen={messageSheet}
