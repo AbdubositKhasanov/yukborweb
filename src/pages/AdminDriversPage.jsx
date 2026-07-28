@@ -5,6 +5,7 @@ import {
   adminListUsers,
   adminCreateDriver,
   adminListTariffs,
+  adminSetInternalDispatcherStatus,
   getUserMe,
 } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
@@ -35,6 +36,12 @@ const SUBSCRIPTION_FILTERS = [
   { key: 'expired', label: 'Muddati tugagan' },
   { key: 'none', label: 'Tarifsiz' },
   { key: 'any', label: 'Tarif bor' },
+];
+
+const INTERNAL_DISPATCHER_FILTERS = [
+  { key: 'all', label: 'Barcha foydalanuvchilar' },
+  { key: 'internal', label: 'Ichki logistlar' },
+  { key: 'regular', label: 'Ichki logist emas' },
 ];
 
 const ROLE_LABELS = {
@@ -95,6 +102,7 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [onlyMine, setOnlyMine] = useState(true);
   const [subscriptionFilter, setSubscriptionFilter] = useState('all');
+  const [internalDispatcherFilter, setInternalDispatcherFilter] = useState('all');
   const [tariffId, setTariffId] = useState('');
   const [tariffs, setTariffs] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -107,6 +115,8 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
   const [createName, setCreateName] = useState('');
   const [createRole, setCreateRole] = useState(normalizeCreateRole(initialRole));
   const [creating, setCreating] = useState(false);
+  const [updatingInternalDispatcherId, setUpdatingInternalDispatcherId] = useState('');
+  const showInternalDispatcherManagement = !mobile && defaultRole === 'any';
 
   useEffect(() => {
     (async () => {
@@ -150,6 +160,12 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
         filter,
         onlyMine,
         role,
+        internalDispatcher:
+          internalDispatcherFilter === 'internal'
+            ? true
+            : internalDispatcherFilter === 'regular'
+              ? false
+              : undefined,
         subscriptionFilter,
         tariffId,
         page: pageNum,
@@ -184,7 +200,7 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
         setLoadingMore(false);
       }
     }
-  }, [filter, debouncedSearch, onlyMine, role, subscriptionFilter, tariffId]);
+  }, [filter, debouncedSearch, onlyMine, role, internalDispatcherFilter, subscriptionFilter, tariffId]);
 
   // Filter o'zgarganda 0-page'dan boshlab yuklaymiz
   useEffect(() => {
@@ -260,6 +276,38 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
     if (nextFilter === 'none') setTariffId('');
   };
 
+  const handleInternalDispatcherFilter = (nextFilter) => {
+    setInternalDispatcherFilter(nextFilter);
+    if (nextFilter === 'internal') setOnlyMine(false);
+  };
+
+  const handleInternalDispatcherStatus = async (user) => {
+    const enabled = user.isInternalDispatcher !== true;
+    if (enabled && user.type !== 'logist') {
+      showError('Avval foydalanuvchi rolini Logist qilib o‘zgartiring');
+      return;
+    }
+    if (enabled && !user.isLinked) {
+      showError('Ichki logist qilish uchun foydalanuvchi avval botga ulanishi kerak');
+      return;
+    }
+    const question = enabled
+      ? `${user.name || 'Foydalanuvchi'}ga ichki logist huquqini berasizmi?`
+      : `${user.name || 'Foydalanuvchi'}dan ichki logist huquqini olib tashlaysizmi? Biriktirilgan kontragentlar o‘chmaydi.`;
+    if (!window.confirm(question)) return;
+    setUpdatingInternalDispatcherId(user.id);
+    try {
+      const response = await adminSetInternalDispatcherStatus(user.id, enabled);
+      if (response.code !== 200) throw new Error(response.message || 'Status o‘zgarmadi');
+      showSuccess(enabled ? 'Ichki logist huquqi berildi' : 'Ichki logist huquqi olib tashlandi');
+      await loadPage(0, false);
+    } catch (error) {
+      showError(error.response?.data?.message || error.message || 'Statusni o‘zgartirib bo‘lmadi');
+    } finally {
+      setUpdatingInternalDispatcherId('');
+    }
+  };
+
   if (!authChecked) {
     return <div style={{ padding: 24 }}>Yuklanmoqda...</div>;
   }
@@ -307,6 +355,34 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
           </button>
         ))}
       </div>
+
+      {showInternalDispatcherManagement && (
+        <section style={internalDispatcherPanelStyle}>
+          <div style={{ minWidth: 210 }}>
+            <strong style={{ display: 'block', color: '#24324a', fontSize: 14 }}>
+              Ichki logistlar boshqaruvi
+            </strong>
+            <span style={{ color: '#667085', fontSize: 12 }}>
+              Filterlang va Logist kartasidan huquqni bering yoki olib tashlang.
+            </span>
+          </div>
+          <div style={{ ...filtersRowStyle, marginBottom: 0 }}>
+            {INTERNAL_DISPATCHER_FILTERS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => handleInternalDispatcherFilter(item.key)}
+                style={{
+                  ...chipStyle,
+                  ...(internalDispatcherFilter === item.key ? activeInternalChipStyle : {}),
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div style={controlsStyle}>
         <input
@@ -389,6 +465,9 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
                 key={d.id}
                 driver={d}
                 onClick={() => navigate(detailPathForRole(d.type || role, d.id, mobile))}
+                showInternalControls={showInternalDispatcherManagement}
+                updatingInternalDispatcher={updatingInternalDispatcherId === d.id}
+                onInternalDispatcherStatus={handleInternalDispatcherStatus}
               />
             ))}
           </div>
@@ -478,7 +557,13 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
   );
 }
 
-function DriverCard({ driver, onClick }) {
+function DriverCard({
+  driver,
+  onClick,
+  showInternalControls = false,
+  updatingInternalDispatcher = false,
+  onInternalDispatcherStatus,
+}) {
   const s = driver.stats || {};
   const acceptanceRate = s.sent > 0 ? Math.round((s.accepted / s.sent) * 100) : 0;
   const userRole = driver.type || 'not_selected';
@@ -486,57 +571,111 @@ function DriverCard({ driver, onClick }) {
   const isCargoOwner = userRole === 'factory';
   const tariffState = getTariffState(driver.subscription);
   const tariffText = formatSubscriptionShort(driver.subscription);
+  const showManageAction = showInternalControls && (userRole === 'logist' || driver.isInternalDispatcher);
+  const canEnableInternalDispatcher = userRole === 'logist' && driver.isLinked;
   return (
-    <button type="button" style={cardBtnStyle} onClick={onClick}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <div style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
-          <div style={{ fontWeight: 700, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {driver.name || '(ismsiz)'}
+    <article style={cardShellStyle}>
+      <button type="button" style={cardBtnStyle} onClick={onClick}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <div style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
+            <div style={{ fontWeight: 700, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {driver.name || '(ismsiz)'}
+            </div>
+            <div style={{ color: '#666', fontSize: 14 }}>+{driver.phone}</div>
+            {driver.telegramUsername && (
+              <div style={{ color: '#0088cc', fontSize: 13 }}>@{driver.telegramUsername}</div>
+            )}
+            <div style={{ color: tariffState.tone, fontSize: 13, marginTop: 4, fontWeight: 700 }}>
+              Tarif: {tariffText}
+            </div>
+            {(isDriver || isCargoOwner) && (
+              <div
+                style={{
+                  color: driver.assignedDispatcher ? '#1f6f50' : '#8a6670',
+                  fontSize: 12,
+                  marginTop: 5,
+                  fontWeight: 700,
+                }}
+              >
+                {driver.assignedDispatcher
+                  ? `Ichki logist: ${driver.assignedDispatcher.name}`
+                  : 'Ichki logistga biriktirilmagan'}
+              </div>
+            )}
           </div>
-          <div style={{ color: '#666', fontSize: 14 }}>+{driver.phone}</div>
-          {driver.telegramUsername && (
-            <div style={{ color: '#0088cc', fontSize: 13 }}>@{driver.telegramUsername}</div>
-          )}
-          <div style={{ color: tariffState.tone, fontSize: 13, marginTop: 4, fontWeight: 700 }}>
-            Tarif: {tariffText}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+            {driver.isInternalDispatcher && (
+              <span style={badgeStyle('#0f8a62')}>Ichki logist</span>
+            )}
+            <span style={badgeStyle(roleColor(userRole))}>{ROLE_LABELS[userRole] || userRole}</span>
+            <span style={badgeStyle(tariffState.tone)}>{tariffState.label}</span>
+            {driver.isLinked ? (
+              <span style={badgeStyle('#1ba353')}>✓ Ulangan</span>
+            ) : (
+              <span style={badgeStyle('#cc8800')}>⏳ Ulanmagan</span>
+            )}
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-          <span style={badgeStyle(roleColor(userRole))}>{ROLE_LABELS[userRole] || userRole}</span>
-          <span style={badgeStyle(tariffState.tone)}>{tariffState.label}</span>
-          {driver.isLinked ? (
-            <span style={badgeStyle('#1ba353')}>✓ Ulangan</span>
-          ) : (
-            <span style={badgeStyle('#cc8800')}>⏳ Ulanmagan</span>
-          )}
+        {isDriver ? (
+          <>
+            <div style={statsRowStyle}>
+              <Stat label="Yuborilgan" value={s.sent ?? 0} />
+              <Stat label={"Ko'rgan"} value={s.viewed ?? 0} />
+              <Stat label="Qabul" value={s.accepted ?? 0} highlight={acceptanceRate >= 50 ? '#1ba353' : null} />
+              <Stat label="Rad" value={s.rejected ?? 0} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#888' }}>
+              <span>Qabul foizi: {acceptanceRate}%</span>
+              <span>Oxirgi taklif: {formatRelativeTime(s.lastSentAt)}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={statsRowStyle}>
+              <Stat label={isCargoOwner ? 'Yuklari' : 'Yozuvlar'} value={driver.ordersCount ?? 0} highlight={isCargoOwner ? '#558b2f' : null} />
+              <Stat label="Tarif" value={driver.subscription?.isActive ? 'Faol' : 'Yoq'} />
+              <Stat label="Holat" value={driver.isLinked ? 'Ulangan' : 'Kutilmoqda'} />
+            </div>
+            <div style={{ fontSize: 12, color: '#888' }}>
+              {isCargoOwner ? 'Yuk egasining yuklari va tarifini detail sahifada boshqarasiz.' : 'Foydalanuvchi profili detail sahifada boshqariladi.'}
+            </div>
+          </>
+        )}
+      </button>
+      {showManageAction && (
+        <div style={internalDispatcherActionStyle}>
+          <div style={{ display: 'grid', gap: 3, flex: '1 1 220px' }}>
+            <strong>{driver.isInternalDispatcher ? 'Ichki logist huquqi faol' : 'Oddiy logist'}</strong>
+            <span>
+              {driver.isInternalDispatcher
+                ? 'Yukchilar, haydovchilar va reminder bo‘limlariga kiradi.'
+                : canEnableInternalDispatcher
+                  ? 'Ichki logist funksiyalariga ruxsat berish mumkin.'
+                  : 'Huquq berish uchun foydalanuvchi botga ulanishi kerak.'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onInternalDispatcherStatus(driver)}
+            disabled={updatingInternalDispatcher || (!driver.isInternalDispatcher && !canEnableInternalDispatcher)}
+            style={{
+              ...internalDispatcherActionButtonStyle,
+              ...(driver.isInternalDispatcher ? internalDispatcherRemoveButtonStyle : {}),
+              opacity:
+                updatingInternalDispatcher || (!driver.isInternalDispatcher && !canEnableInternalDispatcher)
+                  ? 0.55
+                  : 1,
+            }}
+          >
+            {updatingInternalDispatcher
+              ? 'Saqlanmoqda…'
+              : driver.isInternalDispatcher
+                ? 'Huquqni olib tashlash'
+                : 'Ichki logist qilish'}
+          </button>
         </div>
-      </div>
-      {isDriver ? (
-        <>
-          <div style={statsRowStyle}>
-            <Stat label="Yuborilgan" value={s.sent ?? 0} />
-            <Stat label={"Ko'rgan"} value={s.viewed ?? 0} />
-            <Stat label="Qabul" value={s.accepted ?? 0} highlight={acceptanceRate >= 50 ? '#1ba353' : null} />
-            <Stat label="Rad" value={s.rejected ?? 0} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#888' }}>
-            <span>Qabul foizi: {acceptanceRate}%</span>
-            <span>Oxirgi taklif: {formatRelativeTime(s.lastSentAt)}</span>
-          </div>
-        </>
-      ) : (
-        <>
-          <div style={statsRowStyle}>
-            <Stat label={isCargoOwner ? 'Yuklari' : 'Yozuvlar'} value={driver.ordersCount ?? 0} highlight={isCargoOwner ? '#558b2f' : null} />
-            <Stat label="Tarif" value={driver.subscription?.isActive ? 'Faol' : 'Yoq'} />
-            <Stat label="Holat" value={driver.isLinked ? 'Ulangan' : 'Kutilmoqda'} />
-          </div>
-          <div style={{ fontSize: 12, color: '#888' }}>
-            {isCargoOwner ? 'Yuk egasining yuklari va tarifini detail sahifada boshqarasiz.' : 'Foydalanuvchi profili detail sahifada boshqariladi.'}
-          </div>
-        </>
       )}
-    </button>
+    </article>
   );
 }
 
@@ -605,6 +744,25 @@ const activeChipStyle = {
   borderColor: '#1976d2',
 };
 
+const activeInternalChipStyle = {
+  background: '#0f8a62',
+  color: '#fff',
+  borderColor: '#0f8a62',
+};
+
+const internalDispatcherPanelStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 16,
+  flexWrap: 'wrap',
+  marginBottom: 16,
+  padding: 14,
+  border: '1px solid #cfe7dd',
+  borderRadius: 10,
+  background: 'linear-gradient(135deg, #f1fbf7, #fff)',
+};
+
 const inputStyle = {
   flex: 1,
   minWidth: 200,
@@ -651,9 +809,9 @@ const listStyle = {
 };
 
 const cardBtnStyle = {
-  background: '#fff',
-  border: '1px solid #e0e0e0',
-  borderRadius: 8,
+  background: 'transparent',
+  border: 'none',
+  borderRadius: 0,
   padding: 12,
   cursor: 'pointer',
   display: 'flex',
@@ -663,6 +821,46 @@ const cardBtnStyle = {
   textAlign: 'left',
   font: 'inherit',
   width: '100%',
+};
+
+const cardShellStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  border: '1px solid #e0e0e0',
+  borderRadius: 8,
+  background: '#fff',
+};
+
+const internalDispatcherActionStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 10,
+  flexWrap: 'wrap',
+  marginTop: 'auto',
+  padding: '10px 12px',
+  borderTop: '1px solid #dcebe5',
+  background: '#f7fcfa',
+  color: '#39564d',
+  fontSize: 12,
+};
+
+const internalDispatcherActionButtonStyle = {
+  padding: '7px 10px',
+  border: '1px solid #0f8a62',
+  borderRadius: 6,
+  color: '#fff',
+  background: '#0f8a62',
+  cursor: 'pointer',
+  fontWeight: 750,
+  fontSize: 12,
+};
+
+const internalDispatcherRemoveButtonStyle = {
+  borderColor: '#d7a3aa',
+  color: '#a42e3c',
+  background: '#fff',
 };
 
 const statsRowStyle = {

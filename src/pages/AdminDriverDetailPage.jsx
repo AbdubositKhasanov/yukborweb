@@ -11,6 +11,9 @@ import {
   adminAcceptOrderForDriver,
   adminUpdateUser,
   adminUpdateUserRole,
+  adminListInternalDispatchers,
+  adminAssignInternalDispatcher,
+  adminRemoveInternalDispatcher,
   adminListTariffs,
   adminAssignUserTariff,
   adminCancelUserTariff,
@@ -105,6 +108,8 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   const [tariffs, setTariffs] = useState([]);
   const [staticData, setStaticData] = useState(null);
   const [needProfile, setNeedProfile] = useState(null);
+  const [internalDispatchers, setInternalDispatchers] = useState([]);
+  const [dispatcherChoice, setDispatcherChoice] = useState('');
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -115,6 +120,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [savingRole, setSavingRole] = useState(false);
+  const [savingDispatcher, setSavingDispatcher] = useState(false);
   const [savingNeedProfile, setSavingNeedProfile] = useState(false);
 
   useEffect(() => {
@@ -133,13 +139,17 @@ export default function AdminDriverDetailPage({ mobile = false }) {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [d, o, s, t] = await Promise.all([
+      const [d, o, s, t, dispatcherResponse] = await Promise.all([
         adminGetDriver(id),
         adminGetDriverOffers(id),
         getLocationsAndVehicles(),
         adminListTariffs(true),
+        adminListInternalDispatchers(),
       ]);
-      if (d.code === 200) setDriver(d.result);
+      if (d.code === 200) {
+        setDriver(d.result);
+        setDispatcherChoice(d.result?.assignedDispatcher?.id || '');
+      }
       if (d.code === 200 && d.result?.type === 'factory') {
         try {
           const profileResponse = await adminGetCargoOwnerNeedProfile(id);
@@ -153,6 +163,7 @@ export default function AdminDriverDetailPage({ mobile = false }) {
       if (o.code === 200) setOffers(o.result || []);
       if (s.code === 200) setStaticData(s.result);
       if (t.code === 200) setTariffs(t.result || []);
+      if (dispatcherResponse.code === 200) setInternalDispatchers(dispatcherResponse.result || []);
     } catch (e) {
       showError(e.response?.data?.message || e.message || 'Xatolik');
     } finally {
@@ -205,6 +216,52 @@ export default function AdminDriverDetailPage({ mobile = false }) {
       showError(e.response?.data?.message || e.message || 'Xatolik');
     } finally {
       setSavingRole(false);
+    }
+  };
+
+  const handleAssignDispatcher = async () => {
+    if (!driver || !dispatcherChoice || dispatcherChoice === driver.assignedDispatcher?.id) return;
+    const selected = internalDispatchers.find((item) => item.id === dispatcherChoice);
+    if (!selected) {
+      showError('Ichki logistni tanlang');
+      return;
+    }
+    const action = driver.assignedDispatcher ? 'ko‘chirasizmi' : 'biriktirasizmi';
+    if (!confirm(`${driver.name || roleLabel(driver.type)}ni ${selected.name}ga ${action}?`)) return;
+    setSavingDispatcher(true);
+    try {
+      const response = await adminAssignInternalDispatcher(id, dispatcherChoice);
+      if (response.code === 200 && response.result) {
+        setDriver(response.result);
+        setDispatcherChoice(response.result.assignedDispatcher?.id || '');
+        showSuccess(driver.assignedDispatcher ? 'Boshqa ichki logistga ko‘chirildi' : 'Ichki logistga biriktirildi');
+      } else {
+        showError(response.message || 'Biriktirib bo‘lmadi');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Biriktirib bo‘lmadi');
+    } finally {
+      setSavingDispatcher(false);
+    }
+  };
+
+  const handleRemoveDispatcher = async () => {
+    if (!driver?.assignedDispatcher) return;
+    if (!confirm(`${driver.assignedDispatcher.name} bilan bog‘lanishni olib tashlaysizmi?`)) return;
+    setSavingDispatcher(true);
+    try {
+      const response = await adminRemoveInternalDispatcher(id);
+      if (response.code === 200 && response.result) {
+        setDriver(response.result);
+        setDispatcherChoice('');
+        showSuccess('Ichki logistdan olib tashlandi');
+      } else {
+        showError(response.message || 'Bog‘lanishni olib tashlab bo‘lmadi');
+      }
+    } catch (e) {
+      showError(e.response?.data?.message || e.message || 'Bog‘lanishni olib tashlab bo‘lmadi');
+    } finally {
+      setSavingDispatcher(false);
     }
   };
 
@@ -370,6 +427,82 @@ export default function AdminDriverDetailPage({ mobile = false }) {
             ))}
           </div>
         </div>
+
+        {(isDriver || isCargoOwner) && (
+          <div style={dispatcherAssignmentStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#24324a' }}>
+                  Ichki logistga biriktirish
+                </div>
+                <div style={{ marginTop: 4, color: '#667085', fontSize: 12 }}>
+                  {driver.assignedDispatcher
+                    ? `Hozir: ${driver.assignedDispatcher.name} · +${driver.assignedDispatcher.phone}`
+                    : `${roleLabel(driver.type)} hozircha hech kimga biriktirilmagan.`}
+                </div>
+              </div>
+              {driver.assignedDispatcher && (
+                <span style={badge(driver.assignedDispatcher.isActive ? '#1f8f5f' : '#b16b13')}>
+                  {driver.assignedDispatcher.isActive ? '✓ Biriktirilgan' : '⚠ Logist huquqi olingan'}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              <select
+                value={dispatcherChoice}
+                onChange={(e) => setDispatcherChoice(e.target.value)}
+                disabled={savingDispatcher}
+                style={{ ...selectStyle, flex: '1 1 260px', marginBottom: 0 }}
+              >
+                <option value="">Ichki logistni tanlang</option>
+                {internalDispatchers.map((dispatcher) => (
+                  <option key={dispatcher.id} value={dispatcher.id}>
+                    {dispatcher.name || 'Ismsiz'} · +{dispatcher.phone} · ID {dispatcher.chatId}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleAssignDispatcher}
+                disabled={
+                  savingDispatcher ||
+                  !dispatcherChoice ||
+                  dispatcherChoice === driver.assignedDispatcher?.id
+                }
+                style={{
+                  ...primaryBtnStyle,
+                  opacity:
+                    savingDispatcher ||
+                    !dispatcherChoice ||
+                    dispatcherChoice === driver.assignedDispatcher?.id
+                      ? 0.55
+                      : 1,
+                }}
+              >
+                {savingDispatcher
+                  ? 'Saqlanmoqda…'
+                  : driver.assignedDispatcher
+                    ? 'Boshqa logistga ko‘chirish'
+                    : 'Biriktirish'}
+              </button>
+              {driver.assignedDispatcher && (
+                <button
+                  type="button"
+                  onClick={handleRemoveDispatcher}
+                  disabled={savingDispatcher}
+                  style={dangerBtnCompactStyle}
+                >
+                  Olib tashlash
+                </button>
+              )}
+            </div>
+            {!internalDispatchers.length && (
+              <div style={{ marginTop: 10, color: '#a15c00', fontSize: 12 }}>
+                Ichki logistlar topilmadi. Avval foydalanuvchiga ichki logist huquqini bering.
+              </div>
+            )}
+          </div>
+        )}
 
         <SubscriptionBox
           driver={driver}
@@ -1387,6 +1520,7 @@ const selectStyle = { width: '100%', padding: '10px', border: '1px solid #ccc', 
 const primaryBtnStyle = { padding: '10px 16px', borderRadius: 6, background: '#1976d2', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 };
 const secondaryBtnStyle = { padding: '10px 16px', borderRadius: 6, background: '#eee', color: '#333', border: '1px solid #ccc', cursor: 'pointer', fontSize: 14 };
 const smallBtnStyle = { padding: '6px 12px', borderRadius: 4, background: '#f0f0f0', color: '#333', border: '1px solid #ccc', cursor: 'pointer', fontSize: 13 };
+const dispatcherAssignmentStyle = { marginTop: 12, padding: 14, border: '1px solid #cfe0f7', borderRadius: 10, background: 'linear-gradient(135deg, #f5f9ff, #fff)' };
 const tinyBtnStyle = { padding: '4px 8px', borderRadius: 4, background: '#fff', color: '#1976d2', border: '1px solid #1976d2', cursor: 'pointer', fontSize: 12 };
 const dangerBtnStyle = { padding: '10px 16px', borderRadius: 6, background: '#cc4444', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14 };
 const dangerBtnCompactStyle = { padding: '6px 12px', borderRadius: 4, background: '#fff', color: '#b00020', border: '1px solid #f1c7cf', cursor: 'pointer', fontSize: 13 };

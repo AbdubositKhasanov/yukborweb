@@ -443,6 +443,13 @@ export const getReminderSummary = async () => {
   return response.data;
 };
 
+export const getReminderSubjectDetails = async (subjectType, subjectId) => {
+  const type = encodeURIComponent(subjectType);
+  const id = encodeURIComponent(subjectId);
+  const response = await apiClient.get(`/reminders/subjects/${type}/${id}`);
+  return response.data;
+};
+
 export const createReminder = async (payload) => {
   const response = await apiClient.post('/reminders', payload);
   return response.data;
@@ -1117,6 +1124,9 @@ export const adminListDrivers = async (params = {}, signal) => {
   if (params.name) queryParams.name = params.name;
   if (params.onlyMine) queryParams.onlyMine = 'true';
   if (params.role) queryParams.role = params.role;
+  if (typeof params.internalDispatcher === 'boolean') {
+    queryParams.internalDispatcher = String(params.internalDispatcher);
+  }
   if (params.subscriptionFilter && params.subscriptionFilter !== 'all') queryParams.subscriptionFilter = params.subscriptionFilter;
   if (params.tariffId) queryParams.tariffId = params.tariffId;
   if (params.page !== undefined) queryParams.page = params.page;
@@ -1132,6 +1142,9 @@ export const adminListUsers = async (params = {}, signal) => {
   if (params.name) queryParams.name = params.name;
   if (params.onlyMine) queryParams.onlyMine = 'true';
   queryParams.role = params.role || 'any';
+  if (typeof params.internalDispatcher === 'boolean') {
+    queryParams.internalDispatcher = String(params.internalDispatcher);
+  }
   if (params.subscriptionFilter && params.subscriptionFilter !== 'all') queryParams.subscriptionFilter = params.subscriptionFilter;
   if (params.tariffId) queryParams.tariffId = params.tariffId;
   if (params.page !== undefined) queryParams.page = params.page;
@@ -1147,6 +1160,30 @@ export const adminUpdateUser = async (id, payload) => {
 
 export const adminUpdateUserRole = async (id, type) => {
   const response = await apiClient.put(`/admin/users/${id}/role`, { type });
+  return response.data;
+};
+
+export const adminSetInternalDispatcherStatus = async (id, enabled) => {
+  const response = await apiClient.put(`/admin/users/${id}/internal-dispatcher-status`, {
+    enabled,
+  });
+  return response.data;
+};
+
+export const adminListInternalDispatchers = async () => {
+  const response = await apiClient.get('/admin/internal-dispatchers');
+  return response.data;
+};
+
+export const adminAssignInternalDispatcher = async (userId, dispatcherId) => {
+  const response = await apiClient.put(`/admin/users/${userId}/internal-dispatcher`, {
+    dispatcherId,
+  });
+  return response.data;
+};
+
+export const adminRemoveInternalDispatcher = async (userId) => {
+  const response = await apiClient.delete(`/admin/users/${userId}/internal-dispatcher`);
   return response.data;
 };
 

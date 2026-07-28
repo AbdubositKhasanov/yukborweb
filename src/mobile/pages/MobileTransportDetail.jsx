@@ -11,6 +11,7 @@ import { goToTariffs, openPremiumUpgrade, openSupportForPurchase } from '../../u
 import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import MobileLoading from '../components/MobileLoading';
+import ReminderComposer from '../../components/ReminderComposer';
 
 const PHONE_UPGRADE_MESSAGE = 'Transport telefon raqamini ko\'rish uchun tarif kerak yoki bepul limitingiz tugagan.';
 
@@ -18,7 +19,7 @@ export default function MobileTransportDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, user } = useMobileAuth();
+  const { isAuthenticated, user, isInternalDispatcher, permissions } = useMobileAuth();
 
   const fromOrder = location.state?.order;
 
@@ -33,6 +34,9 @@ export default function MobileTransportDetail() {
   const [contactOwnerName, setContactOwnerName] = useState(null);
   const [contactLoaded, setContactLoaded] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
+  const [reminderOpen, setReminderOpen] = useState(false);
+
+  const canViewTransportPhone = isInternalDispatcher || permissions?.viewTransportPhone === true || user?.permissions?.viewTransportPhone === true;
 
   useEffect(() => {
     loadTransport();
@@ -43,7 +47,7 @@ export default function MobileTransportDetail() {
     if (isAuthenticated && id && !contactLoaded) {
       loadContact();
     }
-  }, [isAuthenticated, id]);
+  }, [isAuthenticated, id, canViewTransportPhone]);
 
   const loadTransport = async () => {
     try {
@@ -71,7 +75,7 @@ export default function MobileTransportDetail() {
         setContactTelegramUsername(response.result.telegramUsername || null);
         setContactChatId(response.result.chatId || null);
         setContactOwnerName(response.result.ownerName || response.result.owner_name || null);
-        if (!phone) {
+        if (!phone && !canViewTransportPhone) {
           openPremiumUpgrade({
             featureKey: 'viewTransportPhone',
             message: PHONE_UPGRADE_MESSAGE,
@@ -177,6 +181,18 @@ export default function MobileTransportDetail() {
           </div>
         )}
 
+        {isInternalDispatcher && (
+          <div className="m-detail-section">
+            <button
+              type="button"
+              className="m-btn m-btn-secondary m-btn-lg m-btn-full"
+              onClick={() => setReminderOpen(true)}
+            >
+              ◷ Bu haydovchiga reminder yaratish
+            </button>
+          </div>
+        )}
+
         {/* Time */}
         <div className="m-detail-section">
           <div style={{ fontSize: 14, color: 'var(--m-text-muted)' }}>
@@ -239,7 +255,14 @@ export default function MobileTransportDetail() {
             </div>
           </div>
         )}
-        {contactLoaded && !contactPhone && (
+        {contactLoaded && !contactPhone && canViewTransportPhone && (
+          <div className="m-detail-section">
+            <div style={{ padding: 14, background: '#fff7ed', borderRadius: 10, color: '#9a3412', border: '1px solid #fed7aa' }}>
+              ℹ️ Bu haydovchi telefon raqamini kiritmagan.
+            </div>
+          </div>
+        )}
+        {contactLoaded && !contactPhone && !canViewTransportPhone && (
           <div className="m-detail-section">
             <div style={{ padding: 14, background: '#fff7ed', borderRadius: 10, color: '#7c2d12', border: '1px solid #fed7aa' }}>
               <div style={{ fontWeight: 800, marginBottom: 6 }}>🔒 Telefon ko'rish limiti tugagan</div>
@@ -271,6 +294,15 @@ export default function MobileTransportDetail() {
           </div>
         )}
       </main>
+      <ReminderComposer
+        open={reminderOpen}
+        subject={{
+          type: 'driver',
+          id: String(contactChatId || transport.chatId || transport.userObjectId || transport.id || id),
+          name: contactOwnerName || transport.ownerName || transport.driverName || transport.name || transport.stateNumber || transport.vehicleType || 'Haydovchi',
+        }}
+        onClose={() => setReminderOpen(false)}
+      />
     </>
   );
 }

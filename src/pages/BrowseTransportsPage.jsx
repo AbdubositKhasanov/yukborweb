@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { searchTransports, getLocationsAndVehicles, getTransportDetails, offerForDriver } from '../services/api';
+import { searchTransports, getLocationsAndVehicles, getTransportDetails, getUserMe, offerForDriver } from '../services/api';
 import { formatTimeAgo } from '../utils/formatTime';
+import { openPremiumUpgrade } from '../utils/premiumUpgrade';
+import { showError } from '../utils/toast';
 import LocationSelector from '../components/LocationSelector';
+import ReminderComposer from '../components/ReminderComposer';
+
+const PHONE_UPGRADE_MESSAGE = 'Transport telefon raqamini ko\'rish uchun faol tarif kerak yoki bepul limitingiz tugagan.';
 
 export default function BrowseTransportsPage() {
   const location = useLocation();
@@ -20,6 +25,9 @@ export default function BrowseTransportsPage() {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [staticData, setStaticData] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userAccessLoading, setUserAccessLoading] = useState(Boolean(localStorage.getItem('authToken')));
+  const [reminderSubject, setReminderSubject] = useState(null);
 
   // Filter states
   const [fromCountry, setFromCountry] = useState(initialFilters.fromCountry?.toString() || '');
@@ -30,11 +38,27 @@ export default function BrowseTransportsPage() {
 
   useEffect(() => {
     loadStaticData();
+    loadCurrentUser();
     if (fromOrder) {
       // Auto-search when coming from order
       loadTransports();
     }
   }, []);
+
+  const loadCurrentUser = async () => {
+    if (!localStorage.getItem('authToken')) {
+      setUserAccessLoading(false);
+      return;
+    }
+    try {
+      const response = await getUserMe();
+      if (response.code === 200) setCurrentUser(response.result || null);
+    } catch (error) {
+      console.error('Failed to load current user:', error);
+    } finally {
+      setUserAccessLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!fromOrder) {
@@ -306,6 +330,15 @@ export default function BrowseTransportsPage() {
                 showOfferButton={fromOrder}
                 orderId={orderId}
                 orderInfo={orderInfo}
+                currentUser={currentUser}
+                userAccessLoading={userAccessLoading}
+                onReminder={currentUser?.isInternalDispatcher === true
+                  ? (item) => setReminderSubject({
+                    type: 'driver',
+                    id: String(item.chatId || item.userObjectId || item.id),
+                    name: item.ownerName || item.name || item.stateNumber || item.vehicleType || 'Haydovchi',
+                  })
+                  : null}
               />
             ))}
           </div>
@@ -331,17 +364,23 @@ export default function BrowseTransportsPage() {
           </div>
         </>
       )}
+      <ReminderComposer
+        open={Boolean(reminderSubject)}
+        subject={reminderSubject}
+        onClose={() => setReminderSubject(null)}
+      />
     </div>
   );
 }
 
-function TransportCard({ transport, showOfferButton = false, orderId = null, orderInfo = null }) {
+function TransportCard({ transport, showOfferButton = false, orderId = null, orderInfo = null, currentUser = null, userAccessLoading = false, onReminder = null }) {
   const [showDetails, setShowDetails] = useState(false);
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [offering, setOffering] = useState(false);
   const [offerSuccess, setOfferSuccess] = useState(false);
   const [offerError, setOfferError] = useState(null);
+  const [detailsNotice, setDetailsNotice] = useState('');
 
   const handleShowDetails = async () => {
     if (showDetails) {
@@ -350,14 +389,33 @@ function TransportCard({ transport, showOfferButton = false, orderId = null, ord
     }
 
     setLoading(true);
+    setDetailsNotice('');
     try {
       const response = await getTransportDetails(transport.id);
       if (response.code === 200) {
-        setDetails(response.result);
+        const result = response.result || {};
+        const phone = result.additionalPhone || result.phone;
+        const canViewPhone = currentUser?.permissions?.viewTransportPhone === true;
+
+        if (!phone && !canViewPhone) {
+          openPremiumUpgrade({
+            featureKey: 'viewTransportPhone',
+            message: PHONE_UPGRADE_MESSAGE,
+            currentLimit: currentUser?.featureLimits?.viewTransportPhone,
+            source: 'desktop-transport-card',
+          });
+          return;
+        }
+
+        setDetails(result);
+        setDetailsNotice(phone ? '' : 'Bu haydovchi telefon raqamini kiritmagan.');
         setShowDetails(true);
+      } else {
+        showError(response.message || 'Transport ma\'lumotlari yuklanmadi');
       }
     } catch (error) {
       console.error('Failed to load transport details:', error);
+      if (!error.response) showError('Transport ma\'lumotlari yuklanmadi');
     } finally {
       setLoading(false);
     }
@@ -428,6 +486,12 @@ function TransportCard({ transport, showOfferButton = false, orderId = null, ord
           </p>
         )}
 
+        {showDetails && detailsNotice && (
+          <p style={{ margin: '12px 0', padding: '10px', backgroundColor: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '4px', color: '#9a3412' }}>
+            ℹ️ {detailsNotice}
+          </p>
+        )}
+
         {offerSuccess && (
           <div style={{ margin: '12px 0', padding: '10px', backgroundColor: '#d4edda', borderRadius: '4px', color: '#155724' }}>
             ✓ Taklif muvaffaqiyatli yuborildi!
@@ -458,14 +522,25 @@ function TransportCard({ transport, showOfferButton = false, orderId = null, ord
             {offering ? 'Yuborilmoqda...' : offerSuccess ? '✓ Yuborildi' : '📨 Taklif qilish'}
           </button>
         )}
+
+        {onReminder && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => onReminder(transport)}
+            style={{ width: '100%', color: '#6942ae', background: '#f1ebfc', borderColor: '#dfd2f6' }}
+          >
+            ◷ Haydovchiga reminder
+          </button>
+        )}
         
         <button
           className="btn btn-primary"
           onClick={handleShowDetails}
-          disabled={loading}
+          disabled={loading || userAccessLoading}
           style={{ width: '100%' }}
         >
-          {loading ? 'Yuklanmoqda...' : showDetails ? 'Yopish' : 'Batafsil ko\'rish'}
+          {userAccessLoading ? 'Ruxsat tekshirilmoqda...' : loading ? 'Yuklanmoqda...' : showDetails ? 'Yopish' : 'Batafsil ko\'rish'}
         </button>
       </div>
     </div>

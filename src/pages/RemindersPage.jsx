@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReminderComposer from '../components/ReminderComposer';
 import {
   deleteReminder,
   getReminderCenter,
+  getReminderSubjectDetails,
   markAllRemindersRead,
   markReminderRead,
 } from '../services/api';
@@ -28,12 +29,311 @@ const formatDateTime = (timestamp) =>
     minute: '2-digit',
   });
 
+const formatOptionalDateTime = (timestamp) => (timestamp ? formatDateTime(timestamp) : null);
+
+const hasSubjectDetails = (item) =>
+  Boolean(item.subjectId && ['driver', 'shipper'].includes(item.subjectType));
+
+const shipperStatusLabel = {
+  potential: 'Potensial',
+  active: 'Faol',
+  paused: 'Kutilmoqda',
+  inactive: 'Nofaol',
+};
+
+const userTypeLabel = {
+  driver: 'Haydovchi',
+  factory: 'Yuk egasi',
+  logist: 'Logist',
+  not_selected: 'Tanlanmagan',
+};
+
+const genderLabel = {
+  male: 'Erkak',
+  female: 'Ayol',
+  not_selected: 'Ko‘rsatilmagan',
+};
+
+function DetailRows({ rows }) {
+  const visibleRows = rows.filter(
+    ([, value]) => value !== null && value !== undefined && value !== ''
+  );
+  if (!visibleRows.length) return null;
+  return (
+    <dl>
+      {visibleRows.map(([label, value]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function DetailTags({ title, items }) {
+  if (!items?.length) return null;
+  return (
+    <section>
+      <h3>{title}</h3>
+      <div className="shipper-tags">
+        {items.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ReminderSubjectDrawer({ panel, onClose }) {
+  useEffect(() => {
+    if (!panel.open) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [panel.open, onClose]);
+
+  if (!panel.open) return null;
+
+  const driver = panel.data?.driver;
+  const shipper = panel.data?.shipper;
+  const transport = driver?.driverTransportForm;
+  const person = driver || shipper;
+  const title =
+    driver?.name || shipper?.companyName || shipper?.contactName || panel.subjectName || 'Ma’lumot';
+  const subtitle = driver
+    ? 'Haydovchi ma’lumotlari'
+    : shipper?.companyName && shipper.companyName !== shipper.contactName
+      ? shipper.contactName
+      : 'Yukchi ma’lumotlari';
+  const phone = person?.phone;
+  const telegramUsername = person?.telegramUsername?.replace(/^@/, '');
+
+  const driverRows = driver
+    ? [
+        ['Telefon', phone && <a href={`tel:${phone}`}>{phone}</a>],
+        [
+          'Telegram',
+          telegramUsername && (
+            <a href={`https://t.me/${telegramUsername}`} target="_blank" rel="noreferrer">
+              @{telegramUsername}
+            </a>
+          ),
+        ],
+        ['Ro‘yxatdan o‘tgan', driver.isRegistered ? 'Ha' : 'Hali yo‘q'],
+        ['Roli', userTypeLabel[driver.type] || driver.type],
+        ['Jinsi', genderLabel[driver.gender] || driver.gender],
+        ['Til', driver.language?.toUpperCase()],
+        ['Telegram ID', driver.isRegistered ? driver.chatId : null],
+        [
+          'Balans',
+          driver.balance != null ? `${Number(driver.balance).toLocaleString('uz-UZ')} so‘m` : null,
+        ],
+        ['Oxirgi yangilanish', formatOptionalDateTime(driver.driverInfoUpdatedAt)],
+        ['Yangilagan', driver.driverInfoUpdatedByName],
+      ]
+    : [];
+
+  const transportRows = transport
+    ? [
+        ['Joriy status', driver.driverCurrentStatus ? 'Faol — yuk qidirmoqda' : 'Nofaol'],
+        ['Joylashuv', transport.loc1],
+        ['Transport turi', transport.vehicleType],
+        ['Yuk sig‘imi', transport.maxWeight != null ? `${transport.maxWeight} t` : null],
+        ['Davlat raqami', transport.stateNumber],
+        [
+          'Qo‘shimcha telefon',
+          transport.additionalPhone && (
+            <a href={`tel:${transport.additionalPhone}`}>{transport.additionalPhone}</a>
+          ),
+        ],
+        ['Manba', transport.source],
+        ['Transport yangilangan', formatOptionalDateTime(transport.time)],
+      ]
+    : [];
+
+  const shipperRows = shipper
+    ? [
+        ['Kompaniya', shipper.companyName],
+        ['Kontakt', shipper.contactName],
+        ['Telefon', phone && <a href={`tel:${phone}`}>{phone}</a>],
+        [
+          'Qo‘shimcha telefon',
+          shipper.additionalPhone && (
+            <a href={`tel:${shipper.additionalPhone}`}>{shipper.additionalPhone}</a>
+          ),
+        ],
+        [
+          'Telegram',
+          telegramUsername && (
+            <a href={`https://t.me/${telegramUsername}`} target="_blank" rel="noreferrer">
+              @{telegramUsername}
+            </a>
+          ),
+        ],
+        ['Mijoz turi', shipper.clientType === 'individual' ? 'Jismoniy shaxs' : 'Kompaniya'],
+        ['STIR / INN', shipper.taxId],
+        [
+          'Manzil',
+          [shipper.country, shipper.region, shipper.city, shipper.address]
+            .filter(Boolean)
+            .join(', '),
+        ],
+        ['Oyiga yuklar', shipper.monthlyLoads != null ? `${shipper.monthlyLoads} ta` : null],
+        ['To‘lov turi', shipper.paymentType],
+        ['To‘lov sharti', shipper.paymentTerms],
+        ['Oxirgi aloqa', formatOptionalDateTime(shipper.lastContactAt)],
+        ['Yangilangan', formatOptionalDateTime(shipper.updatedAt)],
+      ]
+    : [];
+
+  return (
+    <div
+      className="crm-drawer-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <aside
+        className="crm-drawer reminder-subject-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        <header>
+          <div className={`reminder-subject-avatar ${driver ? 'driver' : 'shipper'}`}>
+            {(title || '?').slice(0, 1).toUpperCase()}
+          </div>
+          <div>
+            {!panel.loading && !panel.error && (
+              <span
+                className={`crm-status ${driver?.driverCurrentStatus || shipper?.status === 'active' ? 'active' : shipper?.status || 'inactive'}`}
+              >
+                {driver
+                  ? driver.driverCurrentStatus
+                    ? 'Faol'
+                    : 'Nofaol'
+                  : shipperStatusLabel[shipper?.status] || 'Yukchi'}
+              </span>
+            )}
+            <h2>{panel.loading ? 'Ma’lumot yuklanmoqda…' : title}</h2>
+            {!panel.loading && !panel.error && <p>{subtitle}</p>}
+          </div>
+          <button className="crm-icon-button" type="button" onClick={onClose} aria-label="Yopish">
+            ×
+          </button>
+        </header>
+
+        {panel.loading ? (
+          <div className="reminder-subject-state">
+            <div className="crm-loader" />
+            <p>To‘liq ma’lumot olinmoqda…</p>
+          </div>
+        ) : panel.error ? (
+          <div className="reminder-subject-state error">
+            <strong>Ma’lumotni ochib bo‘lmadi</strong>
+            <p>{panel.error}</p>
+          </div>
+        ) : (
+          <>
+            {(phone || telegramUsername || driver?.deepLink) && (
+              <div className="crm-drawer-actions reminder-subject-actions">
+                {phone && (
+                  <a className="crm-button primary" href={`tel:${phone}`}>
+                    ☎ Qo‘ng‘iroq
+                  </a>
+                )}
+                {telegramUsername && (
+                  <a
+                    className="crm-button secondary"
+                    href={`https://t.me/${telegramUsername}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Telegram
+                  </a>
+                )}
+                {!telegramUsername && driver?.deepLink && (
+                  <a
+                    className="crm-button secondary"
+                    href={driver.deepLink}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Bot havolasi
+                  </a>
+                )}
+              </div>
+            )}
+
+            {driver && (
+              <>
+                <section className="reminder-detail-section first">
+                  <h3>Shaxsiy ma’lumotlar</h3>
+                  <DetailRows rows={driverRows} />
+                </section>
+                <section className="reminder-detail-section">
+                  <h3>Transport ma’lumotlari</h3>
+                  {transport ? (
+                    <>
+                      <DetailRows rows={transportRows} />
+                      {transport.otherDesc && <p className="detail-note">{transport.otherDesc}</p>}
+                    </>
+                  ) : (
+                    <p className="reminder-detail-empty">Transport formasi hali kiritilmagan.</p>
+                  )}
+                </section>
+              </>
+            )}
+
+            {shipper && (
+              <>
+                <section className="reminder-detail-section first">
+                  <h3>Asosiy ma’lumotlar</h3>
+                  <DetailRows rows={shipperRows} />
+                </section>
+                <DetailTags title="Yo‘nalishlar" items={shipper.routes} />
+                <DetailTags title="Yuk turlari" items={shipper.cargoTypes} />
+                <DetailTags title="Kerakli transportlar" items={shipper.preferredVehicleTypes} />
+                <DetailTags title="Teglar" items={shipper.tags} />
+                {shipper.notes && (
+                  <section>
+                    <h3>Izoh</h3>
+                    <p className="detail-note">{shipper.notes}</p>
+                  </section>
+                )}
+                {Object.keys(shipper.customFields || {}).length > 0 && (
+                  <section>
+                    <h3>Qo‘shimcha maydonlar</h3>
+                    <DetailRows rows={Object.entries(shipper.customFields)} />
+                  </section>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </aside>
+    </div>
+  );
+}
+
 export default function RemindersPage({ mobile = false }) {
   const [center, setCenter] = useState({ unreadCount: 0, notifications: [], schedules: [] });
   const [activeTab, setActiveTab] = useState('notifications');
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
+  const [subjectPanel, setSubjectPanel] = useState({
+    open: false,
+    loading: false,
+    data: null,
+    error: '',
+    subjectName: '',
+  });
+  const detailRequestId = useRef(0);
 
   const loadCenter = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -104,6 +404,38 @@ export default function RemindersPage({ mobile = false }) {
     }
   };
 
+  const openSubjectDetails = async (item, event, markRead = false) => {
+    event?.stopPropagation();
+    if (!hasSubjectDetails(item)) return;
+    if (markRead) handleRead(item);
+    const requestId = ++detailRequestId.current;
+    setSubjectPanel({
+      open: true,
+      loading: true,
+      data: null,
+      error: '',
+      subjectName: item.subjectName || '',
+    });
+    try {
+      const response = await getReminderSubjectDetails(item.subjectType, item.subjectId);
+      if (response.code !== 200) throw new Error(response.message || 'Ma’lumot topilmadi');
+      if (detailRequestId.current !== requestId) return;
+      setSubjectPanel((current) => ({ ...current, loading: false, data: response.result }));
+    } catch (error) {
+      if (detailRequestId.current !== requestId) return;
+      setSubjectPanel((current) => ({
+        ...current,
+        loading: false,
+        error: error.response?.data?.message || error.message || 'Ma’lumot yuklanmadi',
+      }));
+    }
+  };
+
+  const closeSubjectDetails = useCallback(() => {
+    detailRequestId.current += 1;
+    setSubjectPanel({ open: false, loading: false, data: null, error: '', subjectName: '' });
+  }, []);
+
   return (
     <main className={`crm-page ${mobile ? 'mobile' : ''}`}>
       <section className="crm-hero reminder-hero">
@@ -173,7 +505,22 @@ export default function RemindersPage({ mobile = false }) {
                 <div className="reminder-content">
                   <div className="reminder-card-head">
                     <div>
-                      {notification.subjectName && (
+                      {hasSubjectDetails(notification) && (
+                        <button
+                          type="button"
+                          className="crm-subject-link"
+                          onClick={(event) => openSubjectDetails(notification, event, true)}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <span>
+                            {notification.subjectType === 'driver' ? 'Haydovchi' : 'Yukchi'}
+                          </span>
+                          {notification.subjectName ||
+                            (notification.subjectType === 'driver' ? 'Haydovchi' : 'Yukchi')}
+                          <b>To‘liq ma’lumot →</b>
+                        </button>
+                      )}
+                      {notification.subjectName && !hasSubjectDetails(notification) && (
                         <span className="crm-subject-chip">{notification.subjectName}</span>
                       )}
                       <h3>{notification.title}</h3>
@@ -202,7 +549,19 @@ export default function RemindersPage({ mobile = false }) {
             <article key={schedule.id} className="schedule-card">
               <div className="schedule-icon">◷</div>
               <div className="schedule-main">
-                {schedule.subjectName && (
+                {hasSubjectDetails(schedule) && (
+                  <button
+                    type="button"
+                    className="crm-subject-link"
+                    onClick={(event) => openSubjectDetails(schedule, event)}
+                  >
+                    <span>{schedule.subjectType === 'driver' ? 'Haydovchi' : 'Yukchi'}</span>
+                    {schedule.subjectName ||
+                      (schedule.subjectType === 'driver' ? 'Haydovchi' : 'Yukchi')}
+                    <b>To‘liq ma’lumot →</b>
+                  </button>
+                )}
+                {schedule.subjectName && !hasSubjectDetails(schedule) && (
                   <span className="crm-subject-chip">{schedule.subjectName}</span>
                 )}
                 <h3>{schedule.title}</h3>
@@ -245,6 +604,7 @@ export default function RemindersPage({ mobile = false }) {
         }}
         onSaved={() => loadCenter(true)}
       />
+      <ReminderSubjectDrawer panel={subjectPanel} onClose={closeSubjectDetails} />
     </main>
   );
 }

@@ -1,8 +1,13 @@
-.crm-page {
+.crm-page,
+.crm-modal-backdrop,
+.crm-drawer-backdrop {
   --crm-ink: #17243d;
   --crm-muted: #6b7890;
   --crm-line: #e4e9f2;
   --crm-blue: #235bd7;
+}
+
+.crm-page {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
   padding: 32px 0 64px;
@@ -57,8 +62,19 @@
 }
 .crm-button.primary {
   color: #fff;
-  background: var(--crm-blue);
+  background: var(--crm-blue, #235bd7);
   box-shadow: 0 10px 25px rgba(35, 91, 215, 0.22);
+}
+.crm-button.primary:hover:not(:disabled) {
+  background: #194bb9;
+  box-shadow: 0 12px 28px rgba(35, 91, 215, 0.28);
+}
+.crm-button.primary:disabled {
+  color: rgba(255, 255, 255, 0.88);
+  background: #91a9df;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
 }
 .crm-button.secondary {
   color: var(--crm-ink);
@@ -290,6 +306,47 @@
   background: #f1f4f8;
   font-size: 11px;
   font-weight: 650;
+}
+.crm-subject-link {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+  border: 1px solid #dce5f5;
+  border-radius: 9px;
+  padding: 5px 8px;
+  color: #314661;
+  background: #f5f8fd;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s, background 0.16s, transform 0.16s;
+}
+.crm-subject-link:hover {
+  border-color: #9fb8eb;
+  background: #edf3ff;
+  transform: translateY(-1px);
+}
+.crm-subject-link:focus-visible {
+  outline: 3px solid rgba(35, 91, 215, 0.2);
+  outline-offset: 2px;
+}
+.crm-subject-link > span {
+  border-radius: 5px;
+  padding: 3px 5px;
+  color: #526786;
+  background: #e7edf7;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+}
+.crm-subject-link > b {
+  color: var(--crm-blue);
+  font-size: 10px;
+  white-space: nowrap;
 }
 .shipper-card-footer {
   display: flex;
@@ -831,6 +888,69 @@
   font-weight: 700;
 }
 
+.reminder-subject-drawer {
+  width: min(520px, 100%);
+}
+.reminder-subject-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 15px;
+  color: #1f55ba;
+  background: #e9f0ff;
+  font-size: 20px;
+  font-weight: 850;
+}
+.reminder-subject-avatar.shipper {
+  color: #24724f;
+  background: #e7f7ef;
+}
+.reminder-subject-actions {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+.reminder-subject-drawer dd a {
+  color: #235bd7;
+  text-decoration: none;
+}
+.reminder-subject-drawer dd a:hover {
+  text-decoration: underline;
+}
+.reminder-detail-section.first {
+  margin-top: 4px;
+}
+.reminder-detail-section > .detail-note {
+  margin-top: 12px;
+}
+.reminder-detail-empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed #cfd7e5;
+  border-radius: 13px;
+  color: var(--crm-muted);
+  background: #f8fafc;
+  font-size: 13px;
+}
+.reminder-subject-state {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  padding: 30px 10px;
+  color: var(--crm-muted);
+  text-align: center;
+}
+.reminder-subject-state p {
+  margin: 10px 0 0;
+}
+.reminder-subject-state.error {
+  min-height: 190px;
+  border: 1px solid #f1cccc;
+  border-radius: 15px;
+  color: #914141;
+  background: #fff7f7;
+}
+
 @media (max-width: 900px) {
   .shipper-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -942,6 +1062,12 @@
     align-items: flex-start;
     flex-direction: column-reverse;
     gap: 6px;
+  }
+  .crm-subject-link > b {
+    width: 100%;
+  }
+  .reminder-subject-drawer {
+    padding: 19px 16px 28px;
   }
 }
 
