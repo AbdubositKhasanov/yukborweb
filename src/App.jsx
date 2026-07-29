@@ -29,6 +29,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const PlatformLoadsPage = lazy(() => import('./pages/PlatformLoadsPage'));
 const ShippersPage = lazy(() => import('./pages/ShippersPage'));
 const RemindersPage = lazy(() => import('./pages/RemindersPage'));
+const ViewHistoryPage = lazy(() => import('./pages/ViewHistoryPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const UserbotManagementPage = lazy(() => import('./pages/UserbotManagementPage'));
 const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
@@ -236,6 +237,14 @@ function AppContent() {
             }
           />
           <Route
+            path="/view-history"
+            element={
+              <InternalDispatcherRoute isAuthenticated={isAuthenticated}>
+                <ViewHistoryPage />
+              </InternalDispatcherRoute>
+            }
+          />
+          <Route
             path="/my-orders"
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
@@ -336,6 +345,14 @@ function AppContent() {
             element={
               <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminHarbingersPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/view-history"
+            element={
+              <AdminRoute isAuthenticated={isAuthenticated}>
+                <ViewHistoryPage admin />
               </AdminRoute>
             }
           />

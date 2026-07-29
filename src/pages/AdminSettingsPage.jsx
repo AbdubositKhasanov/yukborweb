@@ -383,15 +383,17 @@ export default function AdminSettingsPage({ mobile = false }) {
   );
 
   const renderNavigationToggle = (role, section) => {
-    const active = normalizeNavigationList(forms.navigation?.[role.key]).includes(section.key);
+    const unavailable = section.dispatcherOnly === true && role.key !== 'dispatcher';
+    const active = !unavailable && normalizeNavigationList(forms.navigation?.[role.key]).includes(section.key);
     return (
-      <label key={`${role.key}-${section.key}`} style={navigationChipStyle(active)}>
+      <label key={`${role.key}-${section.key}`} style={navigationChipStyle(active, unavailable)}>
         <input
           type="checkbox"
           checked={active}
+          disabled={unavailable}
           onChange={() => toggleNavigationSection(role.key, section.key)}
         />
-        {mobile ? role.label : "Ko'rinadi"}
+        {unavailable ? (mobile ? `${role.label}: yopiq` : 'Faqat ichki logist') : (mobile ? role.label : "Ko'rinadi")}
       </label>
     );
   };
@@ -1091,7 +1093,7 @@ const navigationToggleWrapStyle = (mobile) => ({
   } : {}),
 });
 
-const navigationChipStyle = (active) => ({
+const navigationChipStyle = (active, unavailable = false) => ({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -1102,7 +1104,8 @@ const navigationChipStyle = (active) => ({
   borderRadius: 999,
   padding: '7px 10px',
   fontSize: 12,
-  cursor: 'pointer',
+  cursor: unavailable ? 'not-allowed' : 'pointer',
+  opacity: unavailable ? 0.55 : 1,
   minHeight: 34,
   boxSizing: 'border-box',
 });

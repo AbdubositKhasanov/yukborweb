@@ -24,6 +24,7 @@ const ADMIN_PROFILE_LINKS = [
   { section: 'adminPremiumOrders', label: 'Admin: premium yuklar', path: '/mobile/admin/premium-orders' },
   { section: 'adminUserbots', label: 'Admin: userbotlar', path: '/mobile/admin/userbots' },
   { section: 'adminHarbingers', label: 'Admin: xabarchilar', path: '/mobile/admin/harbingers' },
+  { section: 'adminViewHistory', label: 'Admin: ko‘rish tarixi', path: '/mobile/admin/view-history' },
 ];
 
 const normalizeMobileRole = (userType) => {
@@ -162,6 +163,9 @@ export default function MobileProfile() {
   const showHarbingersLink = (
     userRole === 'driver' || userRole === 'logist'
   ) && (!Array.isArray(roleSections) || roleSections.includes('myHarbingers'));
+  const showViewHistoryLink = user?.isInternalDispatcher === true && (
+    !Array.isArray(roleSections) || roleSections.includes('viewHistory')
+  );
 
   return (
     <>
@@ -271,6 +275,16 @@ export default function MobileProfile() {
                   style={{ marginTop: 16 }}
                 >
                   📣 Xabarchilarim
+                </button>
+              )}
+
+              {showViewHistoryLink && (
+                <button
+                  className="m-btn m-btn-secondary m-btn-full"
+                  onClick={() => navigate('/mobile/view-history')}
+                  style={{ marginTop: 10 }}
+                >
+                  Ko‘rish tarixim
                 </button>
               )}
 

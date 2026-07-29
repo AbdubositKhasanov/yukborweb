@@ -35,6 +35,7 @@ const MobileMyListings = lazy(() => import('./pages/MobileMyListings'));
 const TariffsPage = lazy(() => import('../pages/TariffsPage'));
 const ShippersPage = lazy(() => import('../pages/ShippersPage'));
 const RemindersPage = lazy(() => import('../pages/RemindersPage'));
+const ViewHistoryPage = lazy(() => import('../pages/ViewHistoryPage'));
 
 // Admin pages (shared between desktop and mobile — responsive components)
 const AdminUsersPage = lazy(() => import('../pages/AdminDriversPage'));
@@ -151,6 +152,7 @@ function MobileAppContent() {
       if (path === '' || path === '/' || path === '/yuklar' || path.startsWith('/cargo')) return 'home';
       if (path.startsWith('/internal-loads')) return 'internal';
       if (path.startsWith('/shippers')) return 'shippers';
+      if (path.startsWith('/view-history')) return 'profile';
       if (path.startsWith('/transports') || path.startsWith('/transport/')) return 'transports';
       if (path.startsWith('/drivers') || path.startsWith('/driver/')) return 'drivers';
       if (path.startsWith('/my-listings') || path.startsWith('/orders') || path.startsWith('/order/') || path.startsWith('/my-transports') || path.startsWith('/my-harbingers') || path.startsWith('/create')) return 'listings';
@@ -215,6 +217,14 @@ function MobileAppContent() {
             element={
               <MobileProtectedRoute>
                 <MobileInternalDispatcherPage><RemindersPage mobile /></MobileInternalDispatcherPage>
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
+            path="/view-history"
+            element={
+              <MobileProtectedRoute>
+                <MobileInternalDispatcherPage><ViewHistoryPage mobile /></MobileInternalDispatcherPage>
               </MobileProtectedRoute>
             }
           />
@@ -402,6 +412,14 @@ function MobileAppContent() {
             }
           />
           <Route
+            path="/admin/view-history"
+            element={
+              <MobileProtectedRoute>
+                <MobileAdminPage><ViewHistoryPage admin mobile /></MobileAdminPage>
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/userbots"
             element={
               <MobileProtectedRoute>
@@ -441,6 +459,11 @@ function MobileAppContent() {
 function MobileInternalDispatcherPage({ children }) {
   const { isInternalDispatcher } = useMobileAuth();
   return isInternalDispatcher ? children : <Navigate to="/mobile" replace />;
+}
+
+function MobileAdminPage({ children }) {
+  const { user } = useMobileAuth();
+  return user?.isAdmin === true ? children : <Navigate to="/mobile" replace />;
 }
 
 export default function MobileApp() {

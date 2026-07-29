@@ -1175,6 +1175,17 @@ export const adminListInternalDispatchers = async () => {
   return response.data;
 };
 
+export const getViewHistory = async (params = {}) => {
+  const queryParams = {
+    page: params.page ?? 0,
+    size: params.size ?? 50,
+  };
+  if (params.dispatcherId) queryParams.dispatcherId = params.dispatcherId;
+  if (params.targetType && params.targetType !== 'all') queryParams.targetType = params.targetType;
+  const response = await apiClient.get('/view-history', { params: queryParams });
+  return response.data;
+};
+
 export const adminAssignInternalDispatcher = async (userId, dispatcherId) => {
   const response = await apiClient.put(`/admin/users/${userId}/internal-dispatcher`, {
     dispatcherId,

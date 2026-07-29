@@ -344,7 +344,7 @@ export default function ShippersPage({ mobile = false }) {
   );
 }
 
-function ShipperFormModal({ open, shipper, onClose, onSaved }) {
+export function ShipperFormModal({ open, shipper, onClose, onSaved }) {
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
 

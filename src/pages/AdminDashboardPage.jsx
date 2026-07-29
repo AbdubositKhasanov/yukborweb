@@ -58,6 +58,12 @@ const ADMIN_LINKS = [
     description: "Foydalanuvchi xabarchilarini ko'rish, egasiga o'tish va o'chirish.",
   },
   {
+    section: 'adminViewHistory',
+    label: 'Ko‘rish tarixi',
+    path: '/admin/view-history',
+    description: 'Ichki dispetcherlarning oxirgi 24 soatdagi yuk va transport ko‘rishlari.',
+  },
+  {
     section: 'adminSettings',
     label: 'Sozlamalar',
     path: '/admin/settings',

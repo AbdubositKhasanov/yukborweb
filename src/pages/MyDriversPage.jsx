@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyInvitedUsers, getUserMe, updateCounterpartyDriverStatus, getLocationsAndVehicles, addInvitedUser } from '../services/api';
+import {
+  addInvitedUser,
+  getLocationsAndVehicles,
+  getMyInvitedUsers,
+  getShipper,
+  getUserMe,
+  updateCounterpartyDriverStatus,
+} from '../services/api';
 import { formatBalance, getBalanceColor } from '../utils/formatBalance';
 import { showSuccess, showError } from '../utils/toast';
 import ClubMembershipModal from '../components/ClubMembershipModal';
 import CounterpartyTransportModal from '../components/CounterpartyTransportModal';
 import ReminderComposer from '../components/ReminderComposer';
+import { ShipperFormModal } from './ShippersPage';
 import '../styles/dispatcher-crm.css';
 
 const ROLE_FILTERS = [
@@ -37,6 +45,9 @@ export default function MyDriversPage() {
   const [inviteRole, setInviteRole] = useState('driver');
   const [inviting, setInviting] = useState(false);
   const [reminderSubject, setReminderSubject] = useState(null);
+  const [shipperFormOpen, setShipperFormOpen] = useState(false);
+  const [editingShipper, setEditingShipper] = useState(null);
+  const [loadingShipperId, setLoadingShipperId] = useState(null);
 
   useEffect(() => {
     loadDrivers();
@@ -202,8 +213,40 @@ export default function MyDriversPage() {
   };
 
   const openInviteModal = (role = activeRole) => {
+    if (role === 'factory' && isInternalDispatcher) {
+      setEditingShipper(null);
+      setShipperFormOpen(true);
+      return;
+    }
     setInviteRole(role);
     setShowInviteModal(true);
+  };
+
+  const openShipperForm = async (partner) => {
+    const partnerId = String(partner?.id || partner?._id || '');
+    if (!partnerId) {
+      showError('Yukchi IDsi topilmadi');
+      return;
+    }
+
+    setLoadingShipperId(partnerId);
+    try {
+      const response = await getShipper(partnerId);
+      if (response.code !== 200 || !response.result) {
+        throw new Error(response.message || 'Yukchi ma’lumotlari yuklanmadi');
+      }
+      setEditingShipper(response.result);
+      setShipperFormOpen(true);
+    } catch (err) {
+      showError(err.response?.data?.message || err.message || 'Yukchi ma’lumotlari yuklanmadi');
+    } finally {
+      setLoadingShipperId(null);
+    }
+  };
+
+  const closeShipperForm = () => {
+    setShipperFormOpen(false);
+    setEditingShipper(null);
   };
 
   const handleCopyLink = async (driver) => {
@@ -327,6 +370,10 @@ export default function MyDriversPage() {
               getStatusColor={getStatusColor}
               getStatusText={getStatusText}
               canDirectAssign={isInternalDispatcher}
+              onEditShipper={openShipperForm}
+              shipperLoading={
+                loadingShipperId === String(driver.id || driver._id || '')
+              }
               onReminder={(item) => setReminderSubject({
                 type: item.type === 'factory' ? 'shipper' : 'driver',
                 id: String(item.id || item._id || item.chatId),
@@ -357,6 +404,12 @@ export default function MyDriversPage() {
         subject={reminderSubject}
         onClose={() => setReminderSubject(null)}
       />
+      <ShipperFormModal
+        open={shipperFormOpen}
+        shipper={editingShipper}
+        onClose={closeShipperForm}
+        onSaved={loadDrivers}
+      />
 
       {/* Invite Driver Modal */}
       {showInviteModal && (
@@ -375,7 +428,18 @@ export default function MyDriversPage() {
                 <select
                   className="form-input"
                   value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value)}
+                  onChange={(e) => {
+                    const nextRole = e.target.value;
+                    if (nextRole === 'factory' && isInternalDispatcher) {
+                      setShowInviteModal(false);
+                      setInviteName('');
+                      setInvitePhone('');
+                      setEditingShipper(null);
+                      setShipperFormOpen(true);
+                      return;
+                    }
+                    setInviteRole(nextRole);
+                  }}
                   disabled={inviting}
                 >
                   <option value="driver">Haydovchi</option>
@@ -439,7 +503,7 @@ export default function MyDriversPage() {
   );
 }
 
-function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatusText, onStatusUpdate, onAddTransport, onEditTransport, onCopyLink, canDirectAssign, onReminder }) {
+function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatusText, onStatusUpdate, onAddTransport, onEditTransport, onCopyLink, canDirectAssign, onReminder, onEditShipper, shipperLoading }) {
   const transportForm = driver.driverTransportForm;
   const isOnline = driver.driverCurrentStatus === true;
   const hasTransport = transportForm && (
@@ -708,7 +772,24 @@ function DriverCard({ driver, onFindOrder, formatDate, getStatusColor, getStatus
         </div>
       ) : (
         <div style={{ marginBottom: 15, padding: 12, backgroundColor: '#f8f9fa', borderRadius: 8, color: '#666', fontSize: 14 }}>
-          Yuk egasi uchun kontakt va ro'yxatdan o'tish holati boshqariladi.
+          <p style={{ margin: 0 }}>
+            Kompaniya, manzil, yo‘nalishlar, yuk turlari va kelishuv ma’lumotlarini kiriting.
+          </p>
+          {canDirectAssign && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => onEditShipper(driver)}
+              disabled={shipperLoading}
+              style={{ width: '100%', marginTop: 10, padding: 10 }}
+            >
+              {shipperLoading
+                ? 'Yuklanmoqda...'
+                : driver.driverInfoUpdatedAt
+                  ? '✎ Yukchi ma’lumotlarini tahrirlash'
+                  : '+ Yukchi ma’lumotlarini kiritish'}
+            </button>
+          )}
         </div>
       )}
 

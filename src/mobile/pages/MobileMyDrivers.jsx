@@ -5,8 +5,17 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyInvitedUsers, addInvitedUser, createCounterpartyTransport, updateCounterpartyTransportForm } from '../../services/api';
+import {
+  addInvitedUser,
+  createCounterpartyTransport,
+  getMyInvitedUsers,
+  getShipper,
+  updateCounterpartyTransportForm,
+} from '../../services/api';
 import { useStaticData } from '../../context/StaticDataContext';
+import { ShipperFormModal } from '../../pages/ShippersPage';
+import { showError } from '../../utils/toast';
+import { useMobileAuth } from '../context/MobileAuthContext';
 import TopBar from '../components/TopBar';
 import BottomSheet from '../components/BottomSheet';
 import MobileLoading, { ListSkeleton } from '../components/MobileLoading';
@@ -21,6 +30,7 @@ const ROLE_FILTERS = [
 export default function MobileMyDrivers() {
   const navigate = useNavigate();
   const { staticData } = useStaticData();
+  const { isInternalDispatcher } = useMobileAuth();
 
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +59,9 @@ export default function MobileMyDrivers() {
   });
   const [transportLoading, setTransportLoading] = useState(false);
   const [transportError, setTransportError] = useState('');
+  const [shipperFormOpen, setShipperFormOpen] = useState(false);
+  const [editingShipper, setEditingShipper] = useState(null);
+  const [loadingShipperId, setLoadingShipperId] = useState(null);
 
   const loadDrivers = useCallback(async (isRefresh = false) => {
     try {
@@ -215,8 +228,41 @@ export default function MobileMyDrivers() {
   };
 
   const openAddSheet = (role = activeRole) => {
+    if (role === 'factory' && isInternalDispatcher) {
+      setEditingShipper(null);
+      setShipperFormOpen(true);
+      return;
+    }
     setAddRole(role);
     setAddSheet(true);
+  };
+
+  const openShipperForm = async (event, partner) => {
+    event.stopPropagation();
+    const partnerId = String(partner?.id || partner?._id || '');
+    if (!partnerId) return;
+
+    setLoadingShipperId(partnerId);
+    try {
+      const response = await getShipper(partnerId);
+      if (response.code !== 200 || !response.result) {
+        throw new Error(response.message || 'Yukchi ma’lumotlari yuklanmadi');
+      }
+      setEditingShipper(response.result);
+      setShipperFormOpen(true);
+    } catch (error) {
+      console.error('Failed to load shipper details:', error);
+      showError(
+        error.response?.data?.message || error.message || 'Yukchi ma’lumotlari yuklanmadi'
+      );
+    } finally {
+      setLoadingShipperId(null);
+    }
+  };
+
+  const closeShipperForm = () => {
+    setShipperFormOpen(false);
+    setEditingShipper(null);
   };
 
   const visibleDrivers = drivers.filter((driver) => (driver.type || 'driver') === activeRole);
@@ -310,6 +356,20 @@ export default function MobileMyDrivers() {
                         {driverHasTransport ? '✎' : '+ 🚚'}
                       </button>
                     )}
+                    {!isDriver && isInternalDispatcher && (
+                      <button
+                        className="m-btn m-btn-secondary"
+                        onClick={(event) => openShipperForm(event, driver)}
+                        disabled={
+                          loadingShipperId === String(driver.id || driver._id || '')
+                        }
+                        style={{ padding: '4px 10px', fontSize: 12, minHeight: 28 }}
+                      >
+                        {loadingShipperId === String(driver.id || driver._id || '')
+                          ? '...'
+                          : '✎ Ma’lumot'}
+                      </button>
+                    )}
                     <span className="m-list-item-arrow">→</span>
                   </div>
                 </div>
@@ -346,7 +406,18 @@ export default function MobileMyDrivers() {
           <select
             className="m-form-select"
             value={addRole}
-            onChange={(e) => setAddRole(e.target.value)}
+            onChange={(e) => {
+              const nextRole = e.target.value;
+              if (nextRole === 'factory' && isInternalDispatcher) {
+                setAddSheet(false);
+                setAddName('');
+                setAddPhone('');
+                setEditingShipper(null);
+                setShipperFormOpen(true);
+                return;
+              }
+              setAddRole(nextRole);
+            }}
           >
             <option value="driver">Haydovchi</option>
             <option value="factory">Yuk egasi</option>
@@ -495,6 +566,13 @@ export default function MobileMyDrivers() {
           />
         </div>
       </BottomSheet>
+
+      <ShipperFormModal
+        open={shipperFormOpen}
+        shipper={editingShipper}
+        onClose={closeShipperForm}
+        onSaved={() => loadDrivers(true)}
+      />
     </>
   );
 }
