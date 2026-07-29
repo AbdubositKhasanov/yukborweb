@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { adminListInternalDispatchers, getViewHistory } from '../services/api';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { adminListInternalDispatchers, getViewHistory, getViewHistoryDetail } from '../services/api';
 import './ViewHistoryPage.css';
 
 const EMPTY_RESULT = {
@@ -44,6 +44,199 @@ function routeText(item) {
   return points.length ? points.join(' → ') : 'Yo‘nalish ko‘rsatilmagan';
 }
 
+function formatMoney(value) {
+  if (value == null) return null;
+  return `${Number(value).toLocaleString('uz-UZ')} so‘m`;
+}
+
+function DetailRows({ rows }) {
+  const visibleRows = rows.filter(([, value]) => value !== null && value !== undefined && value !== '');
+  if (!visibleRows.length) return null;
+  return (
+    <dl className="view-history-detail-rows">
+      {visibleRows.map(([label, value]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function ViewHistoryDetailDrawer({ panel, onClose, admin }) {
+  useEffect(() => {
+    if (!panel.open) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [panel.open, onClose]);
+
+  if (!panel.open) return null;
+
+  const historyItem = panel.data?.history || panel.item;
+  const cargo = panel.data?.cargo;
+  const transport = panel.data?.transport;
+  const target = cargo || transport;
+  const isCargo = historyItem?.targetType === 'cargo';
+  const phone = target?.additionalPhone;
+  const telegramUsername = target?.telegramUsername?.replace(/^@/, '');
+  const title = cargo?.cargoName || transport?.vehicleType || transport?.name || historyItem?.targetName || 'Ma’lumot';
+  const ownerName = target?.ownerName || transport?.name;
+
+  const historyRows = historyItem
+    ? [
+        ['Ko‘rilgan vaqt', formatDate(historyItem.viewedAt)],
+        ['Tarixdan o‘chadi', formatDate(historyItem.expiresAt)],
+        ['Ko‘rgan xodim', admin ? historyItem.actorName || historyItem.actorId : null],
+        ['Xodim telefoni', admin ? historyItem.actorPhone : null],
+        [
+          'Xodim Telegrami',
+          admin && historyItem.actorTelegramUsername
+            ? `@${historyItem.actorTelegramUsername.replace(/^@/, '')}`
+            : null,
+        ],
+      ]
+    : [];
+
+  const cargoRows = cargo
+    ? [
+        ['Yuk nomi', cargo.cargoName],
+        ['Qayerdan', cargo.fromCity],
+        ['Qayerga', cargo.toCity],
+        ['Transport turi', cargo.vehicleType],
+        ['Og‘irlik', cargo.weightKg != null ? `${cargo.weightKg} t` : null],
+        ['Narx', formatMoney(cargo.priceUzs)],
+        ['Status', cargo.status],
+        ['Yuk egasi', ownerName],
+        ['Telefon', phone && <a href={`tel:${phone}`}>{phone}</a>],
+        [
+          'Telegram',
+          telegramUsername && (
+            <a href={`https://t.me/${telegramUsername}`} target="_blank" rel="noreferrer">
+              @{telegramUsername}
+            </a>
+          ),
+        ],
+        ['Telegram ID', cargo.chatId],
+        ['Yaratilgan vaqt', cargo.createdTime ? formatDate(cargo.createdTime) : null],
+        ['Manba', cargo.source],
+        ['Yuboruvchi turi', cargo.senderType],
+      ]
+    : [];
+
+  const transportRows = transport
+    ? [
+        ['Egasi', ownerName],
+        ['Joylashuv', transport.loc1],
+        ['Transport turi', transport.vehicleType],
+        ['Yuk sig‘imi', transport.weight != null ? `${transport.weight} t` : null],
+        ['Davlat raqami', transport.stateNumber],
+        ['Status', transport.status],
+        ['Telefon', phone && <a href={`tel:${phone}`}>{phone}</a>],
+        [
+          'Telegram',
+          telegramUsername && (
+            <a href={`https://t.me/${telegramUsername}`} target="_blank" rel="noreferrer">
+              @{telegramUsername}
+            </a>
+          ),
+        ],
+        ['Telegram ID', transport.chatId],
+        ['Yangilangan vaqt', transport.time ? formatDate(transport.time) : null],
+        ['Manba', transport.source],
+      ]
+    : [];
+
+  const snapshotRows = historyItem
+    ? [
+        ['Nomi', historyItem.targetName],
+        ['Yo‘nalish', routeText(historyItem)],
+        ['Transport turi', historyItem.vehicleType],
+        ['Og‘irlik', historyItem.weight != null ? `${historyItem.weight} t` : null],
+        ['Davlat raqami', historyItem.stateNumber],
+        ['Manba', historyItem.source],
+      ]
+    : [];
+
+  return (
+    <div
+      className="view-history-drawer-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <aside className="view-history-drawer" role="dialog" aria-modal="true" aria-label={title}>
+        <header>
+          <div className={`view-history-detail-icon view-history-icon--${isCargo ? 'cargo' : 'transport'}`}>
+            {isCargo ? 'Y' : 'T'}
+          </div>
+          <div>
+            <span>{isCargo ? 'Yuk ma’lumotlari' : 'Transport ma’lumotlari'}</span>
+            <h2>{title}</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Yopish">×</button>
+        </header>
+
+        {panel.loading ? (
+          <div className="view-history-detail-state">To‘liq ma’lumot yuklanmoqda…</div>
+        ) : panel.error ? (
+          <div className="view-history-detail-state error">
+            <strong>Ma’lumotni ochib bo‘lmadi</strong>
+            <span>{panel.error}</span>
+          </div>
+        ) : (
+          <div className="view-history-drawer-body">
+            {(phone || telegramUsername || cargo?.messageUrl) && (
+              <div className="view-history-detail-actions">
+                {phone && <a href={`tel:${phone}`}>Qo‘ng‘iroq</a>}
+                {telegramUsername && (
+                  <a href={`https://t.me/${telegramUsername}`} target="_blank" rel="noreferrer">Telegram</a>
+                )}
+                {cargo?.messageUrl?.startsWith('http') && (
+                  <a href={cargo.messageUrl} target="_blank" rel="noreferrer">Asl xabar</a>
+                )}
+              </div>
+            )}
+
+            <section>
+              <h3>Ko‘rish tarixi</h3>
+              <DetailRows rows={historyRows} />
+            </section>
+
+            {target ? (
+              <section>
+                <h3>{isCargo ? 'To‘liq yuk ma’lumotlari' : 'To‘liq transport ma’lumotlari'}</h3>
+                <DetailRows rows={isCargo ? cargoRows : transportRows} />
+                {(cargo?.description || transport?.otherDesc) && (
+                  <p className="view-history-detail-note">{cargo?.description || transport?.otherDesc}</p>
+                )}
+                {cargo?.originMessage && (
+                  <div className="view-history-original-message">
+                    <strong>Asl e’lon matni</strong>
+                    <p>{cargo.originMessage}</p>
+                  </div>
+                )}
+              </section>
+            ) : (
+              <section>
+                <h3>Saqlangan ma’lumot</h3>
+                <p className="view-history-detail-warning">
+                  Asl obyekt o‘chirilgan yoki mavjud emas. Tarixda saqlangan ma’lumot ko‘rsatilmoqda.
+                </p>
+                <DetailRows rows={snapshotRows} />
+              </section>
+            )}
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
+
 export default function ViewHistoryPage({ admin = false, mobile = false }) {
   const [history, setHistory] = useState(EMPTY_RESULT);
   const [dispatchers, setDispatchers] = useState([]);
@@ -52,6 +245,14 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [detailPanel, setDetailPanel] = useState({
+    open: false,
+    loading: false,
+    data: null,
+    item: null,
+    error: '',
+  });
+  const detailRequestId = useRef(0);
 
   useEffect(() => {
     if (!admin) return undefined;
@@ -103,6 +304,29 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
     setDispatcherId(value);
     setPage(0);
   };
+
+  const openDetails = async (item) => {
+    const requestId = ++detailRequestId.current;
+    setDetailPanel({ open: true, loading: true, data: null, item, error: '' });
+    try {
+      const response = await getViewHistoryDetail(item.id);
+      if (response.code !== 200) throw new Error(response.message || 'Ma’lumot topilmadi');
+      if (detailRequestId.current !== requestId) return;
+      setDetailPanel((current) => ({ ...current, loading: false, data: response.result }));
+    } catch (detailError) {
+      if (detailRequestId.current !== requestId) return;
+      setDetailPanel((current) => ({
+        ...current,
+        loading: false,
+        error: detailError.response?.data?.message || detailError.message || 'Ma’lumot yuklanmadi',
+      }));
+    }
+  };
+
+  const closeDetails = useCallback(() => {
+    detailRequestId.current += 1;
+    setDetailPanel({ open: false, loading: false, data: null, item: null, error: '' });
+  }, []);
 
   return (
     <main className={`view-history-page ${mobile ? 'view-history-page--mobile' : ''}`}>
@@ -187,7 +411,7 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
       {history.items.length > 0 && (
         <section className={`view-history-list ${loading ? 'is-loading' : ''}`} aria-live="polite">
           {history.items.map((item) => (
-            <article className="view-history-item" key={item.id}>
+            <button type="button" className="view-history-item" key={item.id} onClick={() => openDetails(item)}>
               <div className={`view-history-icon view-history-icon--${item.targetType}`} aria-hidden="true">
                 {item.targetType === 'cargo' ? 'Y' : 'T'}
               </div>
@@ -216,9 +440,10 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
                     </span>
                   )}
                   <span>{remainingTime(item.expiresAt, history.serverTime)}dan keyin o‘chadi</span>
+                  <strong>To‘liq ma’lumot →</strong>
                 </div>
               </div>
-            </article>
+            </button>
           ))}
         </section>
       )}
@@ -234,6 +459,7 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
           </button>
         </nav>
       )}
+      <ViewHistoryDetailDrawer panel={detailPanel} onClose={closeDetails} admin={admin} />
     </main>
   );
 }

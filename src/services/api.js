@@ -1186,6 +1186,11 @@ export const getViewHistory = async (params = {}) => {
   return response.data;
 };
 
+export const getViewHistoryDetail = async (historyId) => {
+  const response = await apiClient.get(`/view-history/${historyId}`);
+  return response.data;
+};
+
 export const adminAssignInternalDispatcher = async (userId, dispatcherId) => {
   const response = await apiClient.put(`/admin/users/${userId}/internal-dispatcher`, {
     dispatcherId,
