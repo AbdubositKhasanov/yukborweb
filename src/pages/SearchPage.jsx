@@ -401,6 +401,30 @@ export default function SearchPage() {
     setSearchTrigger((t) => t + 1);
   };
 
+  const handleClearDriverContext = () => {
+    setFromCountry('');
+    setFromRegion('');
+    setFromCity('');
+    setToCountry('');
+    setToRegion('');
+    setToCity('');
+    setVehicleType('');
+    setMinWeight('');
+    setMaxWeight('');
+    setSearchMode('simple');
+    setTextQuery('');
+    setPage(0);
+    setCargos([]);
+    setError(null);
+    setHasMore(false);
+    setHasSearched(false);
+    setSearchSnapshotKey('');
+    setHarbingerCreatedForCurrentSearch(false);
+    setIsInitialLoad(false);
+    navigate('/', { replace: true, state: null });
+    setSearchTrigger((t) => t + 1);
+  };
+
   const handleCreateHarbingerFromFilters = async () => {
     if (!localStorage.getItem('authToken')) {
       navigate('/login');
@@ -648,7 +672,7 @@ export default function SearchPage() {
         </button>
       </div>
 
-      {fromDriver && driverName && (
+      {fromDriver && (
         <div style={{
           padding: '15px',
           backgroundColor: '#d1ecf1',
@@ -657,10 +681,31 @@ export default function SearchPage() {
           marginBottom: '20px',
           color: '#0c5460'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: '10px' }}>
             <strong style={{ fontSize: '16px' }}>
-              👤 {driverName} uchun mos yuklar qidirilmoqda
+              👤 {driverName || 'Tanlangan transport'} uchun mos yuklar qidirilmoqda
             </strong>
+            <button
+              type="button"
+              onClick={handleClearDriverContext}
+              aria-label="Tanlangan transportni olib tashlash va oddiy qidiruvga qaytish"
+              title="Transportni olib tashlash"
+              style={{
+                width: 30,
+                height: 30,
+                border: '1px solid #9fcbd2',
+                borderRadius: '50%',
+                background: '#fff',
+                color: '#0c5460',
+                cursor: 'pointer',
+                fontSize: 18,
+                fontWeight: 700,
+                lineHeight: 1,
+                flexShrink: 0,
+              }}
+            >
+              ✕
+            </button>
           </div>
           <p style={{ margin: '10px 0 0', fontSize: '13px', fontStyle: 'italic' }}>
             Shahar, qayerga manzili va tonna natijani cheklamaydi — yuklar moslik darajasi

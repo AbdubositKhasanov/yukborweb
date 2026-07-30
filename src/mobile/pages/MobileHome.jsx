@@ -392,6 +392,32 @@ export default function MobileHome({ internalOnly = false }) {
     setIsInitialLoad(true);
   };
 
+  const handleClearDriverContext = () => {
+    setFilters({
+      fromCountry: '',
+      fromRegion: '',
+      fromCity: '',
+      toCountry: '',
+      toRegion: '',
+      toCity: '',
+      vehicleType: '',
+      minWeight: '',
+      maxWeight: '',
+    });
+    setActiveFilters([]);
+    setSearchMode('simple');
+    setTextQuery('');
+    setPage(0);
+    setCargos([]);
+    setHasMore(false);
+    setHasSearched(false);
+    setSearchSnapshotKey('');
+    setHarbingerCreatedForCurrentSearch(false);
+    setIsInitialLoad(false);
+    navigate('/mobile', { replace: true, state: null });
+    setSearchTrigger((t) => t + 1);
+  };
+
   // Handle filter apply from BottomSheet
   const handleApplyFilters = () => {
     setSearchMode('advanced');
@@ -682,11 +708,36 @@ export default function MobileHome({ internalOnly = false }) {
           )}
 
           {/* Driver context banner */}
-          {fromDriver && driverName && (
+          {fromDriver && (
             <div style={{ padding: '12px 16px', background: '#d1ecf1', marginBottom: 0, fontSize: 14, color: '#0c5460' }}>
-              <strong>👤 {driverName}</strong> uchun yuk qidirilmoqda
-              <div style={{ marginTop: 4, fontSize: 12, lineHeight: 1.4 }}>
-                Shahar, qayerga manzili va tonna bo&apos;yicha eng mos yuklar yuqorida chiqadi.
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <strong>👤 {driverName || 'Tanlangan transport'}</strong> uchun yuk qidirilmoqda
+                  <div style={{ marginTop: 4, fontSize: 12, lineHeight: 1.4 }}>
+                    Shahar, qayerga manzili va tonna bo&apos;yicha eng mos yuklar yuqorida chiqadi.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearDriverContext}
+                  aria-label="Tanlangan transportni olib tashlash va oddiy qidiruvga qaytish"
+                  title="Transportni olib tashlash"
+                  style={{
+                    width: 30,
+                    height: 30,
+                    border: '1px solid #9fcbd2',
+                    borderRadius: '50%',
+                    background: '#fff',
+                    color: '#0c5460',
+                    cursor: 'pointer',
+                    fontSize: 18,
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    flexShrink: 0,
+                  }}
+                >
+                  ✕
+                </button>
               </div>
             </div>
           )}

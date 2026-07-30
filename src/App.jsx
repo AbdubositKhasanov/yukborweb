@@ -42,6 +42,18 @@ const AdminSenderBlacklistPage = lazy(() => import('./pages/AdminSenderBlacklist
 const AdminHarbingersPage = lazy(() => import('./pages/AdminHarbingersPage'));
 const TariffsPage = lazy(() => import('./pages/TariffsPage'));
 
+function isPhoneBrowser() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+
+  if (navigator.userAgentData?.mobile === true) return true;
+
+  const userAgent = navigator.userAgent || '';
+  const phoneUserAgent = /Android.*Mobile|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|webOS|BlackBerry/i;
+  if (phoneUserAgent.test(userAgent)) return true;
+
+  return window.matchMedia?.('(max-width: 767px) and (pointer: coarse)').matches === true;
+}
+
 function AdminRoute({ children, isAuthenticated }) {
   const [checking, setChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -152,6 +164,10 @@ function AppContent() {
 
   // Check if on mobile route - render mobile app without desktop navigation
   const isMobileRoute = location.pathname.startsWith('/mobile');
+
+  if (!isMobileRoute && isPhoneBrowser()) {
+    return <Navigate to="/mobile" replace state={location.state} />;
+  }
 
   if (isMobileRoute) {
     return (
