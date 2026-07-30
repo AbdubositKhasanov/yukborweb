@@ -3,7 +3,7 @@
  * Reads mobile auth from Telegram Mini App initData and shared localStorage.
  */
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { getUserMe, loginTelegramMiniApp } from '../../services/api';
+import { getUserMe, login, loginTelegramMiniApp } from '../../services/api';
 import { trackLogout, setAnalyticsUserProperties } from '../../services/analytics';
 
 const MobileAuthContext = createContext(null);
@@ -70,6 +70,7 @@ export function MobileAuthProvider({ children }) {
   const [permissions, setPermissions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
+  const [isTelegramMiniApp, setIsTelegramMiniApp] = useState(false);
   const loadingRef = useRef(false);
   const loginAttemptsRef = useRef([]); // so'nggi login urinishlari (loop guard)
 
@@ -105,10 +106,12 @@ export function MobileAuthProvider({ children }) {
 
     const initData = getTelegramInitData();
     if (!initData) {
-      setAuthError('Mini app Telegram ichida ochilishi kerak');
+      setIsTelegramMiniApp(false);
+      setAuthError('');
       clearUserState();
       return false;
     }
+    setIsTelegramMiniApp(true);
 
     // Loop guard: agar biror so'rov doimiy 401 berib, qayta-qayta login chaqirilsa,
     // daqiqasiga MOBILE_LOGIN_MAX_ATTEMPTS dan oshmaymiz — aks holda bitta klient
@@ -140,6 +143,38 @@ export function MobileAuthProvider({ children }) {
     return false;
   }, [applyUserState, clearUserState]);
 
+  const authenticateWithCode = useCallback(async (code) => {
+    setAuthError('');
+
+    try {
+      const response = await withMobileAuthTimeout(
+        login(code),
+        'Kirish kodi tekshiruvi javob bermadi. Internetni tekshirib, qayta urinib ko‘ring.'
+      );
+
+      if (response.code === 200 && response.result) {
+        applyUserState(response.result);
+        return { success: true, user: response.result };
+      }
+
+      return {
+        success: false,
+        message: response.message || 'Kod noto‘g‘ri yoki muddati o‘tgan',
+      };
+    } catch (error) {
+      const responseData = error.response?.data;
+      const responseMessage = typeof responseData === 'string'
+        ? responseData
+        : responseData?.message;
+
+      return {
+        success: false,
+        status: error.response?.status,
+        message: responseMessage || error.message || 'Kirishda xatolik yuz berdi',
+      };
+    }
+  }, [applyUserState]);
+
   // Load user data
   const loadUser = useCallback(async () => {
     if (loadingRef.current) return;
@@ -150,6 +185,7 @@ export function MobileAuthProvider({ children }) {
 
     try {
       const hasTelegramInitData = Boolean(getTelegramInitData());
+      setIsTelegramMiniApp(hasTelegramInitData);
 
       if (hasTelegramInitData) {
         await authenticateWithTelegram();
@@ -167,7 +203,8 @@ export function MobileAuthProvider({ children }) {
         }
       }
 
-      await authenticateWithTelegram();
+      setAuthError('');
+      clearUserState();
     } catch (error) {
       console.error('Failed to load user:', error);
       localStorage.removeItem('authToken');
@@ -179,13 +216,9 @@ export function MobileAuthProvider({ children }) {
         return;
       }
 
-      try {
-        await authenticateWithTelegram();
-      } catch (telegramError) {
-        console.error('Failed to authenticate Telegram Mini App:', telegramError);
-        setAuthError('Telegram orqali kirishda xatolik yuz berdi');
-        clearUserState();
-      }
+      setIsTelegramMiniApp(false);
+      setAuthError('');
+      clearUserState();
     } finally {
       loadingRef.current = false;
       setLoading(false);
@@ -239,6 +272,8 @@ export function MobileAuthProvider({ children }) {
     permissions,
     loading,
     authError,
+    isTelegramMiniApp,
+    authenticateWithCode,
     logout,
     refreshUser,
     setAuthenticated,

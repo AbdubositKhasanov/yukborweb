@@ -10,6 +10,7 @@ import MobileProtectedRoute from './components/MobileProtectedRoute';
 import MobileLoading from './components/MobileLoading';
 import { MobileAuthProvider, useMobileAuth } from './context/MobileAuthContext';
 import MobileRoleSelect from './pages/MobileRoleSelect';
+import MobileBrowserLogin from './pages/MobileBrowserLogin';
 import { trackPageView } from '../services/analytics';
 import useTelegramBackButton from './hooks/useTelegramBackButton';
 import { getDefaultMobilePath } from './navigationConfig';
@@ -73,7 +74,11 @@ function RoleBasedHome() {
 }
 
 function MiniAppUnavailable() {
-  const { authError, refreshUser, loading } = useMobileAuth();
+  const { authError, refreshUser, loading, isTelegramMiniApp } = useMobileAuth();
+
+  if (!isTelegramMiniApp) {
+    return <MobileBrowserLogin />;
+  }
 
   return (
     <main className="m-role-screen">
@@ -82,11 +87,11 @@ function MiniAppUnavailable() {
           <div className="m-role-avatar">Y</div>
           <div>
             <p className="m-role-kicker">YukBor Mini App</p>
-            <h1 id="mini-app-unavailable-title">Telegram orqali oching</h1>
+            <h1 id="mini-app-unavailable-title">Kirishda muammo</h1>
           </div>
         </div>
         <p className="m-role-lead">
-          {authError || 'Mini app foydalanuvchini Telegramdan avtomatik taniydi.'}
+          {authError || 'Telegram orqali avtomatik kirishni yakunlab bo‘lmadi.'}
         </p>
         {authError && (
           <button

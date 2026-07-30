@@ -268,6 +268,148 @@
   line-height: 1.4;
 }
 
+/* Mobile browser login */
+.m-login-screen {
+  align-items: flex-start;
+  padding-top: max(24px, env(safe-area-inset-top, 0px));
+}
+
+.m-login-panel {
+  margin: auto 0;
+  padding: 22px 18px;
+}
+
+.m-login-header {
+  margin-bottom: 12px;
+}
+
+.m-login-steps {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.m-login-step {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.m-login-step-number {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8f0fe;
+  color: var(--m-primary);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.m-login-step strong,
+.m-login-step small {
+  display: block;
+}
+
+.m-login-step strong {
+  color: var(--m-text);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.m-login-step small {
+  margin-top: 1px;
+  color: var(--m-text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.m-btn-telegram {
+  background: #229ed9;
+  color: #fff;
+  text-decoration: none;
+}
+
+.m-btn-telegram:active {
+  background: #1689c1;
+}
+
+.m-btn-telegram svg {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
+  fill: currentColor;
+}
+
+.m-login-status {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: var(--m-radius-sm);
+  background: #e6f4ea;
+  color: #137333;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.m-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 14px;
+  color: var(--m-text-muted);
+  font-size: 12px;
+}
+
+.m-login-divider::before,
+.m-login-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--m-border);
+}
+
+.m-login-divider span {
+  white-space: nowrap;
+}
+
+.m-form-input.m-login-code-input {
+  height: 56px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  font-variant-numeric: tabular-nums;
+}
+
+.m-form-input.m-login-code-input::placeholder {
+  font-size: 18px;
+  letter-spacing: 0.12em;
+}
+
+.m-login-help {
+  min-height: 18px;
+  margin: 6px 0 12px;
+  color: var(--m-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.m-login-error {
+  margin: 8px 0 12px;
+}
+
+.m-login-security {
+  margin: 14px 0 0;
+  color: var(--m-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+}
+
 /* Bottom Navigation */
 .m-bottomnav {
   position: fixed;

@@ -181,8 +181,10 @@ apiClient.interceptors.response.use(
           localStorage.removeItem('authToken');
           localStorage.removeItem('userData');
           if (window.location.pathname.startsWith('/mobile')) {
-            const isMiniAppLoginRequest = error.config?.url?.includes('/login/telegram-mini-app');
-            if (isMiniAppLoginRequest) break;
+            const isMobileLoginRequest =
+              error.config?.url?.includes('/login/telegram-mini-app') ||
+              error.config?.url?.includes('/login/mobile');
+            if (isMobileLoginRequest) break;
             window.dispatchEvent(new Event('mobile-auth-token-cleared'));
           } else if (!window.location.pathname.includes('/login')) {
             window.location.href = '/login';
