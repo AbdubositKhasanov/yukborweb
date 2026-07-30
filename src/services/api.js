@@ -138,6 +138,12 @@ apiClient.interceptors.request.use(
 
     // Add security headers
     config.headers['X-Request-Time'] = Date.now();
+
+    // Mutable GET ma'lumotlari browser/proxy HTTP cache'idan olinmasin.
+    if (String(config.method || 'get').toLowerCase() === 'get') {
+      config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      config.headers.Pragma = 'no-cache';
+    }
     
     // CSRF token (if available)
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -222,72 +228,18 @@ apiClient.interceptors.response.use(
   }
 );
 
-/**
- * API Cache implementation
- */
-class APICache {
-  constructor() {
-    this.cache = new Map();
-    this.ttl = 5 * 60 * 1000; // 5 minutes
-  }
-
-  set(key, data) {
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now(),
-    });
-  }
-
-  get(key) {
-    const cached = this.cache.get(key);
-    if (!cached) return null;
-
-    // Check if expired
-    if (Date.now() - cached.timestamp > this.ttl) {
-      this.cache.delete(key);
-      return null;
-    }
-
-    return cached.data;
-  }
-
-  clear() {
-    this.cache.clear();
-  }
-
-  invalidate(pattern) {
-    for (const key of this.cache.keys()) {
-      if (key.includes(pattern)) {
-        this.cache.delete(key);
-      }
-    }
-  }
-}
-
-const apiCache = new APICache();
+// API javoblari client xotirasida cache qilinmaydi. Mutable data har safar
+// serverdan olinadi; invalidate chaqiriqlari backward-compatible no-op qoladi.
+const apiCache = {
+  clear() {},
+  invalidate() {},
+};
 
 /**
  * Wrapper for cached GET requests
  */
-const cachedGet = async (url, params = {}, options = {}) => {
-  const cacheKey = `${url}_${JSON.stringify(params)}`;
-  
-  // Check cache first (unless skipCache is true)
-  if (!options.skipCache) {
-    const cached = apiCache.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
-  }
-
-  // Fetch from API
+const cachedGet = async (url, params = {}, _options = {}) => {
   const response = await apiClient.get(url, { params });
-  
-  // Cache the result
-  if (response.data) {
-    apiCache.set(cacheKey, response.data);
-  }
-
   return response.data;
 };
 
@@ -498,15 +450,7 @@ export const searchTransports = async (filters = {}) => {
 // ============================================
 
 export const getLocationsAndVehicles = async () => {
-  // Cache for longer (static data changes rarely)
-  const cacheKey = 'locations_and_vehicles';
-  const cached = apiCache.get(cacheKey);
-  if (cached) return cached;
-
   const response = await apiClient.get('/locationsAndVehicles');
-  if (response.data) {
-    apiCache.set(cacheKey, response.data);
-  }
   return response.data;
 };
 

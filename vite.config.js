@@ -30,48 +30,41 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,ico,png,svg}'],
-        // index.html'ni precache'ga qo'shmaymiz — har navigatsiyada NetworkFirst
-        // orqali yangi index.html olinadi va u yangi hashlangan asset nomlariga ishora qiladi.
+        // Lazy page chunklarini precache qilmaymiz. Brauzer ularni kerak bo'lganda
+        // oladi va nginx content-hash sabab xavfsiz immutable cache qiladi.
+        globPatterns: [],
+        // index.html hech qachon service worker cache'iga kirmaydi.
         globIgnores: ['**/index.html'],
-        // vite-plugin-pwa default'i `navigateFallback: 'index.html'` —
-        // bu precache-cache-first NavigationRoute generatsiya qilib,
-        // pastdagi NetworkFirst runtime route'ni soya qilib qo'yadi.
-        // Default'ni bekor qilamiz, runtime NetworkFirst navigatsiyani boshqaradi.
+        // SPA navigatsiya fallback'i serverdagi try_files orqali ishlaydi.
         navigateFallback: null,
-        // Yangi service worker darhol chiqariladi va ochiq tab'larni egallaydi
-        // — oddiy refresh'da ham yangi asset'lar ko'rinadi.
+        // Yangi service worker darhol aktiv bo'ladi va ochiq oynani yangilaydi.
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            // Admin userbot holati mutable va xavfsizlikka bog'liq. Eski
-            // permission javobini hech qachon service worker'dan bermaymiz.
-            urlPattern: ({ url }) => url.pathname.includes('/api/userbot/'),
+            // Same-origin API: offline fallback yo'q, faqat yangi server javobi.
+            urlPattern: ({ url }) =>
+              url.origin === self.location.origin && url.pathname.startsWith('/api/'),
             handler: 'NetworkOnly',
-          },
-          {
-            urlPattern: ({ request }) => request.mode === 'navigate',
-            handler: 'NetworkFirst',
             options: {
-              cacheName: 'html-cache',
-              networkTimeoutSeconds: 3,
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24,
-              },
+              fetchOptions: { cache: 'no-store' },
             },
           },
           {
-            urlPattern: /^https:\/\/api\.yukbor\.uz\/.*$/,
-            handler: 'NetworkFirst',
+            // HTML/navigatsiya hech qachon eski cache'dan ko'rsatilmaydi.
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkOnly',
             options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 300,
-              },
+              fetchOptions: { cache: 'no-store' },
+            },
+          },
+          {
+            // Eski alohida API domeni qayta ishlatilsa ham cache qilinmaydi.
+            urlPattern: /^https:\/\/api\.yukbor\.uz\/.*$/,
+            handler: 'NetworkOnly',
+            options: {
+              fetchOptions: { cache: 'no-store' },
             },
           },
         ],

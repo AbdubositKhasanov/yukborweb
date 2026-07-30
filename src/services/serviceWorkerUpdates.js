@@ -4,8 +4,24 @@ const CHECK_DEBOUNCE_MS = 30 * 1000;
 const PERIODIC_CHECK_MS = 10 * 60 * 1000;
 const RELOAD_GUARD_KEY = 'yukbor:sw-reload-at';
 const RELOAD_GUARD_MS = 10 * 1000;
+const LEGACY_RUNTIME_CACHES = new Set(['html-cache', 'api-cache']);
 
 const canUseServiceWorker = () => import.meta.env.PROD && 'serviceWorker' in navigator;
+
+const clearLegacyRuntimeCaches = async () => {
+  if (!('caches' in window)) return;
+
+  try {
+    const cacheNames = await window.caches.keys();
+    await Promise.all(
+      cacheNames
+        .filter((cacheName) => LEGACY_RUNTIME_CACHES.has(cacheName))
+        .map((cacheName) => window.caches.delete(cacheName))
+    );
+  } catch (error) {
+    console.warn('Legacy runtime cache cleanup failed', error);
+  }
+};
 
 const readReloadGuard = () => {
   try {
@@ -46,6 +62,8 @@ const isStaleChunkError = (value) => {
 export function setupServiceWorkerUpdates() {
   if (!canUseServiceWorker()) return;
 
+  clearLegacyRuntimeCaches();
+
   let registration = null;
   let lastCheckAt = 0;
   let checkPromise = null;
@@ -79,6 +97,7 @@ export function setupServiceWorkerUpdates() {
   };
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    clearLegacyRuntimeCaches();
     if (!hadController) {
       hadController = true;
       return;
