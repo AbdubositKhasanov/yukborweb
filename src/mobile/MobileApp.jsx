@@ -258,6 +258,14 @@ function MobileAppContent() {
             }
           />
           <Route
+            path="/edit-order/:id"
+            element={
+              <MobileProtectedRoute>
+                <MobileCreateOrder />
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
             path="/orders"
             element={
               <MobileProtectedRoute>

@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createOrder, getBroadcastStatus, getLocationsAndVehicles, updateOrderOwnerStatusPrompt } from '../services/api';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  createOrder,
+  getBroadcastStatus,
+  getLocationsAndVehicles,
+  getMyOrder,
+  updateOrder,
+  updateOrderOwnerStatusPrompt,
+} from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
-import LocationSelector, { getManualLocationName, toOptionalLocationId } from '../components/LocationSelector';
+import LocationSelector, {
+  getManualLocationName,
+  makeCustomLocationValue,
+  toOptionalLocationId,
+} from '../components/LocationSelector';
 import {
   formatBroadcastDeliveryCount,
   isBroadcastFinished,
@@ -23,8 +34,21 @@ const hasRequiredLocation = (countryValue, regionValue, cityValue) => {
   );
 };
 
+const getLocationFormValues = (location) => {
+  const country = location?.countryId == null ? '' : String(location.countryId);
+  const customValue = makeCustomLocationValue(location?.customName);
+  const region = location?.regionId == null ? customValue : String(location.regionId);
+  const city = location?.cityId == null
+    ? (location?.regionId == null ? '' : customValue)
+    : String(location.cityId);
+
+  return { country, region, city };
+};
+
 export default function CreateOrderPage() {
   const navigate = useNavigate();
+  const { id: orderId } = useParams();
+  const isEditing = Boolean(orderId);
 
   // Form state
   const [cargoName, setCargoName] = useState('');
@@ -48,6 +72,7 @@ export default function CreateOrderPage() {
   const [loading, setLoading] = useState(false);
   const [staticData, setStaticData] = useState(null);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [errors, setErrors] = useState({});
   const [createdOrder, setCreatedOrder] = useState(null);
   const [broadcastStatus, setBroadcastStatus] = useState(null);
@@ -57,8 +82,58 @@ export default function CreateOrderPage() {
   const [ownerPromptError, setOwnerPromptError] = useState('');
 
   useEffect(() => {
-    loadStaticData();
-  }, []);
+    let cancelled = false;
+
+    const loadPageData = async () => {
+      setLoadingData(true);
+      setLoadError('');
+      try {
+        const [staticResponse, orderResponse] = await Promise.all([
+          getLocationsAndVehicles(),
+          isEditing ? getMyOrder(orderId) : Promise.resolve(null),
+        ]);
+        if (cancelled) return;
+
+        if (staticResponse.code !== 200) {
+          throw new Error(staticResponse.message || 'Ma\'lumotlarni yuklab bo\'lmadi');
+        }
+        setStaticData(staticResponse.result);
+
+        if (isEditing) {
+          if (orderResponse?.code !== 200 || !orderResponse.result) {
+            throw new Error(orderResponse?.message || 'Yuk topilmadi');
+          }
+
+          const order = orderResponse.result;
+          const from = getLocationFormValues(order.fromLocation);
+          const to = getLocationFormValues(order.toLocation);
+          setCargoName(order.cargoName || '');
+          setAdditionalPhone(order.additionalPhone || '');
+          setDescription(order.description && order.description !== 'null' ? order.description : '');
+          setWeight(order.weightKg == null ? '' : String(order.weightKg));
+          setVehicleTypeId(order.vehicleTypeId == null ? '' : String(order.vehicleTypeId));
+          setPriceUzs(order.priceUzs == null ? '' : String(order.priceUzs));
+          setFromCountry(from.country);
+          setFromRegion(from.region);
+          setFromCity(from.city);
+          setToCountry(to.country);
+          setToRegion(to.region);
+          setToCity(to.city);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(error.response?.data?.message || error.message || 'Ma\'lumotlarni yuklab bo\'lmadi');
+        }
+      } finally {
+        if (!cancelled) setLoadingData(false);
+      }
+    };
+
+    loadPageData();
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditing, orderId]);
 
   useEffect(() => {
     const broadcastId = broadcastStatus?.broadcastId;
@@ -84,21 +159,6 @@ export default function CreateOrderPage() {
       clearInterval(interval);
     };
   }, [broadcastStatus?.broadcastId, broadcastStatus?.status]);
-
-  const loadStaticData = async () => {
-    setLoadingData(true);
-    try {
-      const response = await getLocationsAndVehicles();
-      if (response.code === 200) {
-        setStaticData(response.result);
-      }
-    } catch (error) {
-      console.error('Failed to load static data:', error);
-      showError('Ma\'lumotlarni yuklab bo\'lmadi');
-    } finally {
-      setLoadingData(false);
-    }
-  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -155,9 +215,17 @@ export default function CreateOrderPage() {
         priceUzs: parseInt(priceUzs),
       };
 
-      const response = await createOrder(orderData);
+      const response = isEditing
+        ? await updateOrder(orderId, orderData)
+        : await createOrder(orderData);
 
       if (response.code === 200) {
+        if (isEditing) {
+          showSuccess('Yuk muvaffaqiyatli tahrirlandi!');
+          navigate('/my-orders', { replace: true });
+          return;
+        }
+
         const nextBroadcastStatus = normalizeBroadcastStatus(response.result?.broadcast);
         setCreatedOrder(response.result?.order || orderData);
         setBroadcastStatus(nextBroadcastStatus);
@@ -170,10 +238,10 @@ export default function CreateOrderPage() {
             : 'Buyurtma muvaffaqiyatli yaratildi!'
         );
       } else {
-        showError(response.message || 'Buyurtma yaratishda xatolik');
+        showError(response.message || (isEditing ? 'Yukni tahrirlashda xatolik' : 'Buyurtma yaratishda xatolik'));
       }
     } catch (error) {
-      console.error('Failed to create order:', error);
+      console.error(isEditing ? 'Failed to update order:' : 'Failed to create order:', error);
       showError(error.response?.data?.message || 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
@@ -317,6 +385,17 @@ export default function CreateOrderPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="container">
+        <div className="card" style={{ maxWidth: 720, margin: '40px auto', textAlign: 'center' }}>
+          <div className="error-message" style={{ marginBottom: 20 }}>{loadError}</div>
+          <button className="btn btn-secondary" onClick={handleCancel}>Buyurtmalarimga qaytish</button>
+        </div>
+      </div>
+    );
+  }
+
   if (createdOrder) {
     return (
       <div className="container">
@@ -351,7 +430,9 @@ export default function CreateOrderPage() {
         alignItems: 'center',
         marginBottom: '20px'
       }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Yangi buyurtma yaratish</h1>
+        <h1 className="page-title" style={{ margin: 0 }}>
+          {isEditing ? 'Yukni tahrirlash' : 'Yangi buyurtma yaratish'}
+        </h1>
         <button
           type="button"
           className="btn btn-secondary"
@@ -532,7 +613,9 @@ export default function CreateOrderPage() {
               className="btn btn-primary"
               disabled={loading}
             >
-              {loading ? 'Yaratilmoqda...' : '✓ Buyurtma yaratish'}
+              {loading
+                ? (isEditing ? 'Saqlanmoqda...' : 'Yaratilmoqda...')
+                : (isEditing ? '✓ O\'zgarishlarni saqlash' : '✓ Buyurtma yaratish')}
             </button>
           </div>
         </form>

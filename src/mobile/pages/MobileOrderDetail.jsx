@@ -263,7 +263,13 @@ export default function MobileOrderDetail() {
 
   return (
     <>
-      <TopBar title="Buyurtma" showBack />
+      <TopBar
+        title="Buyurtma"
+        showBack
+        rightAction="Tahrirlash"
+        rightIcon="✏️"
+        onRightAction={() => navigate(`/mobile/edit-order/${id}`)}
+      />
 
       <main className="m-content m-content-padded" style={{ paddingBottom: isActive || isAppointed ? 100 : 24 }}>
         {/* Status badge and title */}

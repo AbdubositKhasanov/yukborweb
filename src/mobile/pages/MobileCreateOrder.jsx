@@ -4,16 +4,26 @@
  * MUST use identical payload structure as Desktop CreateOrderPage.jsx
  */
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useStaticData } from '../../context/StaticDataContext';
-import { createOrder, getBroadcastStatus, getLocationsAndVehicles, updateOrderOwnerStatusPrompt } from '../../services/api';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  createOrder,
+  getBroadcastStatus,
+  getLocationsAndVehicles,
+  getMyOrder,
+  updateOrder,
+  updateOrderOwnerStatusPrompt,
+} from '../../services/api';
 import {
   formatBroadcastDeliveryCount,
   isBroadcastFinished,
   normalizeBroadcastStatus,
 } from '../../utils/orderText';
 import TopBar from '../components/TopBar';
-import LocationSelector, { getManualLocationName, toOptionalLocationId } from '../../components/LocationSelector';
+import LocationSelector, {
+  getManualLocationName,
+  makeCustomLocationValue,
+  toOptionalLocationId,
+} from '../../components/LocationSelector';
 
 const STEPS = [
   { id: 1, title: 'Yuk ma\'lumotlari' },
@@ -35,9 +45,21 @@ const hasRequiredLocation = (countryValue, regionValue, cityValue) => {
   );
 };
 
+const getLocationFormValues = (location) => {
+  const country = location?.countryId == null ? '' : String(location.countryId);
+  const customValue = makeCustomLocationValue(location?.customName);
+  const region = location?.regionId == null ? customValue : String(location.regionId);
+  const city = location?.cityId == null
+    ? (location?.regionId == null ? '' : customValue)
+    : String(location.cityId);
+
+  return { country, region, city };
+};
+
 export default function MobileCreateOrder() {
   const navigate = useNavigate();
-  const { staticData: contextStaticData } = useStaticData();
+  const { id: orderId } = useParams();
+  const isEditing = Boolean(orderId);
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -70,10 +92,62 @@ export default function MobileCreateOrder() {
     description: '',
   });
 
-  // Load static data exactly like Desktop does
   useEffect(() => {
-    loadStaticData();
-  }, []);
+    let cancelled = false;
+
+    const loadPageData = async () => {
+      setLoadingData(true);
+      try {
+        const [staticResponse, orderResponse] = await Promise.all([
+          getLocationsAndVehicles(),
+          isEditing ? getMyOrder(orderId) : Promise.resolve(null),
+        ]);
+        if (cancelled) return;
+
+        if (staticResponse.code !== 200) {
+          throw new Error(staticResponse.message || 'Ma\'lumotlarni yuklab bo\'lmadi');
+        }
+        setStaticData(staticResponse.result);
+
+        if (isEditing) {
+          if (orderResponse?.code !== 200 || !orderResponse.result) {
+            throw new Error(orderResponse?.message || 'Yuk topilmadi');
+          }
+
+          const order = orderResponse.result;
+          const from = getLocationFormValues(order.fromLocation);
+          const to = getLocationFormValues(order.toLocation);
+          setFormData({
+            cargoName: order.cargoName || '',
+            weight: order.weightKg == null ? '' : String(order.weightKg),
+            vehicleTypeId: order.vehicleTypeId == null ? '' : String(order.vehicleTypeId),
+            fromCountry: from.country,
+            fromRegion: from.region,
+            fromCity: from.city,
+            toCountry: to.country,
+            toRegion: to.region,
+            toCity: to.city,
+            priceUzs: order.priceUzs == null ? '' : String(order.priceUzs),
+            additionalPhone: order.additionalPhone || '',
+            description: order.description && order.description !== 'null' ? order.description : '',
+          });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrors({
+            load: error.response?.data?.message || error.message || 'Ma\'lumotlarni yuklab bo\'lmadi',
+          });
+        }
+      } finally {
+        if (!cancelled) setLoadingData(false);
+      }
+    };
+
+    loadPageData();
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditing, orderId]);
 
   useEffect(() => {
     const broadcastId = broadcastStatus?.broadcastId;
@@ -99,20 +173,6 @@ export default function MobileCreateOrder() {
       clearInterval(interval);
     };
   }, [broadcastStatus?.broadcastId, broadcastStatus?.status]);
-
-  const loadStaticData = async () => {
-    setLoadingData(true);
-    try {
-      const response = await getLocationsAndVehicles();
-      if (response.code === 200) {
-        setStaticData(response.result);
-      }
-    } catch (error) {
-      console.error('Failed to load static data:', error);
-    } finally {
-      setLoadingData(false);
-    }
-  };
 
   const updateField = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -184,19 +244,28 @@ export default function MobileCreateOrder() {
         priceUzs: parseInt(formData.priceUzs),
       };
 
-      const response = await createOrder(orderData);
+      const response = isEditing
+        ? await updateOrder(orderId, orderData)
+        : await createOrder(orderData);
 
       if (response.code === 200) {
+        if (isEditing) {
+          navigate('/mobile/orders', { replace: true });
+          return;
+        }
+
         setCreatedOrder(response.result?.order || orderData);
         setBroadcastStatus(normalizeBroadcastStatus(response.result?.broadcast));
         setOwnerPromptAvailable(Boolean(response.result?.ownerStatusPromptAvailable));
         setOwnerPromptChoice(null);
         setOwnerPromptError('');
       } else {
-        setErrors({ submit: response.message || 'Buyurtma yaratishda xatolik' });
+        setErrors({
+          submit: response.message || (isEditing ? 'Yukni tahrirlashda xatolik' : 'Buyurtma yaratishda xatolik'),
+        });
       }
     } catch (error) {
-      console.error('Failed to create order:', error);
+      console.error(isEditing ? 'Failed to update order:' : 'Failed to create order:', error);
       setErrors({ submit: error.response?.data?.message || 'Xatolik yuz berdi' });
     } finally {
       setLoading(false);
@@ -374,9 +443,26 @@ export default function MobileCreateOrder() {
   if (loadingData) {
     return (
       <>
-        <TopBar title="Yangi buyurtma" showBack onBack={handleBack} />
+        <TopBar title={isEditing ? 'Yukni tahrirlash' : 'Yangi buyurtma'} showBack onBack={handleBack} />
         <main className="m-content m-content-padded" style={{ display: 'flex', justifyContent: 'center', paddingTop: 60 }}>
           <div className="m-spinner" style={{ width: 32, height: 32 }} />
+        </main>
+      </>
+    );
+  }
+
+  if (errors.load) {
+    return (
+      <>
+        <TopBar title="Yukni tahrirlash" showBack onBack={() => navigate('/mobile/orders')} />
+        <main className="m-content m-content-padded">
+          <div className="m-empty">
+            <div className="m-empty-icon">❌</div>
+            <h3 className="m-empty-title">{errors.load}</h3>
+            <button className="m-btn m-btn-primary" onClick={() => navigate('/mobile/orders')}>
+              Buyurtmalarimga qaytish
+            </button>
+          </div>
         </main>
       </>
     );
@@ -412,7 +498,7 @@ export default function MobileCreateOrder() {
   return (
     <>
       <TopBar
-        title="Yangi buyurtma"
+        title={isEditing ? 'Yukni tahrirlash' : 'Yangi buyurtma'}
         showBack
         onBack={handleBack}
       />
@@ -573,10 +659,10 @@ export default function MobileCreateOrder() {
               {loading ? (
                 <>
                   <span className="m-spinner" style={{ width: 20, height: 20 }} />
-                  Yaratilmoqda...
+                  {isEditing ? 'Saqlanmoqda...' : 'Yaratilmoqda...'}
                 </>
               ) : (
-                '✓ Yaratish'
+                isEditing ? '✓ Saqlash' : '✓ Yaratish'
               )}
             </button>
           )}

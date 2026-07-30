@@ -24,6 +24,7 @@ import ClubMembershipModal from '../../components/ClubMembershipModal';
 import CargoOwnerToggle from '../../components/CargoOwnerToggle';
 import LocationSelector from '../../components/LocationSelector';
 import { showError, showSuccess } from '../../utils/toast';
+import { sortCargosByMatch } from '../../utils/cargoMatch';
 
 const SENDER_FILTER_STORAGE_KEY = 'cargoSenderFilter';
 const MOBILE_CARGO_FEED_STATE_KEY = 'mobileCargoFeedState';
@@ -116,8 +117,6 @@ export default function MobileHome({ internalOnly = false }) {
 
   // Data state - matches Desktop SearchPage.jsx exactly
   const [cargos, setCargos] = useState([]);
-  const [internalCargos, setInternalCargos] = useState([]);
-  const [otherCargos, setOtherCargos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(() => {
@@ -264,6 +263,7 @@ export default function MobileHome({ internalOnly = false }) {
         vehicleType: filters.vehicleType || undefined,
         minWeight: filters.minWeight || undefined,
         maxWeight: filters.maxWeight || undefined,
+        matchMode: fromDriver ? 'driver' : undefined,
         orderType: internalOnly ? undefined : selectedOrderType,
         page,
         ...(searchMode === 'simple' && textQuery.trim() ? { query: textQuery.trim() } : {}),
@@ -286,9 +286,7 @@ export default function MobileHome({ internalOnly = false }) {
             setPage((current) => Math.max(0, current - 1));
             return;
           }
-          setInternalCargos(internal);
-          setOtherCargos(other);
-          setCargos([...internal, ...other]);
+          setCargos(sortCargosByMatch([...internal, ...other]));
           setHasMore(response.result?.hasMore === true);
         } else {
           const cargoPage = normalizeCargoPage(response.result);
@@ -296,9 +294,7 @@ export default function MobileHome({ internalOnly = false }) {
             setPage((current) => Math.max(0, current - 1));
             return;
           }
-          setInternalCargos([]);
-          setOtherCargos([]);
-          setCargos(cargoPage.items);
+          setCargos(fromDriver ? sortCargosByMatch(cargoPage.items) : cargoPage.items);
           setHasMore(cargoPage.hasMore);
         }
       } else {
@@ -315,8 +311,6 @@ export default function MobileHome({ internalOnly = false }) {
 
   const handleAssigned = (cargoId) => {
     setCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
-    setInternalCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
-    setOtherCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
   };
 
   // Initial load
@@ -691,6 +685,9 @@ export default function MobileHome({ internalOnly = false }) {
           {fromDriver && driverName && (
             <div style={{ padding: '12px 16px', background: '#d1ecf1', marginBottom: 0, fontSize: 14, color: '#0c5460' }}>
               <strong>👤 {driverName}</strong> uchun yuk qidirilmoqda
+              <div style={{ marginTop: 4, fontSize: 12, lineHeight: 1.4 }}>
+                Shahar, qayerga manzili va tonna bo&apos;yicha eng mos yuklar yuqorida chiqadi.
+              </div>
             </div>
           )}
 
@@ -751,75 +748,22 @@ export default function MobileHome({ internalOnly = false }) {
             </div>
           ) : (
             <>
-              {fromDriver && isInternalDispatcher && !internalOnly ? (
-                <div style={{ display: 'grid', gap: 16, padding: '12px 0' }}>
-                  <section>
-                    <h2 style={{ padding: '0 12px', margin: '0 0 8px', fontSize: 17, color: '#92400e' }}>
-                      ⭐ Ichki yuklar ({internalCargos.length})
-                    </h2>
-                    {internalCargos.length > 0 ? (
-                      <div className="m-card m-card-list">
-                        {internalCargos.map((cargo, index) => (
-                          <CargoListItem
-                            key={cargo.id || cargo._id || index}
-                            cargo={cargo}
-                            onClick={handleOpenCargo}
-                            showOfferButton
-                            driverId={driverId}
-                            driverReference={driverReference}
-                            canOffer
-                            assignDirectly
-                            onAssigned={handleAssigned}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ padding: '14px 16px', color: 'var(--m-text-muted)' }}>Mos ichki yuk topilmadi</div>
-                    )}
-                  </section>
-
-                  <section>
-                    <h2 style={{ padding: '0 12px', margin: '0 0 8px', fontSize: 17, color: '#475569' }}>
-                      Boshqa yuklar ({otherCargos.length})
-                    </h2>
-                    {otherCargos.length > 0 ? (
-                      <div className="m-card m-card-list">
-                        {otherCargos.map((cargo, index) => (
-                          <CargoListItem
-                            key={cargo.id || cargo._id || index}
-                            cargo={cargo}
-                            onClick={handleOpenCargo}
-                            showOfferButton
-                            driverId={driverId}
-                            driverReference={driverReference}
-                            canOffer
-                            assignDirectly
-                            onAssigned={handleAssigned}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ padding: '14px 16px', color: 'var(--m-text-muted)' }}>Mos boshqa yuk topilmadi</div>
-                    )}
-                  </section>
-                </div>
-              ) : (
-                <div className="m-card m-card-list">
-                  {cargos.map((cargo, index) => (
-                    <CargoListItem
-                      key={cargo.id || cargo._id || index}
-                      cargo={cargo}
-                      onClick={handleOpenCargo}
-                      showOfferButton={fromDriver && !!permissions?.offerToDriver}
-                      driverId={driverId}
-                      driverReference={driverReference}
-                      canOffer={!!permissions?.offerToDriver}
-                      showAssignToDriverButton={internalOnly}
-                      onAssigned={handleAssigned}
-                    />
-                  ))}
-                </div>
-              )}
+              <div className="m-card m-card-list">
+                {cargos.map((cargo, index) => (
+                  <CargoListItem
+                    key={cargo.id || cargo._id || index}
+                    cargo={cargo}
+                    onClick={handleOpenCargo}
+                    showOfferButton={fromDriver && (isInternalDispatcher || !!permissions?.offerToDriver)}
+                    driverId={driverId}
+                    driverReference={driverReference}
+                    canOffer={isInternalDispatcher || !!permissions?.offerToDriver}
+                    assignDirectly={fromDriver && isInternalDispatcher}
+                    showAssignToDriverButton={internalOnly}
+                    onAssigned={handleAssigned}
+                  />
+                ))}
+              </div>
 
               {/* Pagination */}
               {(page > 0 || hasMore) && <div style={{

@@ -413,31 +413,42 @@ export default function MobileMyOrders() {
                   </div>
 
                   {/* Action buttons - matches Desktop */}
-                  {isActive && (
-                    <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '1px solid var(--m-border)' }}>
-                      {/* Find transport button */}
-                      {permissions?.findTransportForOrder && (
-                        <button
-                          className="m-btn m-btn-success"
-                          onClick={(e) => handleFindTransport(e, order)}
-                          style={{ flex: 2, fontSize: 13, padding: '8px 12px' }}
-                        >
-                          🚚 Mashina topish
-                        </button>
-                      )}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 8, borderTop: '1px solid var(--m-border)' }}>
+                    <button
+                      className="m-btn m-btn-secondary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/mobile/edit-order/${order.id || order._id}`);
+                      }}
+                      style={{ flex: 1, minWidth: 120, fontSize: 13, padding: '8px 12px' }}
+                    >
+                      ✏️ Tahrirlash
+                    </button>
 
-                      {/* Broadcast button - only for internal dispatcher */}
-                      {isInternalDispatcher && (
-                        <button
-                          className="m-btn"
-                          onClick={(e) => handleOpenBroadcast(e, order)}
-                          style={{ flex: 1, fontSize: 13, padding: '8px 12px', background: '#6f42c1', color: 'white' }}
-                        >
-                          📡
-                        </button>
-                      )}
+                    {/* Find transport button */}
+                    {isActive && permissions?.findTransportForOrder && (
+                      <button
+                        className="m-btn m-btn-success"
+                        onClick={(e) => handleFindTransport(e, order)}
+                        style={{ flex: 2, fontSize: 13, padding: '8px 12px' }}
+                      >
+                        🚚 Mashina topish
+                      </button>
+                    )}
 
-                      {/* Delete button */}
+                    {/* Broadcast button - only for internal dispatcher */}
+                    {isActive && isInternalDispatcher && (
+                      <button
+                        className="m-btn"
+                        onClick={(e) => handleOpenBroadcast(e, order)}
+                        style={{ flex: 1, fontSize: 13, padding: '8px 12px', background: '#6f42c1', color: 'white' }}
+                      >
+                        📡
+                      </button>
+                    )}
+
+                    {/* Delete button */}
+                    {isActive && (
                       <button
                         className="m-btn m-btn-danger"
                         onClick={(e) => {
@@ -448,8 +459,8 @@ export default function MobileMyOrders() {
                       >
                         🗑️
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Time */}
                   <div style={{ fontSize: 12, color: 'var(--m-text-muted)', marginTop: 8 }}>

@@ -12,6 +12,7 @@ import SenderTypeBadge from '../../components/SenderTypeBadge';
 import { buildOriginalCargoMessage, PRIVATE_GROUP_MESSAGE_NOTE } from '../../utils/originalMessage';
 import { canOpenTelegramMessageLink, CONTACT_FALLBACK_MESSAGE } from '../../utils/telegramLinks';
 import AssignToDriverModal from '../../components/AssignToDriverModal';
+import { getCargoMatchPresentation } from '../../utils/cargoMatch';
 
 export default function CargoListItem({
   cargo,
@@ -141,15 +142,33 @@ export default function CargoListItem({
   const canOpenMessageLink = canOpenTelegramMessageLink(cargo.messageUrl);
   const hasLeadingMeta = Boolean(cargo.vehicleType || cargo.priceUzs);
   const isInternalLoad = cargo.source === 'bot';
+  const matchPresentation = getCargoMatchPresentation(cargo.matchInfo);
 
   return (
     <>
       <div
         className="m-list-item m-card-tap"
         onClick={handleClick}
-        style={isInternalLoad ? { borderLeft: '4px solid #f59e0b', background: '#fffbeb' } : undefined}
+        style={matchPresentation
+          ? { borderLeft: `4px solid ${matchPresentation.border}`, background: matchPresentation.background }
+          : isInternalLoad ? { borderLeft: '4px solid #f59e0b', background: '#fffbeb' } : undefined}
       >
         <div className="m-list-item-content">
+          {matchPresentation && (
+            <div style={{ marginBottom: 6, color: matchPresentation.color }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11, fontWeight: 800 }}>
+                <span>{matchPresentation.icon} {matchPresentation.label}</span>
+                <span>· {cargo.matchInfo.score}%</span>
+              </div>
+              <div style={{ marginTop: 3, display: 'grid', gap: 2, fontSize: 10, lineHeight: 1.3 }}>
+                {cargo.matchInfo.criteria.map((criterion) => (
+                  <span key={criterion.key}>
+                    {criterion.status === 'match' ? '✓' : criterion.status === 'unknown' ? '?' : '•'} {criterion.detail}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           <p className="m-list-item-title" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span>
               {cargo.cargoName || cargo.cargo_name || 'Yuk'}

@@ -362,6 +362,13 @@ export default function MyOrdersPage() {
 
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
+                    className="btn btn-secondary"
+                    onClick={() => navigate(`/edit-order/${order.id}`)}
+                    style={{ flex: 1 }}
+                  >
+                    ✏️ Tahrirlash
+                  </button>
+                  <button
                     className="btn btn-primary"
                     onClick={() => handleShowPhone(order.additionalPhone)}
                     style={{ flex: 1 }}

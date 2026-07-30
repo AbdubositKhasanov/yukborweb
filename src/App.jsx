@@ -212,6 +212,14 @@ function AppContent() {
             }
           />
           <Route
+            path="/edit-order/:id"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <CreateOrderPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/internal-loads"
             element={
               <InternalDispatcherRoute isAuthenticated={isAuthenticated}>

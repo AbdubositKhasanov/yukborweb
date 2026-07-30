@@ -10,6 +10,7 @@ import SenderTypeBadge from './SenderTypeBadge';
 import { formatTimeAgo } from '../utils/formatTime';
 import { formatOrderPrice } from '../utils/orderText';
 import { buildOriginalCargoMessage, PRIVATE_GROUP_MESSAGE_NOTE } from '../utils/originalMessage';
+import { getCargoMatchPresentation } from '../utils/cargoMatch';
 
 export default function CargoCard({
   cargo,
@@ -40,6 +41,7 @@ export default function CargoCard({
   const [showAssignModal, setShowAssignModal] = useState(false);
   const hasMessageAction = Boolean(cargo.messageUrl || cargo.messageIsPrivateGroup);
   const isInternalLoad = cargo.source === 'bot';
+  const matchPresentation = getCargoMatchPresentation(cargo.matchInfo);
 
   const handleRequestPhone = async () => {
     setLoading(true);
@@ -139,8 +141,32 @@ export default function CargoCard({
     <>
       <div
         className="card"
-        style={isInternalLoad ? { border: '2px solid #f59e0b', background: '#fffbeb' } : undefined}
+        style={matchPresentation
+          ? { border: `2px solid ${matchPresentation.border}`, background: matchPresentation.background }
+          : isInternalLoad ? { border: '2px solid #f59e0b', background: '#fffbeb' } : undefined}
       >
+        {matchPresentation && (
+          <div style={{
+            marginBottom: 12,
+            padding: '10px 12px',
+            borderRadius: 8,
+            background: '#fff',
+            border: `1px solid ${matchPresentation.border}`,
+            color: matchPresentation.color,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontWeight: 800 }}>
+              <span>{matchPresentation.icon} {matchPresentation.label}</span>
+              <span>{cargo.matchInfo.score}%</span>
+            </div>
+            <div style={{ display: 'grid', gap: 3, marginTop: 6, fontSize: 12, lineHeight: 1.35 }}>
+              {cargo.matchInfo.criteria.map((criterion) => (
+                <span key={criterion.key}>
+                  {criterion.status === 'match' ? '✓' : criterion.status === 'unknown' ? '?' : '•'} {criterion.detail}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
           <h3 className="card-title" style={{ margin: 0 }}>
             {cargo.cargoName || `${cargo.fromCity || ''} → ${cargo.toCity || ''}`}
