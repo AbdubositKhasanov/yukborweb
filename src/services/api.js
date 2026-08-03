@@ -1155,6 +1155,9 @@ export const getViewHistory = async (params = {}) => {
   };
   if (params.dispatcherId) queryParams.dispatcherId = params.dispatcherId;
   if (params.targetType && params.targetType !== 'all') queryParams.targetType = params.targetType;
+  if (params.search?.trim()) queryParams.search = params.search.trim();
+  if (params.from) queryParams.from = params.from;
+  if (params.to) queryParams.to = params.to;
   const response = await apiClient.get('/view-history', { params: queryParams });
   return response.data;
 };

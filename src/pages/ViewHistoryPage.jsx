@@ -36,6 +36,12 @@ function formatDate(value) {
   });
 }
 
+function dayBoundaryEpoch(date, endOfDay = false) {
+  if (!date) return undefined;
+  const parsed = new Date(`${date}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}`);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.getTime();
+}
+
 function remainingTime(expiresAt, serverTime) {
   const remainingMinutes = Math.max(0, Math.ceil((expiresAt - serverTime) / 60_000));
   if (remainingMinutes < 60) return `${remainingMinutes} daqiqa`;
@@ -402,6 +408,10 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
   const [dispatchers, setDispatchers] = useState([]);
   const [dispatcherId, setDispatcherId] = useState('');
   const [targetType, setTargetType] = useState('all');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -436,6 +446,9 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
       const response = await getViewHistory({
         dispatcherId: admin ? dispatcherId : '',
         targetType,
+        search,
+        from: dayBoundaryEpoch(fromDate),
+        to: dayBoundaryEpoch(toDate, true),
         page,
         size: 50,
       });
@@ -449,7 +462,7 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
     } finally {
       setLoading(false);
     }
-  }, [admin, dispatcherId, page, targetType]);
+  }, [admin, dispatcherId, fromDate, page, search, targetType, toDate]);
 
   useEffect(() => {
     loadHistory();
@@ -462,6 +475,22 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
 
   const changeDispatcher = (value) => {
     setDispatcherId(value);
+    setPage(0);
+  };
+
+  const applySearch = (event) => {
+    event.preventDefault();
+    setSearch(searchInput.trim());
+    setPage(0);
+  };
+
+  const clearFilters = () => {
+    setDispatcherId('');
+    setTargetType('all');
+    setSearchInput('');
+    setSearch('');
+    setFromDate('');
+    setToDate('');
     setPage(0);
   };
 
@@ -528,31 +557,74 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
         </article>
       </section>
 
-      <section className="view-history-filters">
-        {admin && (
+      <section className="view-history-filters view-history-filters--advanced">
+        <div className="view-history-filter-fields">
+          {admin && (
+            <label>
+              <span>Ichki logist</span>
+              <select value={dispatcherId} onChange={(event) => changeDispatcher(event.target.value)}>
+                <option value="">Barcha ichki logistlar</option>
+                {dispatchers.map((dispatcher) => (
+                  <option key={dispatcher.id} value={dispatcher.chatId}>
+                    {dispatcher.name || 'Ismsiz'} · {dispatcher.phone || dispatcher.chatId}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
-            <span>Ichki dispetcher</span>
-            <select value={dispatcherId} onChange={(event) => changeDispatcher(event.target.value)}>
-              <option value="">Barcha ichki dispetcherlar</option>
-              {dispatchers.map((dispatcher) => (
-                <option key={dispatcher.id} value={dispatcher.chatId}>
-                  {dispatcher.name || 'Ismsiz'} · {dispatcher.phone || dispatcher.chatId}
-                </option>
-              ))}
-            </select>
+            <span>Sana oralig‘i</span>
+            <div className="view-history-date-range">
+              <input
+                type="date"
+                aria-label="Dan sana"
+                value={fromDate}
+                onChange={(event) => {
+                  setFromDate(event.target.value);
+                  setPage(0);
+                }}
+              />
+              <span>—</span>
+              <input
+                type="date"
+                aria-label="Gacha sana"
+                value={toDate}
+                onChange={(event) => {
+                  setToDate(event.target.value);
+                  setPage(0);
+                }}
+              />
+            </div>
           </label>
-        )}
-        <div className="view-history-types" role="group" aria-label="Ma’lumot turi">
-          {TYPE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={targetType === option.value ? 'active' : ''}
-              onClick={() => changeType(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
+          <form className="view-history-search" onSubmit={applySearch}>
+            <label htmlFor="view-history-search">Yuk, yo‘nalish, raqam yoki xodim</label>
+            <div>
+              <input
+                id="view-history-search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Qidirish"
+              />
+              <button type="submit">Qidirish</button>
+            </div>
+          </form>
+        </div>
+        <div className="view-history-filter-actions">
+          <div className="view-history-types" role="group" aria-label="Ma’lumot turi">
+            {TYPE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={targetType === option.value ? 'active' : ''}
+                onClick={() => changeType(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="view-history-clear-filters" onClick={clearFilters}>
+            Tozalash
+          </button>
         </div>
       </section>
 
