@@ -28,6 +28,7 @@ export function getMobileTabs(userRole = 'logist', navigation = null, isInternal
   const visibleSections = navigation?.roleSections;
   return tabs.filter((tab) => {
     if (tab.requireDispatcher && !isInternalDispatcher) return false;
+    if (isInternalDispatcher && tab.id === 'internal') return true;
     if (!Array.isArray(visibleSections)) return true;
     return visibleSections.includes(tab.section);
   });

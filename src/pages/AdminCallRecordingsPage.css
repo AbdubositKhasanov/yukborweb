@@ -1,0 +1,179 @@
+.admin-call-history-filters {
+  display: grid;
+  align-items: stretch;
+}
+
+.admin-call-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.admin-call-filter-grid > label,
+.admin-call-history-search {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: #596a80;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-call-filter-grid input,
+.admin-call-filter-grid select,
+.admin-call-history-search input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #ccd8e5;
+  border-radius: 10px;
+  background: #fff;
+  color: #1f3045;
+  font: inherit;
+}
+
+.admin-call-history-search {
+  grid-column: span 2;
+}
+
+.admin-call-history-search > div {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-call-history-search button,
+.admin-call-clear-filters {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid #cbd9e8;
+  border-radius: 10px;
+  background: #fff;
+  color: #263b55;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.admin-call-filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #edf1f5;
+}
+
+.admin-call-clear-filters {
+  color: #596a80;
+}
+
+.admin-call-history-item {
+  cursor: default;
+}
+
+.admin-call-history-item:hover {
+  border-color: #e1e8f0;
+  box-shadow: none;
+  transform: none;
+}
+
+.admin-call-history-icon {
+  background: #eef4fb;
+  color: #2763a7;
+  font-size: 20px;
+}
+
+.admin-call-history-icon--incoming {
+  background: #e5f7ee;
+  color: #14754c;
+}
+
+.admin-call-history-direction--incoming {
+  background: #e5f7ee;
+  color: #14754c;
+}
+
+.admin-call-history-direction--outgoing {
+  background: #eaf2ff;
+  color: #2763a7;
+}
+
+.admin-call-history-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 360px);
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-call-history-match {
+  justify-self: start;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff2d9;
+  color: #8b6110;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-call-history-match.is-matchable {
+  background: #e5f7ee;
+  color: #14754c;
+}
+
+.admin-call-history-audio-action,
+.admin-call-history-audio {
+  width: 100%;
+}
+
+.admin-call-history-audio {
+  height: 42px;
+}
+
+.admin-call-history-audio-action .view-history-audio-error {
+  margin-top: 7px;
+}
+
+@media (max-width: 900px) {
+  .admin-call-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-call-history-search {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-call-filter-grid,
+  .admin-call-history-search {
+    grid-template-columns: 1fr;
+    grid-column: auto;
+  }
+
+  .admin-call-history-search > div {
+    display: grid;
+  }
+
+  .admin-call-filter-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-call-filter-actions .view-history-types {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-call-history-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-call-clear-filters {
+    width: 100%;
+  }
+}

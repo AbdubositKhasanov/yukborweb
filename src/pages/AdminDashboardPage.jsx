@@ -64,6 +64,12 @@ const ADMIN_LINKS = [
     description: 'Ichki dispetcherlarning oxirgi 24 soatdagi yuk va transport ko‘rishlari.',
   },
   {
+    section: 'adminCallRecordings',
+    label: 'Qo‘ng‘iroq yozuvlari',
+    path: '/admin/call-recordings',
+    description: 'Barcha call yozuvlari, mos kelmagan qisqa raqamlar va audio ijrosi.',
+  },
+  {
     section: 'adminSettings',
     label: 'Sozlamalar',
     path: '/admin/settings',

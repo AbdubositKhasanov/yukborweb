@@ -144,7 +144,7 @@ apiClient.interceptors.request.use(
       config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
       config.headers.Pragma = 'no-cache';
     }
-    
+
     // CSRF token (if available)
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
     if (csrfToken) {
@@ -335,6 +335,12 @@ export const searchPlatformCargos = async (filters = {}) => {
   return cachedGet('/internal/cargos', params, { skipCache: true });
 };
 
+export const claimCargoAsInternal = async (id) => {
+  const response = await apiClient.post(`/internal/cargos/${id}/claim`);
+  apiCache.invalidate('orders');
+  return response.data;
+};
+
 export const searchDispatcherCargos = async (filters = {}) => {
   trackSearch('dispatcher_cargo', filters);
   const params = {
@@ -447,6 +453,18 @@ export const searchTransports = async (filters = {}) => {
   return cachedGet('/transports', params, { skipCache: true });
 };
 
+export const searchInternalTransports = async (filters = {}) => {
+  const params = {
+    ...(filters.fromCountry && { from_country: filters.fromCountry }),
+    ...(filters.fromRegion && { from_region: filters.fromRegion }),
+    ...(filters.fromCity && { from_city: filters.fromCity }),
+    ...(filters.vehicleType && { vehicle_type: filters.vehicleType }),
+    ...(filters.maxWeight && { max_weight: filters.maxWeight }),
+    ...(filters.page !== undefined && { page: filters.page }),
+  };
+  return cachedGet('/internal/transports', params, { skipCache: true });
+};
+
 // ============================================
 // STATIC DATA
 // ============================================
@@ -554,6 +572,12 @@ export const updateTransport = async (id, transportData) => {
   const response = await apiClient.put(`/update/transport/${id}`, transportData);
   apiCache.invalidate('transports');
   trackTransportUpdate(id);
+  return response.data;
+};
+
+export const updateInternalTransport = async (id, transportData) => {
+  const response = await apiClient.put(`/internal/transports/${id}`, transportData);
+  apiCache.invalidate('transports');
   return response.data;
 };
 
@@ -1137,6 +1161,32 @@ export const getViewHistory = async (params = {}) => {
 
 export const getViewHistoryDetail = async (historyId) => {
   const response = await apiClient.get(`/view-history/${historyId}`);
+  return response.data;
+};
+
+export const getCallRecordingAudio = async (recordingId, signal) => {
+  const response = await apiClient.get(`/call-recordings/${recordingId}/audio`, {
+    responseType: 'blob',
+    signal,
+    timeout: 60_000,
+  });
+  return response.data;
+};
+
+export const adminGetCallRecordings = async (params = {}) => {
+  const queryParams = {
+    page: params.page ?? 0,
+    size: params.size ?? 50,
+  };
+  if (params.search?.trim()) queryParams.search = params.search.trim();
+  if (params.phoneMatch && params.phoneMatch !== 'all') queryParams.phoneMatch = params.phoneMatch;
+  if (params.operatorId) queryParams.operatorId = params.operatorId;
+  if (params.deviceId?.trim()) queryParams.deviceId = params.deviceId.trim();
+  if (params.direction && params.direction !== 'all') queryParams.direction = params.direction;
+  if (params.status && params.status !== 'all') queryParams.status = params.status;
+  if (params.from) queryParams.from = params.from;
+  if (params.to) queryParams.to = params.to;
+  const response = await apiClient.get('/admin/call-recordings', { params: queryParams });
   return response.data;
 };
 

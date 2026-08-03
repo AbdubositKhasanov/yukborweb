@@ -25,6 +25,7 @@ const ADMIN_PROFILE_LINKS = [
   { section: 'adminUserbots', label: 'Admin: userbotlar', path: '/mobile/admin/userbots' },
   { section: 'adminHarbingers', label: 'Admin: xabarchilar', path: '/mobile/admin/harbingers' },
   { section: 'adminViewHistory', label: 'Admin: ko‘rish tarixi', path: '/mobile/admin/view-history' },
+  { section: 'adminCallRecordings', label: 'Admin: qo‘ng‘iroq yozuvlari', path: '/mobile/admin/call-recordings' },
 ];
 
 const normalizeMobileRole = (userType) => {

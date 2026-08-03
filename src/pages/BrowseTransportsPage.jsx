@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { searchTransports, getLocationsAndVehicles, getTransportDetails, getUserMe, offerForDriver } from '../services/api';
+import { searchTransports, searchInternalTransports, getLocationsAndVehicles, getTransportDetails, getUserMe, offerForDriver } from '../services/api';
 import { formatTimeAgo } from '../utils/formatTime';
 import { openPremiumUpgrade } from '../utils/premiumUpgrade';
 import { showError } from '../utils/toast';
 import LocationSelector from '../components/LocationSelector';
 import ReminderComposer from '../components/ReminderComposer';
+import InternalTransportEditModal from '../components/InternalTransportEditModal';
 
 const PHONE_UPGRADE_MESSAGE = 'Transport telefon raqamini ko\'rish uchun faol tarif kerak yoki bepul limitingiz tugagan.';
 
@@ -66,6 +67,12 @@ export default function BrowseTransportsPage() {
     }
   }, [page]);
 
+  useEffect(() => {
+    if (currentUser?.isInternalDispatcher === true || currentUser?.isAdmin === true) {
+      loadTransports();
+    }
+  }, [currentUser?.isInternalDispatcher, currentUser?.isAdmin]);
+
   const loadStaticData = async () => {
     try {
       const response = await getLocationsAndVehicles();
@@ -91,7 +98,10 @@ export default function BrowseTransportsPage() {
         page
       };
 
-      const response = await searchTransports(filters);
+      const canManageTransports = currentUser?.isInternalDispatcher === true || currentUser?.isAdmin === true;
+      const response = canManageTransports
+        ? await searchInternalTransports(filters)
+        : await searchTransports(filters);
       if (response.code === 200) {
         setTransports(response.result);
       } else {
@@ -103,7 +113,7 @@ export default function BrowseTransportsPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fromCountry, fromRegion, fromCity, vehicleType, maxWeight, page]);
+  }, [fromCountry, fromRegion, fromCity, vehicleType, maxWeight, page, currentUser]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -123,6 +133,11 @@ export default function BrowseTransportsPage() {
     setVehicleType('');
     setMaxWeight('');
     setPage(0);
+  };
+
+  const handleTransportUpdated = (updated) => {
+    if (!updated?.id) return;
+    setTransports((items) => items.map((item) => item.id === updated.id ? { ...item, ...updated } : item));
   };
 
   const filteredFromRegions = staticData?.regions.filter(
@@ -332,7 +347,11 @@ export default function BrowseTransportsPage() {
                 orderInfo={orderInfo}
                 currentUser={currentUser}
                 userAccessLoading={userAccessLoading}
-                onReminder={currentUser?.isInternalDispatcher === true
+                canEdit={currentUser?.isInternalDispatcher === true || currentUser?.isAdmin === true}
+                isAdmin={currentUser?.isAdmin === true}
+                staticData={staticData}
+                onUpdated={handleTransportUpdated}
+                onReminder={(currentUser?.isInternalDispatcher === true || currentUser?.isAdmin === true)
                   ? (item) => setReminderSubject({
                     type: 'driver',
                     id: String(item.chatId || item.userObjectId || item.id),
@@ -373,7 +392,7 @@ export default function BrowseTransportsPage() {
   );
 }
 
-function TransportCard({ transport, showOfferButton = false, orderId = null, orderInfo = null, currentUser = null, userAccessLoading = false, onReminder = null }) {
+function TransportCard({ transport, showOfferButton = false, orderId = null, orderInfo = null, currentUser = null, userAccessLoading = false, onReminder = null, canEdit = false, isAdmin = false, staticData = null, onUpdated = null }) {
   const [showDetails, setShowDetails] = useState(false);
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -381,6 +400,15 @@ function TransportCard({ transport, showOfferButton = false, orderId = null, ord
   const [offerSuccess, setOfferSuccess] = useState(false);
   const [offerError, setOfferError] = useState(null);
   const [detailsNotice, setDetailsNotice] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const displayedTransport = details || transport;
+
+  const handleSaved = (updated) => {
+    if (!updated) return;
+    setDetails((current) => current ? { ...current, ...updated } : updated);
+    onUpdated?.(updated);
+  };
 
   const handleShowDetails = async () => {
     if (showDetails) {
@@ -509,6 +537,14 @@ function TransportCard({ transport, showOfferButton = false, orderId = null, ord
             {formatTimeAgo(transport.time)}
           </p>
         )}
+
+        {isAdmin && displayedTransport.lastEditedAt && (
+          <div style={{ marginTop: 12, padding: 10, borderRadius: 8, background: '#f3f0ff', color: '#4c1d95', fontSize: 12 }}>
+            <strong>Oxirgi tahrir:</strong>{' '}
+            {displayedTransport.lastEditedByName || displayedTransport.lastEditedByUsername || displayedTransport.lastEditedBy || 'Noma\'lum user'}
+            {' · '}{formatTimeAgo(displayedTransport.lastEditedAt)}
+          </div>
+        )}
       </div>
 
       <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -533,6 +569,13 @@ function TransportCard({ transport, showOfferButton = false, orderId = null, ord
             ◷ Haydovchiga reminder
           </button>
         )}
+
+
+        {canEdit && (
+          <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(true)} style={{ width: '100%' }}>
+            ✎ Tahrirlash
+          </button>
+        )}
         
         <button
           className="btn btn-primary"
@@ -543,6 +586,13 @@ function TransportCard({ transport, showOfferButton = false, orderId = null, ord
           {userAccessLoading ? 'Ruxsat tekshirilmoqda...' : loading ? 'Yuklanmoqda...' : showDetails ? 'Yopish' : 'Batafsil ko\'rish'}
         </button>
       </div>
+      <InternalTransportEditModal
+        isOpen={showEditModal}
+        transport={displayedTransport}
+        staticData={staticData}
+        onClose={() => setShowEditModal(false)}
+        onSaved={handleSaved}
+      />
     </div>
   );
 }

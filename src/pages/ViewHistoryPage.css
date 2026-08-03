@@ -166,7 +166,10 @@
   cursor: pointer;
   font: inherit;
   text-align: left;
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .view-history-item:hover,
@@ -331,8 +334,14 @@
 }
 
 @keyframes view-history-drawer-in {
-  from { transform: translateX(28px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(28px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .view-history-drawer > header {
@@ -483,6 +492,163 @@
   margin: 0 0 10px;
   background: #fff8e7;
   color: #765b17;
+}
+
+.view-history-call-section-title,
+.view-history-call-recording-head,
+.view-history-call-recording-meta,
+.view-history-audio-load,
+.view-history-audio-error {
+  display: flex;
+  align-items: center;
+}
+
+.view-history-call-section-title {
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 13px;
+}
+
+.view-history-call-section-title h3 {
+  margin-bottom: 3px !important;
+}
+
+.view-history-call-section-title p {
+  margin: 0;
+  color: #728197;
+  font-size: 12px;
+}
+
+.view-history-call-section-title > strong {
+  display: grid;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 9px;
+  place-items: center;
+  border-radius: 999px;
+  background: #e5f7ee;
+  color: #14754c;
+  font-size: 13px;
+}
+
+.view-history-call-list {
+  display: grid;
+  gap: 10px;
+}
+
+.view-history-call-recording {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid #dfe7f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.view-history-call-recording-head {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.view-history-call-recording-head > div {
+  display: grid;
+  gap: 2px;
+}
+
+.view-history-call-recording-head > div span {
+  color: #728197;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.view-history-call-recording-head > div strong {
+  color: #22374f;
+  font-size: 15px;
+}
+
+.view-history-call-status {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #e8f4ee;
+  color: #176a49;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.view-history-call-status--failed,
+.view-history-call-status--rejected,
+.view-history-call-status--blocked {
+  background: #fdeaea;
+  color: #a33b3b;
+}
+
+.view-history-call-status--missed {
+  background: #fff2d9;
+  color: #8b6110;
+}
+
+.view-history-call-recording-meta {
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  color: #66788d;
+  font-size: 11px;
+}
+
+.view-history-call-recording audio {
+  width: 100%;
+  height: 42px;
+}
+
+.view-history-audio-load {
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #b9d8c9;
+  border-radius: 10px;
+  background: #edf8f3;
+  color: #176a49;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.view-history-audio-load:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.view-history-audio-error {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  color: #a33b3b;
+  font-size: 12px;
+}
+
+.view-history-audio-error button {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+.view-history-call-empty {
+  padding: 18px 12px;
+  border: 1px dashed #d4dee9;
+  border-radius: 11px;
+  background: #f8fafc;
+  color: #728197;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .view-history-detail-state {

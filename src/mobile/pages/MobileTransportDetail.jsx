@@ -9,9 +9,11 @@ import { formatTimeAgo } from '../../utils/formatTime';
 import { getTelegramProfileLink } from '../../utils/telegramLinks';
 import { goToTariffs, openPremiumUpgrade, openSupportForPurchase } from '../../utils/premiumUpgrade';
 import { useMobileAuth } from '../context/MobileAuthContext';
+import { useStaticData } from '../../context/StaticDataContext';
 import TopBar from '../components/TopBar';
 import MobileLoading from '../components/MobileLoading';
 import ReminderComposer from '../../components/ReminderComposer';
+import InternalTransportEditModal from '../../components/InternalTransportEditModal';
 
 const PHONE_UPGRADE_MESSAGE = 'Transport telefon raqamini ko\'rish uchun tarif kerak yoki bepul limitingiz tugagan.';
 
@@ -20,6 +22,7 @@ export default function MobileTransportDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, isInternalDispatcher, permissions } = useMobileAuth();
+  const { staticData } = useStaticData();
 
   const fromOrder = location.state?.order;
 
@@ -35,8 +38,10 @@ export default function MobileTransportDetail() {
   const [contactLoaded, setContactLoaded] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
-  const canViewTransportPhone = isInternalDispatcher || permissions?.viewTransportPhone === true || user?.permissions?.viewTransportPhone === true;
+  const isInternalStaff = isInternalDispatcher || user?.isAdmin === true;
+  const canViewTransportPhone = isInternalStaff || permissions?.viewTransportPhone === true || user?.permissions?.viewTransportPhone === true;
 
   useEffect(() => {
     loadTransport();
@@ -181,7 +186,7 @@ export default function MobileTransportDetail() {
           </div>
         )}
 
-        {isInternalDispatcher && (
+        {isInternalStaff && (
           <div className="m-detail-section">
             <button
               type="button"
@@ -190,6 +195,26 @@ export default function MobileTransportDetail() {
             >
               ◷ Bu haydovchiga reminder yaratish
             </button>
+          </div>
+        )}
+
+        {isInternalStaff && (
+          <div className="m-detail-section">
+            <button
+              type="button"
+              className="m-btn m-btn-primary m-btn-lg m-btn-full"
+              onClick={() => setEditOpen(true)}
+            >
+              ✎ Transportni tahrirlash
+            </button>
+          </div>
+        )}
+
+        {user?.isAdmin === true && transport.lastEditedAt && (
+          <div className="m-detail-section" style={{ color: '#4c1d95', fontSize: 13 }}>
+            <strong>Oxirgi tahrir:</strong>{' '}
+            {transport.lastEditedByName || transport.lastEditedByUsername || transport.lastEditedBy || 'Noma\'lum user'}
+            {' · '}{formatTimeAgo(transport.lastEditedAt)}
           </div>
         )}
 
@@ -302,6 +327,20 @@ export default function MobileTransportDetail() {
           name: contactOwnerName || transport.ownerName || transport.driverName || transport.name || transport.stateNumber || transport.vehicleType || 'Haydovchi',
         }}
         onClose={() => setReminderOpen(false)}
+      />
+      <InternalTransportEditModal
+        isOpen={editOpen}
+        transport={transport}
+        staticData={staticData}
+        onClose={() => setEditOpen(false)}
+        onSaved={(updated) => {
+          if (!updated) return;
+          setTransport((current) => ({ ...current, ...updated }));
+          setContactPhone(updated.additionalPhone || null);
+          setContactOwnerName(updated.ownerName || null);
+          setContactTelegramUsername(updated.telegramUsername || null);
+          setContactLoaded(true);
+        }}
       />
     </>
   );

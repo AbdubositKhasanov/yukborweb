@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getCargoDetails, requestCargoPhone, getUserMe, getMyInvitedUsers, offerForDriver, markCargoDispatcher } from '../../services/api';
+import { getCargoDetails, requestCargoPhone, getUserMe, getMyInvitedUsers, offerForDriver, markCargoDispatcher, claimCargoAsInternal } from '../../services/api';
 import { formatTimeAgo } from '../../utils/formatTime';
 import { formatOrderPrice } from '../../utils/orderText';
 import { buildOriginalCargoMessage, PRIVATE_GROUP_MESSAGE_NOTE } from '../../utils/originalMessage';
@@ -21,7 +21,7 @@ const PHONE_UPGRADE_MESSAGE = 'Telefon raqamni ko\'rish uchun tarif kerak yoki b
 export default function MobileCargoDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useMobileAuth();
+  const { isAuthenticated, user, isInternalDispatcher } = useMobileAuth();
 
   const [cargo, setCargo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +37,8 @@ export default function MobileCargoDetail() {
   const [dispatcherMarking, setDispatcherMarking] = useState(false);
   const [dispatcherMarked, setDispatcherMarked] = useState(false);
   const [dispatcherMarkError, setDispatcherMarkError] = useState('');
+  const [claimingInternal, setClaimingInternal] = useState(false);
+  const [claimError, setClaimError] = useState('');
 
   // User and permission state
   const [permissions, setPermissions] = useState(null);
@@ -127,6 +129,24 @@ export default function MobileCargoDetail() {
     } finally {
       setContactLoaded(true);
       setContactLoading(false);
+    }
+  };
+
+  const handleClaimInternal = async () => {
+    if (!window.confirm("Bu yukni ichki logistlar boshqaruviga olasizmi?")) return;
+    setClaimingInternal(true);
+    setClaimError('');
+    try {
+      const response = await claimCargoAsInternal(id);
+      if (response.code === 200) {
+        navigate('/mobile/internal-loads', { replace: true });
+      } else {
+        setClaimError(response.message || "Yukni olishda xatolik");
+      }
+    } catch (error) {
+      setClaimError(error.response?.data?.message || "Yukni olishda xatolik");
+    } finally {
+      setClaimingInternal(false);
     }
   };
 
@@ -310,6 +330,20 @@ export default function MobileCargoDetail() {
             ⏱️ {formatTimeAgo(cargo.createdTime || cargo.createdAt || cargo.created_at)}
           </div>
         </div>
+
+        {(isInternalDispatcher || user?.isAdmin === true) && cargo.internalManaged !== true && (
+          <div className="m-detail-section">
+            <button
+              type="button"
+              className="m-btn m-btn-success m-btn-lg m-btn-full"
+              onClick={handleClaimInternal}
+              disabled={claimingInternal}
+            >
+              {claimingInternal ? 'Olinmoqda...' : '✓ Oldim'}
+            </button>
+            {claimError && <div style={{ marginTop: 8, color: '#dc3545', fontSize: 13 }}>{claimError}</div>}
+          </div>
+        )}
 
         {/* Message link */}
         {hasMessageAction && (

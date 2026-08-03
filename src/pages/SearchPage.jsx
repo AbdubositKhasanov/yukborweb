@@ -55,6 +55,8 @@ export default function SearchPage() {
   const [featureLimits, setFeatureLimits] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [isInternalDispatcher, setIsInternalDispatcher] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const isInternalStaff = isInternalDispatcher || isAdmin;
   const [userDataLoaded, setUserDataLoaded] = useState(!fromDriver);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
@@ -95,6 +97,7 @@ export default function SearchPage() {
         const normalizedRole = String(response.result.type || '').toLowerCase();
         setUserRole(normalizedRole === 'zavod' ? 'factory' : normalizedRole);
         setIsInternalDispatcher(response.result.isInternalDispatcher === true);
+        setIsAdmin(response.result.isAdmin === true);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -171,11 +174,11 @@ export default function SearchPage() {
         page
       };
 
-      const response = fromDriver && isInternalDispatcher
+      const response = fromDriver && isInternalStaff
         ? await searchDispatcherCargos(filters)
         : await searchCargos(filters);
       if (response.code === 200) {
-        if (fromDriver && isInternalDispatcher) {
+        if (fromDriver && isInternalStaff) {
           const internal = response.result?.internalLoads || [];
           const other = response.result?.otherLoads || [];
           if (internal.length === 0 && other.length === 0 && page > 0) {
@@ -204,7 +207,7 @@ export default function SearchPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fromCountry, fromRegion, fromCity, toCountry, toRegion, toCity, vehicleType, minWeight, maxWeight, senderFilter, page, fromDriver, isInternalDispatcher]);
+  }, [fromCountry, fromRegion, fromCity, toCountry, toRegion, toCity, vehicleType, minWeight, maxWeight, senderFilter, page, fromDriver, isInternalStaff]);
 
   const loadTextSearch = useCallback(async () => {
     if (!textQuery.trim()) return;
@@ -213,7 +216,7 @@ export default function SearchPage() {
     setHasMore(false);
 
     try {
-      const response = fromDriver && isInternalDispatcher
+      const response = fromDriver && isInternalStaff
         ? await searchDispatcherCargos({
           query: textQuery.trim(),
           page,
@@ -221,7 +224,7 @@ export default function SearchPage() {
         })
         : await textSearchCargos(textQuery.trim(), page, orderTypeParam(senderFilter));
       if (response.code === 200) {
-        if (fromDriver && isInternalDispatcher) {
+        if (fromDriver && isInternalStaff) {
           const internal = response.result?.internalLoads || [];
           const other = response.result?.otherLoads || [];
           if (internal.length === 0 && other.length === 0 && page > 0) {
@@ -250,10 +253,15 @@ export default function SearchPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [textQuery, page, senderFilter, fromDriver, isInternalDispatcher]);
+  }, [textQuery, page, senderFilter, fromDriver, isInternalStaff]);
 
   const handleAssigned = (cargoId) => {
     setCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
+  };
+
+  const handleClaimed = (cargoId) => {
+    setCargos((items) => items.filter((cargo) => cargo.id !== cargoId));
+    showSuccess("Yuk ichki logistlar boshqaruviga o'tkazildi");
   };
 
   const buildSearchKey = (searchState) => {
@@ -920,9 +928,11 @@ export default function SearchPage() {
                 showOfferButton={fromDriver}
                 driverId={driverId}
                 driverReference={driverReference}
-                canOffer={isInternalDispatcher || !!permissions?.offerToDriver}
-                assignDirectly={fromDriver && isInternalDispatcher}
+                canOffer={isInternalStaff || !!permissions?.offerToDriver}
+                assignDirectly={fromDriver && isInternalStaff}
                 onAssigned={handleAssigned}
+                canClaimInternal={isInternalStaff && !fromDriver}
+                onClaimed={handleClaimed}
                 showOfferToDriverButton={!!permissions?.offerToDriver && !fromDriver}
               />
             ))}

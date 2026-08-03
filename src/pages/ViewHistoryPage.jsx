@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { adminListInternalDispatchers, getViewHistory, getViewHistoryDetail } from '../services/api';
+import {
+  adminListInternalDispatchers,
+  getCallRecordingAudio,
+  getViewHistory,
+  getViewHistoryDetail,
+} from '../services/api';
 import './ViewHistoryPage.css';
 
 const EMPTY_RESULT = {
@@ -49,8 +54,118 @@ function formatMoney(value) {
   return `${Number(value).toLocaleString('uz-UZ')} so‘m`;
 }
 
+function formatDuration(value) {
+  const seconds = Math.max(0, Number(value) || 0);
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return minutes ? `${minutes}:${String(remainder).padStart(2, '0')}` : `${remainder} soniya`;
+}
+
+const CALL_DIRECTION_LABELS = {
+  INCOMING: 'Kiruvchi',
+  OUTGOING: 'Chiquvchi',
+  UNKNOWN: 'Noma’lum yo‘nalish',
+};
+
+const CALL_STATUS_LABELS = {
+  ANSWERED: 'Javob berilgan',
+  REJECTED: 'Rad etilgan',
+  MISSED: 'O‘tkazib yuborilgan',
+  ENDED: 'Yakunlangan',
+  BLOCKED: 'Bloklangan',
+  FAILED: 'Xatolik',
+  UNKNOWN: 'Noma’lum',
+};
+
+function CallRecordingPlayer({ recording }) {
+  const [audioUrl, setAudioUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const controllerRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      controllerRef.current?.abort();
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    },
+    [audioUrl]
+  );
+
+  const loadAudio = async () => {
+    if (loading || audioUrl) return;
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setLoading(true);
+    setError('');
+    try {
+      const blob = await getCallRecordingAudio(recording.id, controller.signal);
+      if (!blob?.size) throw new Error('Audio fayl bo‘sh');
+      setAudioUrl(URL.createObjectURL(blob));
+    } catch (requestError) {
+      if (requestError.code !== 'ERR_CANCELED') {
+        setError(
+          requestError.response?.data?.message || requestError.message || 'Audio yuklanmadi'
+        );
+      }
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  };
+
+  return (
+    <article className="view-history-call-recording">
+      <div className="view-history-call-recording-head">
+        <div>
+          <span>{CALL_DIRECTION_LABELS[recording.direction] || recording.direction}</span>
+          <strong>{recording.phoneNumber}</strong>
+        </div>
+        <span
+          className={`view-history-call-status view-history-call-status--${recording.status?.toLowerCase()}`}
+        >
+          {CALL_STATUS_LABELS[recording.status] || recording.status}
+        </span>
+      </div>
+      <div className="view-history-call-recording-meta">
+        <span>{formatDate(recording.startedAt)}</span>
+        <span>{formatDuration(recording.durationSeconds)}</span>
+        {(recording.operatorName || recording.deviceId) && (
+          <span>Operator: {recording.operatorName || recording.deviceId}</span>
+        )}
+      </div>
+      {audioUrl ? (
+        // Call audio has no speech-to-text caption source; keep the native accessible controls.
+        // eslint-disable-next-line jsx-a11y/media-has-caption
+        <audio controls autoPlay preload="metadata" src={audioUrl}>
+          Brauzeringiz audio ijrosini qo‘llab-quvvatlamaydi.
+        </audio>
+      ) : (
+        <button
+          type="button"
+          className="view-history-audio-load"
+          onClick={loadAudio}
+          disabled={loading}
+        >
+          <span aria-hidden="true">▶</span>
+          {loading ? 'Audio yuklanmoqda…' : 'Yozuvni eshitish'}
+        </button>
+      )}
+      {error && (
+        <div className="view-history-audio-error">
+          <span>{error}</span>
+          <button type="button" onClick={loadAudio}>
+            Qayta urinish
+          </button>
+        </div>
+      )}
+    </article>
+  );
+}
+
 function DetailRows({ rows }) {
-  const visibleRows = rows.filter(([, value]) => value !== null && value !== undefined && value !== '');
+  const visibleRows = rows.filter(
+    ([, value]) => value !== null && value !== undefined && value !== ''
+  );
   if (!visibleRows.length) return null;
   return (
     <dl className="view-history-detail-rows">
@@ -83,8 +198,15 @@ function ViewHistoryDetailDrawer({ panel, onClose, admin }) {
   const isCargo = historyItem?.targetType === 'cargo';
   const phone = target?.additionalPhone;
   const telegramUsername = target?.telegramUsername?.replace(/^@/, '');
-  const title = cargo?.cargoName || transport?.vehicleType || transport?.name || historyItem?.targetName || 'Ma’lumot';
+  const title =
+    cargo?.cargoName ||
+    transport?.vehicleType ||
+    transport?.name ||
+    historyItem?.targetName ||
+    'Ma’lumot';
   const ownerName = target?.ownerName || transport?.name;
+  const callRecordings = panel.data?.callRecordings || [];
+  const matchedPhone = panel.data?.matchedPhone;
 
   const historyRows = historyItem
     ? [
@@ -171,14 +293,18 @@ function ViewHistoryDetailDrawer({ panel, onClose, admin }) {
     >
       <aside className="view-history-drawer" role="dialog" aria-modal="true" aria-label={title}>
         <header>
-          <div className={`view-history-detail-icon view-history-icon--${isCargo ? 'cargo' : 'transport'}`}>
+          <div
+            className={`view-history-detail-icon view-history-icon--${isCargo ? 'cargo' : 'transport'}`}
+          >
             {isCargo ? 'Y' : 'T'}
           </div>
           <div>
             <span>{isCargo ? 'Yuk ma’lumotlari' : 'Transport ma’lumotlari'}</span>
             <h2>{title}</h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Yopish">×</button>
+          <button type="button" onClick={onClose} aria-label="Yopish">
+            ×
+          </button>
         </header>
 
         {panel.loading ? (
@@ -194,10 +320,14 @@ function ViewHistoryDetailDrawer({ panel, onClose, admin }) {
               <div className="view-history-detail-actions">
                 {phone && <a href={`tel:${phone}`}>Qo‘ng‘iroq</a>}
                 {telegramUsername && (
-                  <a href={`https://t.me/${telegramUsername}`} target="_blank" rel="noreferrer">Telegram</a>
+                  <a href={`https://t.me/${telegramUsername}`} target="_blank" rel="noreferrer">
+                    Telegram
+                  </a>
                 )}
                 {cargo?.messageUrl?.startsWith('http') && (
-                  <a href={cargo.messageUrl} target="_blank" rel="noreferrer">Asl xabar</a>
+                  <a href={cargo.messageUrl} target="_blank" rel="noreferrer">
+                    Asl xabar
+                  </a>
                 )}
               </div>
             )}
@@ -207,12 +337,41 @@ function ViewHistoryDetailDrawer({ panel, onClose, admin }) {
               <DetailRows rows={historyRows} />
             </section>
 
+            <section className="view-history-call-section">
+              <div className="view-history-call-section-title">
+                <div>
+                  <h3>Qo‘ng‘iroq yozuvlari</h3>
+                  <p>
+                    {matchedPhone
+                      ? `${matchedPhone} raqamiga mos yozuvlar`
+                      : 'Obyektda moslashtirish uchun telefon raqami yo‘q'}
+                  </p>
+                </div>
+                <strong>{callRecordings.length}</strong>
+              </div>
+              {callRecordings.length ? (
+                <div className="view-history-call-list">
+                  {callRecordings.map((recording) => (
+                    <CallRecordingPlayer key={recording.id} recording={recording} />
+                  ))}
+                </div>
+              ) : (
+                <div className="view-history-call-empty">
+                  {matchedPhone
+                    ? 'Bu raqam uchun qo‘ng‘iroq yozuvi hali yuklanmagan.'
+                    : 'Telefon raqami qo‘shilganda yozuvlar avtomatik bog‘lanadi.'}
+                </div>
+              )}
+            </section>
+
             {target ? (
               <section>
                 <h3>{isCargo ? 'To‘liq yuk ma’lumotlari' : 'To‘liq transport ma’lumotlari'}</h3>
                 <DetailRows rows={isCargo ? cargoRows : transportRows} />
                 {(cargo?.description || transport?.otherDesc) && (
-                  <p className="view-history-detail-note">{cargo?.description || transport?.otherDesc}</p>
+                  <p className="view-history-detail-note">
+                    {cargo?.description || transport?.otherDesc}
+                  </p>
                 )}
                 {cargo?.originMessage && (
                   <div className="view-history-original-message">
@@ -225,7 +384,8 @@ function ViewHistoryDetailDrawer({ panel, onClose, admin }) {
               <section>
                 <h3>Saqlangan ma’lumot</h3>
                 <p className="view-history-detail-warning">
-                  Asl obyekt o‘chirilgan yoki mavjud emas. Tarixda saqlangan ma’lumot ko‘rsatilmoqda.
+                  Asl obyekt o‘chirilgan yoki mavjud emas. Tarixda saqlangan ma’lumot
+                  ko‘rsatilmoqda.
                 </p>
                 <DetailRows rows={snapshotRows} />
               </section>
@@ -335,10 +495,16 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
           <span className="view-history-eyebrow">24 soatlik jurnal</span>
           <h1>{admin ? 'Ichki dispetcherlar ko‘rish tarixi' : 'Ko‘rish tarixim'}</h1>
           <p>
-            Yuk va transport ma’lumotlarini ochish harakatlari 24 soatdan keyin avtomatik o‘chiriladi.
+            Yuk va transport ma’lumotlarini ochish harakatlari 24 soatdan keyin avtomatik
+            o‘chiriladi.
           </p>
         </div>
-        <button type="button" className="view-history-refresh" onClick={loadHistory} disabled={loading}>
+        <button
+          type="button"
+          className="view-history-refresh"
+          onClick={loadHistory}
+          disabled={loading}
+        >
           {loading ? 'Yangilanmoqda…' : 'Yangilash'}
         </button>
       </header>
@@ -393,7 +559,9 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
       {error && (
         <div className="view-history-error">
           <span>{error}</span>
-          <button type="button" onClick={loadHistory}>Qayta urinish</button>
+          <button type="button" onClick={loadHistory}>
+            Qayta urinish
+          </button>
         </div>
       )}
 
@@ -411,8 +579,16 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
       {history.items.length > 0 && (
         <section className={`view-history-list ${loading ? 'is-loading' : ''}`} aria-live="polite">
           {history.items.map((item) => (
-            <button type="button" className="view-history-item" key={item.id} onClick={() => openDetails(item)}>
-              <div className={`view-history-icon view-history-icon--${item.targetType}`} aria-hidden="true">
+            <button
+              type="button"
+              className="view-history-item"
+              key={item.id}
+              onClick={() => openDetails(item)}
+            >
+              <div
+                className={`view-history-icon view-history-icon--${item.targetType}`}
+                aria-hidden="true"
+              >
                 {item.targetType === 'cargo' ? 'Y' : 'T'}
               </div>
               <div className="view-history-item-main">
@@ -423,7 +599,9 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
                     </span>
                     <strong>{item.targetName}</strong>
                   </div>
-                  <time dateTime={new Date(item.viewedAt).toISOString()}>{formatDate(item.viewedAt)}</time>
+                  <time dateTime={new Date(item.viewedAt).toISOString()}>
+                    {formatDate(item.viewedAt)}
+                  </time>
                 </div>
                 <div className="view-history-route">{routeText(item)}</div>
                 <div className="view-history-details">
@@ -450,11 +628,19 @@ export default function ViewHistoryPage({ admin = false, mobile = false }) {
 
       {(page > 0 || history.hasMore) && (
         <nav className="view-history-pagination" aria-label="Tarix sahifalari">
-          <button type="button" disabled={page === 0 || loading} onClick={() => setPage((value) => value - 1)}>
+          <button
+            type="button"
+            disabled={page === 0 || loading}
+            onClick={() => setPage((value) => value - 1)}
+          >
             Oldingi
           </button>
           <span>{page + 1}-sahifa</span>
-          <button type="button" disabled={!history.hasMore || loading} onClick={() => setPage((value) => value + 1)}>
+          <button
+            type="button"
+            disabled={!history.hasMore || loading}
+            onClick={() => setPage((value) => value + 1)}
+          >
             Keyingi
           </button>
         </nav>

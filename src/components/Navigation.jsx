@@ -124,6 +124,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
 
     const roleSections = navigation?.roleSections;
     tabs = tabs.filter((tab) => {
+      if (isAdmin && tab.path === '/internal-loads') return true;
       if (!tab.section) return !tab.optional;
       if (!Array.isArray(roleSections)) return !tab.optional;
       return roleSections.includes(tab.section);
@@ -140,7 +141,7 @@ export default function Navigation({ isAuthenticated, onLogout }) {
     }
 
     // Filter tabs that require dispatcher access
-    if (!isInternalDispatcher) {
+    if (!isInternalDispatcher && !isAdmin) {
       tabs = tabs.filter(tab => !tab.requireDispatcher);
     }
 

@@ -37,6 +37,7 @@ const TariffsPage = lazy(() => import('../pages/TariffsPage'));
 const ShippersPage = lazy(() => import('../pages/ShippersPage'));
 const RemindersPage = lazy(() => import('../pages/RemindersPage'));
 const ViewHistoryPage = lazy(() => import('../pages/ViewHistoryPage'));
+const AdminCallRecordingsPage = lazy(() => import('../pages/AdminCallRecordingsPage'));
 
 // Admin pages (shared between desktop and mobile — responsive components)
 const AdminUsersPage = lazy(() => import('../pages/AdminDriversPage'));
@@ -109,8 +110,8 @@ function MiniAppUnavailable() {
 }
 
 function MobileInternalLoadsRoute() {
-  const { isInternalDispatcher } = useMobileAuth();
-  if (!isInternalDispatcher) {
+  const { isInternalDispatcher, user } = useMobileAuth();
+  if (!isInternalDispatcher && user?.isAdmin !== true) {
     return <Navigate to="/mobile" replace />;
   }
   return <MobileHome internalOnly />;
@@ -433,6 +434,14 @@ function MobileAppContent() {
             }
           />
           <Route
+            path="/admin/call-recordings"
+            element={
+              <MobileProtectedRoute>
+                <MobileAdminPage><AdminCallRecordingsPage mobile /></MobileAdminPage>
+              </MobileProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/userbots"
             element={
               <MobileProtectedRoute>
@@ -462,7 +471,7 @@ function MobileAppContent() {
           activeTab={getActiveTab()}
           userRole={userRole}
           navigation={user?.navigation}
-          isInternalDispatcher={isInternalDispatcher}
+          isInternalDispatcher={isInternalDispatcher || user?.isAdmin === true}
         />
       )}
     </div>
@@ -470,8 +479,8 @@ function MobileAppContent() {
 }
 
 function MobileInternalDispatcherPage({ children }) {
-  const { isInternalDispatcher } = useMobileAuth();
-  return isInternalDispatcher ? children : <Navigate to="/mobile" replace />;
+  const { isInternalDispatcher, user } = useMobileAuth();
+  return isInternalDispatcher || user?.isAdmin === true ? children : <Navigate to="/mobile" replace />;
 }
 
 function MobileAdminPage({ children }) {

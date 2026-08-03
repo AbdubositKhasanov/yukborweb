@@ -141,7 +141,7 @@ export default function CargoListItem({
   const hasMessageAction = Boolean(cargo.messageUrl || cargo.messageIsPrivateGroup);
   const canOpenMessageLink = canOpenTelegramMessageLink(cargo.messageUrl);
   const hasLeadingMeta = Boolean(cargo.vehicleType || cargo.priceUzs);
-  const isInternalLoad = cargo.source === 'bot';
+  const isInternalLoad = cargo.internalManaged === true;
   const matchPresentation = getCargoMatchPresentation(cargo.matchInfo);
 
   return (

@@ -30,6 +30,7 @@ const PlatformLoadsPage = lazy(() => import('./pages/PlatformLoadsPage'));
 const ShippersPage = lazy(() => import('./pages/ShippersPage'));
 const RemindersPage = lazy(() => import('./pages/RemindersPage'));
 const ViewHistoryPage = lazy(() => import('./pages/ViewHistoryPage'));
+const AdminCallRecordingsPage = lazy(() => import('./pages/AdminCallRecordingsPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const UserbotManagementPage = lazy(() => import('./pages/UserbotManagementPage'));
 const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
@@ -103,7 +104,9 @@ function InternalDispatcherRoute({ children, isAuthenticated }) {
       try {
         const response = await getUserMe();
         if (!cancelled) {
-          setAllowed(response.code === 200 && response.result?.isInternalDispatcher === true);
+          setAllowed(response.code === 200 && (
+            response.result?.isInternalDispatcher === true || response.result?.isAdmin === true
+          ));
         }
       } catch (_) {
         if (!cancelled) setAllowed(false);
@@ -377,6 +380,14 @@ function AppContent() {
             element={
               <AdminRoute isAuthenticated={isAuthenticated}>
                 <ViewHistoryPage admin />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/call-recordings"
+            element={
+              <AdminRoute isAuthenticated={isAuthenticated}>
+                <AdminCallRecordingsPage />
               </AdminRoute>
             }
           />

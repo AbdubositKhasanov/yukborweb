@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PhoneAccessModal from './PhoneAccessModal';
 import { handlePhoneAccess } from '../services/phoneAccess';
-import { requestCargoPhone, offerForDriver, assignOrderToDriver } from '../services/api';
+import { requestCargoPhone, offerForDriver, assignOrderToDriver, claimCargoAsInternal } from '../services/api';
 import ClubMembershipModal from './ClubMembershipModal';
 import OfferToDriverModal from './OfferToDriverModal';
 import PriceInputModal from './PriceInputModal';
@@ -22,6 +22,8 @@ export default function CargoCard({
   showAssignToDriverButton = false,
   assignDirectly = false,
   onAssigned = null,
+  canClaimInternal = false,
+  onClaimed = null,
 }) {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState(null);
@@ -39,8 +41,9 @@ export default function CargoCard({
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [showOriginalMessage, setShowOriginalMessage] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [claimingInternal, setClaimingInternal] = useState(false);
   const hasMessageAction = Boolean(cargo.messageUrl || cargo.messageIsPrivateGroup);
-  const isInternalLoad = cargo.source === 'bot';
+  const isInternalLoad = cargo.internalManaged === true;
   const matchPresentation = getCargoMatchPresentation(cargo.matchInfo);
 
   const handleRequestPhone = async () => {
@@ -134,6 +137,26 @@ export default function CargoCard({
       setOfferError(error.response?.data?.message || 'Yukni biriktirib bo\'lmadi');
     } finally {
       setOffering(false);
+    }
+  };
+
+  const handleClaimInternal = async () => {
+    if (!cargo.id || !window.confirm("Bu yukni ichki logistlar boshqaruviga olasizmi? Yuk oddiy yuklar ro'yxatidan yo'qoladi.")) {
+      return;
+    }
+    setClaimingInternal(true);
+    setOfferError(null);
+    try {
+      const response = await claimCargoAsInternal(cargo.id);
+      if (response.code === 200) {
+        onClaimed?.(cargo.id, response.result);
+      } else {
+        setOfferError(response.message || "Yukni ichki yuk sifatida olishda xatolik");
+      }
+    } catch (error) {
+      setOfferError(error.response?.data?.message || "Yukni ichki yuk sifatida olishda xatolik");
+    } finally {
+      setClaimingInternal(false);
     }
   };
 
@@ -297,6 +320,17 @@ export default function CargoCard({
         )}
 
         <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {canClaimInternal && !isInternalLoad && (
+            <button
+              className="btn btn-success"
+              onClick={handleClaimInternal}
+              disabled={claimingInternal}
+              style={{ width: '100%', fontWeight: 800 }}
+            >
+              {claimingInternal ? 'Olinmoqda...' : '✓ Oldim'}
+            </button>
+          )}
+
           {showOfferButton && assignDirectly && (
             <button
               className="btn btn-success"
