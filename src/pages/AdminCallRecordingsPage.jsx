@@ -127,7 +127,7 @@ function RecordingAudioPlayer({ recording }) {
 }
 
 function CallRecordingCard({ recording }) {
-  const matchable = recording.isPhoneMatchable === true;
+  const isCargoverNumber = recording.isCargoverNumber === true;
   const direction = DIRECTION_LABELS[recording.direction] || recording.direction || 'Noma’lum';
   const status = STATUS_LABELS[recording.status] || recording.status || 'Noma’lum';
 
@@ -156,8 +156,8 @@ function CallRecordingCard({ recording }) {
           {recording.recordingSource && <span>Manba: {recording.recordingSource}</span>}
         </div>
         <div className="view-history-meta admin-call-history-meta">
-          <span className={matchable ? 'admin-call-history-match is-matchable' : 'admin-call-history-match'}>
-            {matchable ? 'Cargover raqami' : 'Mos kelmagan call'}
+          <span className={isCargoverNumber ? 'admin-call-history-match is-matchable' : 'admin-call-history-match'}>
+            {isCargoverNumber ? 'Cargover raqami' : 'Mos kelmagan call'}
           </span>
           <RecordingAudioPlayer recording={recording} />
         </div>
@@ -248,7 +248,7 @@ export default function AdminCallRecordingsPage({ mobile = false }) {
     setPage(0);
   };
 
-  const pageMatched = recordsPage.items.filter((item) => item.isPhoneMatchable).length;
+  const pageMatched = recordsPage.items.filter((item) => item.isCargoverNumber).length;
   const pageUnmatched = recordsPage.items.length - pageMatched;
 
   return (
