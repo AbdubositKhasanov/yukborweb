@@ -1,8 +1,35 @@
 .driver-locations-page {
+  --dl-page-bg: #f4f7f9;
+  --dl-surface: #ffffff;
+  --dl-surface-soft: #f3f7f5;
+  --dl-surface-muted: #eef3f0;
+  --dl-map-bg: #e8eeeb;
+  --dl-text: #17251f;
+  --dl-text-muted: #52635b;
+  --dl-text-subtle: #617169;
+  --dl-primary: #0b6b55;
+  --dl-primary-hover: #075441;
+  --dl-on-primary: #ffffff;
+  --dl-border: #cfdcd6;
+  --dl-border-soft: #dde6e2;
+  --dl-focus: #258563;
+  --dl-live-bg: #dff6e9;
+  --dl-live-border: #9bd9bb;
+  --dl-live-text: #0d7445;
+  --dl-stale-bg: #fff0cf;
+  --dl-stale-border: #efd293;
+  --dl-stale-text: #785000;
+  --dl-warning-bg: #fff7e5;
+  --dl-warning-border: #edca81;
+  --dl-warning-text: #6f4b08;
+  --dl-danger: #9d2f2f;
+  --dl-shadow: 0 8px 24px rgba(27, 91, 61, 0.12);
+
   min-height: 100vh;
   padding: 28px;
-  background: #f4f7f9;
-  color: #17251f;
+  background: var(--dl-page-bg);
+  color: var(--dl-text);
+  color-scheme: light;
 }
 
 .driver-locations-page.is-mobile {
@@ -19,7 +46,7 @@
 }
 
 .driver-locations-eyebrow {
-  color: #16734a;
+  color: var(--dl-primary);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -33,7 +60,7 @@
 .driver-locations-hero p {
   max-width: 700px;
   margin: 0;
-  color: #5d6d66;
+  color: var(--dl-text-muted);
 }
 
 .driver-locations-auto-refresh {
@@ -42,9 +69,9 @@
   gap: 9px;
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid #d5e1db;
+  border: 1px solid var(--dl-border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--dl-surface);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -56,10 +83,10 @@
   box-sizing: border-box;
   margin: 0 auto 16px;
   padding: 14px 16px;
-  border: 1px solid #edca81;
+  border: 1px solid var(--dl-warning-border);
   border-radius: 16px;
-  background: #fff7e5;
-  color: #6f4b08;
+  background: var(--dl-warning-bg);
+  color: var(--dl-warning-text);
 }
 
 .driver-locations-summary {
@@ -76,9 +103,9 @@
   gap: 4px 12px;
   min-height: 92px;
   padding: 16px;
-  border: 1px solid #dbe5e0;
+  border: 1px solid var(--dl-border-soft);
   border-radius: 18px;
-  background: #fff;
+  background: var(--dl-surface);
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -92,15 +119,15 @@
   font-size: 32px;
 }
 .driver-locations-summary small {
-  color: #6a7a73;
+  color: var(--dl-text-muted);
 }
 .driver-locations-summary .is-live {
-  border-color: #9bd9bb;
-  background: #effbf5;
+  border-color: var(--dl-live-border);
+  background: var(--dl-live-bg);
 }
 .driver-locations-summary .is-stale {
-  border-color: #efd293;
-  background: #fff9ec;
+  border-color: var(--dl-stale-border);
+  background: var(--dl-stale-bg);
 }
 
 .driver-locations-controls {
@@ -111,9 +138,9 @@
   max-width: 1440px;
   margin: 0 auto 14px;
   padding: 14px;
-  border: 1px solid #dde6e2;
+  border: 1px solid var(--dl-border-soft);
   border-radius: 18px;
-  background: #fff;
+  background: var(--dl-surface);
 }
 
 .driver-locations-controls label,
@@ -123,7 +150,7 @@
   min-width: 0;
   font-size: 13px;
   font-weight: 750;
-  color: #52635b;
+  color: var(--dl-text-muted);
 }
 
 .driver-locations-controls input,
@@ -134,10 +161,10 @@
   min-height: 44px;
   box-sizing: border-box;
   padding: 10px 12px;
-  border: 1px solid #cfdcd6;
+  border: 1px solid var(--dl-border);
   border-radius: 12px;
-  background: #fff;
-  color: #17251f;
+  background: var(--dl-surface);
+  color: var(--dl-text);
   font: inherit;
 }
 
@@ -149,11 +176,23 @@
   padding: 0 16px;
   border: 0;
   border-radius: 12px;
-  background: #16734a;
-  color: #fff;
+  background: var(--dl-primary);
+  color: var(--dl-on-primary);
   font: inherit;
   font-weight: 800;
   cursor: pointer;
+}
+
+.driver-locations-controls button:hover:not(:disabled),
+.driver-locations-load-more:hover:not(:disabled),
+.driver-location-refresh:hover:not(:disabled),
+.driver-location-notify button:hover:not(:disabled) {
+  background: var(--dl-primary-hover);
+}
+
+.driver-locations-page :where(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid var(--dl-focus);
+  outline-offset: 2px;
 }
 
 .driver-locations-controls button:disabled,
@@ -175,9 +214,9 @@
 .driver-location-detail {
   min-height: 520px;
   padding: 12px;
-  border: 1px solid #dde6e2;
+  border: 1px solid var(--dl-border-soft);
   border-radius: 20px;
-  background: #fff;
+  background: var(--dl-surface);
 }
 
 .driver-locations-list {
@@ -193,9 +232,9 @@
   gap: 5px 12px;
   min-height: 112px;
   padding: 15px;
-  border: 1px solid #e1e9e5;
+  border: 1px solid var(--dl-border-soft);
   border-radius: 15px;
-  background: #fff;
+  background: var(--dl-surface);
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -203,8 +242,8 @@
 
 .driver-location-card:hover,
 .driver-location-card.is-selected {
-  border-color: #65b38f;
-  box-shadow: 0 8px 24px rgba(27, 91, 61, 0.1);
+  border-color: var(--dl-focus);
+  box-shadow: var(--dl-shadow);
 }
 .driver-location-name {
   font-size: 16px;
@@ -213,7 +252,7 @@
 .driver-location-phone,
 .driver-location-meta,
 .driver-location-device {
-  color: #617169;
+  color: var(--dl-text-subtle);
   font-size: 13px;
 }
 .driver-location-meta {
@@ -227,19 +266,19 @@
   justify-self: end;
   padding: 5px 9px;
   border-radius: 999px;
-  background: #eef1ef;
-  color: #5b6962;
+  background: var(--dl-surface-muted);
+  color: var(--dl-text-muted);
   font-size: 11px;
   font-weight: 850;
 }
 
 .driver-location-status.is-live {
-  background: #dff6e9;
-  color: #0d7445;
+  background: var(--dl-live-bg);
+  color: var(--dl-live-text);
 }
 .driver-location-status.is-stale {
-  background: #fff0cf;
-  color: #8b5a00;
+  background: var(--dl-stale-bg);
+  color: var(--dl-stale-text);
 }
 
 .driver-locations-state {
@@ -248,12 +287,12 @@
   gap: 7px;
   min-height: 220px;
   padding: 20px;
-  color: #66756e;
+  color: var(--dl-text-subtle);
   text-align: center;
 }
 
 .driver-locations-state.is-error {
-  color: #9d2f2f;
+  color: var(--dl-danger);
 }
 .driver-locations-state.compact {
   min-height: 100px;
@@ -280,7 +319,7 @@
   margin: 8px 0 4px;
 }
 .driver-location-detail-head a {
-  color: #16734a;
+  color: var(--dl-primary);
   font-weight: 750;
 }
 .driver-location-detail-head > button {
@@ -288,7 +327,7 @@
   height: 44px;
   border: 0;
   border-radius: 50%;
-  background: #eef3f0;
+  background: var(--dl-surface-muted);
   font-size: 26px;
   cursor: pointer;
 }
@@ -301,7 +340,7 @@
   height: 310px;
   border: 0;
   border-radius: 16px;
-  background: #e8eeeb;
+  background: var(--dl-map-bg);
 }
 .driver-location-facts {
   display: grid;
@@ -314,10 +353,10 @@
   gap: 4px;
   padding: 11px;
   border-radius: 12px;
-  background: #f3f7f5;
+  background: var(--dl-surface-soft);
 }
 .driver-location-facts span {
-  color: #6b7972;
+  color: var(--dl-text-muted);
   font-size: 11px;
 }
 .driver-location-facts strong {
@@ -327,7 +366,7 @@
   display: inline-flex;
   min-height: 42px;
   align-items: center;
-  color: #16734a;
+  color: var(--dl-primary);
   font-weight: 800;
 }
 .driver-location-refresh {
@@ -339,7 +378,7 @@
 .driver-location-notify {
   margin-top: 18px;
   padding-top: 16px;
-  border-top: 1px solid #e5ece8;
+  border-top: 1px solid var(--dl-border-soft);
 }
 .driver-location-history h3,
 .driver-location-notify h3 {
@@ -360,14 +399,14 @@
   gap: 3px 10px;
   padding: 10px 12px;
   border-radius: 11px;
-  background: #f5f8f6;
+  background: var(--dl-surface-soft);
 }
 .driver-location-history li small {
   grid-column: 1 / -1;
-  color: #65756d;
+  color: var(--dl-text-subtle);
 }
 .driver-location-history p {
-  color: #6b7972;
+  color: var(--dl-text-muted);
 }
 .driver-location-notify {
   display: grid;
@@ -414,5 +453,48 @@
   }
   .driver-location-map {
     height: 250px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .driver-locations-page {
+    --dl-page-bg: #0f1713;
+    --dl-surface: #17201c;
+    --dl-surface-soft: #202b25;
+    --dl-surface-muted: #26332d;
+    --dl-map-bg: #26332d;
+    --dl-text: #e2eae5;
+    --dl-text-muted: #bec9c3;
+    --dl-text-subtle: #a8b5ae;
+    --dl-primary: #7edcbd;
+    --dl-primary-hover: #9be8ce;
+    --dl-on-primary: #00382b;
+    --dl-border: #52615a;
+    --dl-border-soft: #34423b;
+    --dl-focus: #7edcbd;
+    --dl-live-bg: #153d2c;
+    --dl-live-border: #39775b;
+    --dl-live-text: #9be8bd;
+    --dl-stale-bg: #433817;
+    --dl-stale-border: #78652a;
+    --dl-stale-text: #f5d270;
+    --dl-warning-bg: #3f3218;
+    --dl-warning-border: #8b6a24;
+    --dl-warning-text: #f4d58c;
+    --dl-danger: #ffb4ab;
+    --dl-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+
+    color-scheme: dark;
+  }
+
+  .driver-location-map {
+    filter: brightness(0.78) contrast(1.1) saturate(0.85);
+  }
+}
+
+@media (forced-colors: active) {
+  .driver-locations-page :where(button, a, input, select, textarea):focus-visible,
+  .driver-location-card.is-selected {
+    outline: 3px solid CanvasText;
   }
 }
