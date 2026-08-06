@@ -17,6 +17,7 @@ const TABS = ['Ma\'lumot', 'Tahrirlash', 'Statistika'];
 const ADMIN_PROFILE_LINKS = [
   { section: 'adminUsers', label: 'Admin: foydalanuvchilar', path: '/mobile/admin/users' },
   { section: 'adminDrivers', label: 'Admin: haydovchilar', path: '/mobile/admin/drivers' },
+  { section: 'adminDriverLocations', label: 'Admin: haydovchi lokatsiyalari', path: '/mobile/admin/driver-locations' },
   { section: 'adminCargoOwners', label: 'Admin: yuk egalari', path: '/mobile/admin/cargo-owners' },
   { section: 'adminTariffs', label: 'Admin: tariflar', path: '/mobile/admin/tariffs' },
   { section: 'adminSettings', label: 'Admin: sozlamalar', path: '/mobile/admin/settings' },

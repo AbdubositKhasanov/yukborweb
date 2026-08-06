@@ -1267,6 +1267,32 @@ export const adminGetDriverOffers = async (driverId) => {
   return response.data;
 };
 
+export const adminListDriverLocations = async (params = {}, signal) => {
+  const response = await apiClient.get('/admin/driver-locations', {
+    params: { ...params, _ts: Date.now() },
+    signal,
+  });
+  return response.data;
+};
+
+export const adminGetDriverLocationHistory = async (driverId, params = {}, signal) => {
+  const response = await apiClient.get(`/admin/driver-locations/${driverId}/history`, {
+    params: { ...params, _ts: Date.now() },
+    signal,
+  });
+  return response.data;
+};
+
+export const adminRequestDriverLocationRefresh = async (driverId) => {
+  const response = await apiClient.post(`/admin/driver-locations/${driverId}/request-refresh`);
+  return response.data;
+};
+
+export const adminNotifyDriver = async (driverId, payload) => {
+  const response = await apiClient.post(`/admin/driver-locations/${driverId}/notify`, payload);
+  return response.data;
+};
+
 export const adminGetOrderOffers = async (orderId) => {
   const response = await apiClient.get(`/admin/orders/${orderId}/offers`);
   return response.data;

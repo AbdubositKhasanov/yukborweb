@@ -16,6 +16,12 @@ const ADMIN_LINKS = [
     description: 'Haydovchilar, transport, xabarchi va takliflar tarixi.',
   },
   {
+    section: 'adminDriverLocations',
+    label: 'Haydovchi lokatsiyalari',
+    path: '/admin/driver-locations',
+    description: 'Rozilik bilan ulashilgan jonli xarita, qurilma, signal va lokatsiya tarixi.',
+  },
+  {
     section: 'adminCargoOwners',
     label: 'Yuk egalari',
     path: '/admin/cargo-owners',

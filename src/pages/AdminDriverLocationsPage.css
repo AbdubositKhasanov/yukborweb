@@ -1,0 +1,418 @@
+.driver-locations-page {
+  min-height: 100vh;
+  padding: 28px;
+  background: #f4f7f9;
+  color: #17251f;
+}
+
+.driver-locations-page.is-mobile {
+  padding: 16px 12px 100px;
+}
+
+.driver-locations-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  max-width: 1440px;
+  margin: 0 auto 18px;
+}
+
+.driver-locations-eyebrow {
+  color: #16734a;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.driver-locations-hero h1 {
+  margin: 6px 0;
+  font-size: clamp(28px, 4vw, 44px);
+}
+.driver-locations-hero p {
+  max-width: 700px;
+  margin: 0;
+  color: #5d6d66;
+}
+
+.driver-locations-auto-refresh {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #d5e1db;
+  border-radius: 14px;
+  background: #fff;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.driver-locations-warning {
+  display: grid;
+  gap: 4px;
+  max-width: 1440px;
+  box-sizing: border-box;
+  margin: 0 auto 16px;
+  padding: 14px 16px;
+  border: 1px solid #edca81;
+  border-radius: 16px;
+  background: #fff7e5;
+  color: #6f4b08;
+}
+
+.driver-locations-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 1440px;
+  margin: 0 auto 14px;
+}
+
+.driver-locations-summary button {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  min-height: 92px;
+  padding: 16px;
+  border: 1px solid #dbe5e0;
+  border-radius: 18px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.driver-locations-summary span {
+  font-weight: 800;
+}
+.driver-locations-summary strong {
+  grid-row: span 2;
+  font-size: 32px;
+}
+.driver-locations-summary small {
+  color: #6a7a73;
+}
+.driver-locations-summary .is-live {
+  border-color: #9bd9bb;
+  background: #effbf5;
+}
+.driver-locations-summary .is-stale {
+  border-color: #efd293;
+  background: #fff9ec;
+}
+
+.driver-locations-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(170px, 240px) auto;
+  align-items: end;
+  gap: 12px;
+  max-width: 1440px;
+  margin: 0 auto 14px;
+  padding: 14px;
+  border: 1px solid #dde6e2;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.driver-locations-controls label,
+.driver-location-notify label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 750;
+  color: #52635b;
+}
+
+.driver-locations-controls input,
+.driver-locations-controls select,
+.driver-location-notify input,
+.driver-location-notify textarea {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #cfdcd6;
+  border-radius: 12px;
+  background: #fff;
+  color: #17251f;
+  font: inherit;
+}
+
+.driver-locations-controls button,
+.driver-locations-load-more,
+.driver-location-refresh,
+.driver-location-notify button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: #16734a;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.driver-locations-controls button:disabled,
+.driver-location-refresh:disabled,
+.driver-location-notify button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.driver-locations-workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.8fr) minmax(460px, 1.4fr);
+  gap: 14px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.driver-locations-list,
+.driver-location-detail {
+  min-height: 520px;
+  padding: 12px;
+  border: 1px solid #dde6e2;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.driver-locations-list {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+
+.driver-location-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 12px;
+  min-height: 112px;
+  padding: 15px;
+  border: 1px solid #e1e9e5;
+  border-radius: 15px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.driver-location-card:hover,
+.driver-location-card.is-selected {
+  border-color: #65b38f;
+  box-shadow: 0 8px 24px rgba(27, 91, 61, 0.1);
+}
+.driver-location-name {
+  font-size: 16px;
+  font-weight: 850;
+}
+.driver-location-phone,
+.driver-location-meta,
+.driver-location-device {
+  color: #617169;
+  font-size: 13px;
+}
+.driver-location-meta {
+  grid-column: 1 / -1;
+}
+.driver-location-device {
+  justify-self: end;
+}
+
+.driver-location-status {
+  justify-self: end;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #eef1ef;
+  color: #5b6962;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.driver-location-status.is-live {
+  background: #dff6e9;
+  color: #0d7445;
+}
+.driver-location-status.is-stale {
+  background: #fff0cf;
+  color: #8b5a00;
+}
+
+.driver-locations-state {
+  display: grid;
+  place-content: center;
+  gap: 7px;
+  min-height: 220px;
+  padding: 20px;
+  color: #66756e;
+  text-align: center;
+}
+
+.driver-locations-state.is-error {
+  color: #9d2f2f;
+}
+.driver-locations-state.compact {
+  min-height: 100px;
+}
+.driver-locations-state button {
+  min-height: 42px;
+  margin-top: 8px;
+}
+.driver-locations-load-more {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.driver-location-detail {
+  padding: 18px;
+}
+.driver-location-detail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.driver-location-detail-head h2 {
+  margin: 8px 0 4px;
+}
+.driver-location-detail-head a {
+  color: #16734a;
+  font-weight: 750;
+}
+.driver-location-detail-head > button {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: #eef3f0;
+  font-size: 26px;
+  cursor: pointer;
+}
+.driver-location-detail-head .driver-location-status {
+  justify-self: start;
+}
+
+.driver-location-map {
+  width: 100%;
+  height: 310px;
+  border: 0;
+  border-radius: 16px;
+  background: #e8eeeb;
+}
+.driver-location-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.driver-location-facts div {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border-radius: 12px;
+  background: #f3f7f5;
+}
+.driver-location-facts span {
+  color: #6b7972;
+  font-size: 11px;
+}
+.driver-location-facts strong {
+  font-size: 13px;
+}
+.driver-location-open-map {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  color: #16734a;
+  font-weight: 800;
+}
+.driver-location-refresh {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.driver-location-history,
+.driver-location-notify {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e5ece8;
+}
+.driver-location-history h3,
+.driver-location-notify h3 {
+  margin: 0 0 12px;
+}
+.driver-location-history ol {
+  display: grid;
+  gap: 8px;
+  max-height: 290px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.driver-location-history li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: #f5f8f6;
+}
+.driver-location-history li small {
+  grid-column: 1 / -1;
+  color: #65756d;
+}
+.driver-location-history p {
+  color: #6b7972;
+}
+.driver-location-notify {
+  display: grid;
+  gap: 11px;
+}
+.driver-location-notify textarea {
+  min-height: 94px;
+  resize: vertical;
+}
+
+@media (max-width: 980px) {
+  .driver-locations-workspace {
+    grid-template-columns: 1fr;
+  }
+  .driver-location-detail {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 680px) {
+  .driver-locations-page {
+    padding: 14px 10px 96px;
+  }
+  .driver-locations-hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .driver-locations-summary {
+    grid-template-columns: 1fr;
+  }
+  .driver-locations-summary button {
+    min-height: 76px;
+  }
+  .driver-locations-controls {
+    grid-template-columns: 1fr;
+  }
+  .driver-locations-list,
+  .driver-location-detail {
+    min-height: 0;
+    border-radius: 16px;
+  }
+  .driver-location-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .driver-location-map {
+    height: 250px;
+  }
+}

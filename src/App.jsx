@@ -31,6 +31,7 @@ const ShippersPage = lazy(() => import('./pages/ShippersPage'));
 const RemindersPage = lazy(() => import('./pages/RemindersPage'));
 const ViewHistoryPage = lazy(() => import('./pages/ViewHistoryPage'));
 const AdminCallRecordingsPage = lazy(() => import('./pages/AdminCallRecordingsPage'));
+const AdminDriverLocationsPage = lazy(() => import('./pages/AdminDriverLocationsPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const UserbotManagementPage = lazy(() => import('./pages/UserbotManagementPage'));
 const AdminDriversPage = lazy(() => import('./pages/AdminDriversPage'));
@@ -388,6 +389,14 @@ function AppContent() {
             element={
               <AdminRoute isAuthenticated={isAuthenticated}>
                 <AdminCallRecordingsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/driver-locations"
+            element={
+              <AdminRoute isAuthenticated={isAuthenticated}>
+                <AdminDriverLocationsPage />
               </AdminRoute>
             }
           />

@@ -38,6 +38,7 @@ const ShippersPage = lazy(() => import('../pages/ShippersPage'));
 const RemindersPage = lazy(() => import('../pages/RemindersPage'));
 const ViewHistoryPage = lazy(() => import('../pages/ViewHistoryPage'));
 const AdminCallRecordingsPage = lazy(() => import('../pages/AdminCallRecordingsPage'));
+const AdminDriverLocationsPage = lazy(() => import('../pages/AdminDriverLocationsPage'));
 
 // Admin pages (shared between desktop and mobile — responsive components)
 const AdminUsersPage = lazy(() => import('../pages/AdminDriversPage'));
@@ -353,6 +354,14 @@ function MobileAppContent() {
           />
 
           {/* Admin Routes (mobile-responsive desktop pages) */}
+          <Route
+            path="/admin/driver-locations"
+            element={
+              <MobileProtectedRoute>
+                <MobileAdminPage><AdminDriverLocationsPage mobile /></MobileAdminPage>
+              </MobileProtectedRoute>
+            }
+          />
           <Route
             path="/admin/users"
             element={
