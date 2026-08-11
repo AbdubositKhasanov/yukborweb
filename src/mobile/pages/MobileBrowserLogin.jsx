@@ -3,7 +3,8 @@ import { getTelegramLoginUrl } from '../../config/config';
 import { trackLogin } from '../../services/analytics';
 import { useMobileAuth } from '../context/MobileAuthContext';
 
-const CODE_LENGTH = 6;
+const MAX_CODE_LENGTH = 6;
+const isSupportedLoginCode = (value) => value.length === 5 || value.length === MAX_CODE_LENGTH;
 
 const getFriendlyError = ({ status, message } = {}) => {
   if (status === 401) {
@@ -23,7 +24,7 @@ export default function MobileBrowserLogin() {
   const [botOpened, setBotOpened] = useState(false);
 
   const handleCodeChange = (event) => {
-    const nextCode = event.target.value.replace(/\D/g, '').slice(0, CODE_LENGTH);
+    const nextCode = event.target.value.replace(/\D/g, '').slice(0, MAX_CODE_LENGTH);
     setCode(nextCode);
     if (error) setError('');
   };
@@ -31,8 +32,8 @@ export default function MobileBrowserLogin() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (code.length !== CODE_LENGTH) {
-      setError('Bot yuborgan 6 xonali kodni to‘liq kiriting.');
+    if (!isSupportedLoginCode(code)) {
+      setError('6 xonali Telegram kodini yoki Play uchun berilgan 5 xonali demo kodini kiriting.');
       return;
     }
 
@@ -122,7 +123,7 @@ export default function MobileBrowserLogin() {
             inputMode="numeric"
             autoComplete="one-time-code"
             pattern="[0-9]*"
-            maxLength={CODE_LENGTH}
+            maxLength={MAX_CODE_LENGTH}
             value={code}
             onChange={handleCodeChange}
             placeholder="• • • • • •"
@@ -137,14 +138,14 @@ export default function MobileBrowserLogin() {
             </p>
           ) : (
             <p id="mobile-login-help" className="m-login-help">
-              Telegramdagi YukBor botidan kelgan kodni kiriting.
+              Telegramdagi 6 xonali kodni yoki Play uchun berilgan 5 xonali demo kodini kiriting.
             </p>
           )}
 
           <button
             type="submit"
             className="m-btn m-btn-primary m-btn-lg m-btn-full"
-            disabled={submitting || code.length !== CODE_LENGTH}
+            disabled={submitting || !isSupportedLoginCode(code)}
           >
             {submitting ? 'Tekshirilmoqda...' : 'Kirish'}
           </button>

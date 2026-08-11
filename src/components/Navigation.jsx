@@ -213,6 +213,14 @@ export default function Navigation({ isAuthenticated, onLogout }) {
           </Link>
         ))}
 
+        <Link to="/privacy">
+          <button
+            className={`nav-button ${location.pathname === '/privacy' || location.pathname === '/delete-account' ? 'active' : ''}`}
+          >
+            Maxfiylik
+          </button>
+        </Link>
+
         {isAuthenticated && (
           <button className="nav-button danger" onClick={onLogout}>
             Chiqish

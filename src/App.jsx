@@ -43,6 +43,7 @@ const AdminPremiumOrdersPage = lazy(() => import('./pages/AdminPremiumOrdersPage
 const AdminSenderBlacklistPage = lazy(() => import('./pages/AdminSenderBlacklistPage'));
 const AdminHarbingersPage = lazy(() => import('./pages/AdminHarbingersPage'));
 const TariffsPage = lazy(() => import('./pages/TariffsPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 
 function isPhoneBrowser() {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
@@ -168,8 +169,9 @@ function AppContent() {
 
   // Check if on mobile route - render mobile app without desktop navigation
   const isMobileRoute = location.pathname.startsWith('/mobile');
+  const isStandalonePublicRoute = ['/privacy', '/delete-account'].includes(location.pathname);
 
-  if (!isMobileRoute && isPhoneBrowser()) {
+  if (!isMobileRoute && !isStandalonePublicRoute && isPhoneBrowser()) {
     return <Navigate to="/mobile" replace state={location.state} />;
   }
 
@@ -197,6 +199,8 @@ function AppContent() {
           <Route path="/transports" element={<BrowseTransportsPage />} />
           <Route path="/tariffs" element={<TariffsPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/delete-account" element={<PrivacyPolicyPage />} />
 
           {/* Protected Routes */}
           <Route
