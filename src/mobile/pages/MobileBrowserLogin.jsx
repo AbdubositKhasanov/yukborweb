@@ -33,7 +33,7 @@ export default function MobileBrowserLogin() {
     event.preventDefault();
 
     if (!isSupportedLoginCode(code)) {
-      setError('6 xonali Telegram kodini yoki Play uchun berilgan 5 xonali demo kodini kiriting.');
+      setError('Telegram yoki Play uchun berilgan 5–6 xonali kirish kodini kiriting.');
       return;
     }
 
@@ -138,7 +138,7 @@ export default function MobileBrowserLogin() {
             </p>
           ) : (
             <p id="mobile-login-help" className="m-login-help">
-              Telegramdagi 6 xonali kodni yoki Play uchun berilgan 5 xonali demo kodini kiriting.
+              Telegram yoki Play uchun berilgan 5–6 xonali kirish kodini kiriting.
             </p>
           )}
 
