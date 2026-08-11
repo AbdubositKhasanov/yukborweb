@@ -1,17 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  adminGetSettings,
-  adminSendGroupAnnouncementNow,
-  adminUpdateSettings,
-  getUserMe,
-} from '../services/api';
+import { adminGetSettings, adminSendGroupAnnouncementNow, adminUpdateSettings, getUserMe } from '../services/api';
 import AdminMediaUpload from '../components/AdminMediaUpload';
 import { showError, showSuccess } from '../utils/toast';
 
 const emptyForms = {
   identity: { botUserName: '', mainGroupUsername: '' },
   freeLimits: { freeHarbingerCreateLimit: 0, freeOrderShowLimit: 3, defaultCarShowLimit: 5 },
+  harbingerDelivery: { hourlyNotificationLimit: 10, confirmationBatchSize: 100 },
   groupIds: {
     adminId: '',
     backupGroupId: '',
@@ -118,6 +114,10 @@ export default function AdminSettingsPage({ mobile = false }) {
         freeOrderShowLimit: data.freeLimits?.freeOrderShowLimit ?? 3,
         defaultCarShowLimit: data.freeLimits?.defaultCarShowLimit ?? 5,
       },
+      harbingerDelivery: {
+        hourlyNotificationLimit: data.harbingerDelivery?.hourlyNotificationLimit ?? 10,
+        confirmationBatchSize: data.harbingerDelivery?.confirmationBatchSize ?? 100,
+      },
       groupIds: {
         adminId: (data.groupIds?.adminId || []).join(', '),
         backupGroupId: data.groupIds?.backupGroupId || '',
@@ -156,10 +156,12 @@ export default function AdminSettingsPage({ mobile = false }) {
         admin: normalizeNavigationList(data.navigation?.admin),
       },
     });
-    setPermissions((data.permissions || []).map((permission) => ({
-      ...permission,
-      allowedGroups: normalizePermissionGroups(permission.allowedGroups || []),
-    })));
+    setPermissions(
+      (data.permissions || []).map((permission) => ({
+        ...permission,
+        allowedGroups: normalizePermissionGroups(permission.allowedGroups || []),
+      }))
+    );
   }, []);
 
   useEffect(() => {
@@ -217,20 +219,22 @@ export default function AdminSettingsPage({ mobile = false }) {
   };
 
   const togglePermissionGroup = (featureKey, groupKey) => {
-    setPermissions((prev) => prev.map((item) => {
-      if (item.key !== featureKey) return item;
-      const current = normalizePermissionGroups(item.allowedGroups || []);
-      let next;
-      if (groupKey === ALL_ACCESS_GROUP) {
-        next = current.includes(ALL_ACCESS_GROUP) ? [] : [ALL_ACCESS_GROUP];
-      } else {
-        const withoutAll = current.filter((group) => group !== ALL_ACCESS_GROUP);
-        next = withoutAll.includes(groupKey)
-          ? withoutAll.filter((group) => group !== groupKey)
-          : [...withoutAll, groupKey];
-      }
-      return { ...item, allowedGroups: next };
-    }));
+    setPermissions((prev) =>
+      prev.map((item) => {
+        if (item.key !== featureKey) return item;
+        const current = normalizePermissionGroups(item.allowedGroups || []);
+        let next;
+        if (groupKey === ALL_ACCESS_GROUP) {
+          next = current.includes(ALL_ACCESS_GROUP) ? [] : [ALL_ACCESS_GROUP];
+        } else {
+          const withoutAll = current.filter((group) => group !== ALL_ACCESS_GROUP);
+          next = withoutAll.includes(groupKey)
+            ? withoutAll.filter((group) => group !== groupKey)
+            : [...withoutAll, groupKey];
+        }
+        return { ...item, allowedGroups: next };
+      })
+    );
   };
 
   const toggleNavigationSection = (roleKey, sectionKey) => {
@@ -251,13 +255,37 @@ export default function AdminSettingsPage({ mobile = false }) {
 
   const saveFreeLimits = (e) => {
     e.preventDefault();
-    savePatch('freeLimits', {
-      freeLimits: {
-        freeHarbingerCreateLimit: Math.max(0, toNumber(forms.freeLimits.freeHarbingerCreateLimit, 0)),
-        freeOrderShowLimit: Math.max(0, toNumber(forms.freeLimits.freeOrderShowLimit, 0)),
-        defaultCarShowLimit: Math.max(0, toNumber(forms.freeLimits.defaultCarShowLimit, 0)),
+    savePatch(
+      'freeLimits',
+      {
+        freeLimits: {
+          freeHarbingerCreateLimit: Math.max(0, toNumber(forms.freeLimits.freeHarbingerCreateLimit, 0)),
+          freeOrderShowLimit: Math.max(0, toNumber(forms.freeLimits.freeOrderShowLimit, 0)),
+          defaultCarShowLimit: Math.max(0, toNumber(forms.freeLimits.defaultCarShowLimit, 0)),
+        },
       },
-    }, 'Bepul limitlar saqlandi');
+      'Bepul limitlar saqlandi'
+    );
+  };
+
+  const saveHarbingerDelivery = (e) => {
+    e.preventDefault();
+    savePatch(
+      'harbingerDelivery',
+      {
+        harbingerDelivery: {
+          hourlyNotificationLimit: Math.max(
+            1,
+            Math.min(1000, toNumber(forms.harbingerDelivery.hourlyNotificationLimit, 10))
+          ),
+          confirmationBatchSize: Math.max(
+            1,
+            Math.min(100000, toNumber(forms.harbingerDelivery.confirmationBatchSize, 100))
+          ),
+        },
+      },
+      'Xabarchi xabar limitlari saqlandi'
+    );
   };
 
   const savePermissions = () => {
@@ -269,27 +297,35 @@ export default function AdminSettingsPage({ mobile = false }) {
   };
 
   const saveNavigation = () => {
-    savePatch('navigation', {
-      navigation: {
-        driver: normalizeNavigationList(forms.navigation.driver),
-        logist: normalizeNavigationList(forms.navigation.logist),
-        dispatcher: normalizeNavigationList(forms.navigation.dispatcher),
-        factory: normalizeNavigationList(forms.navigation.factory),
-        notSelected: normalizeNavigationList(forms.navigation.notSelected),
-        admin: normalizeNavigationList(forms.navigation.admin),
+    savePatch(
+      'navigation',
+      {
+        navigation: {
+          driver: normalizeNavigationList(forms.navigation.driver),
+          logist: normalizeNavigationList(forms.navigation.logist),
+          dispatcher: normalizeNavigationList(forms.navigation.dispatcher),
+          factory: normalizeNavigationList(forms.navigation.factory),
+          notSelected: normalizeNavigationList(forms.navigation.notSelected),
+          admin: normalizeNavigationList(forms.navigation.admin),
+        },
       },
-    }, "Bo'lim ko'rinishi saqlandi");
+      "Bo'lim ko'rinishi saqlandi"
+    );
   };
 
   const saveGroupAnnouncer = (e) => {
     e.preventDefault();
-    savePatch('groupAnnouncer', {
-      groupAnnouncer: {
-        enabled: forms.groupAnnouncer.enabled === true,
-        intervalMinutes: Math.max(1, Math.min(1440, toNumber(forms.groupAnnouncer.intervalMinutes, 30))),
-        pinTimes: splitTimes(forms.groupAnnouncer.pinTimes),
+    savePatch(
+      'groupAnnouncer',
+      {
+        groupAnnouncer: {
+          enabled: forms.groupAnnouncer.enabled === true,
+          intervalMinutes: Math.max(1, Math.min(1440, toNumber(forms.groupAnnouncer.intervalMinutes, 30))),
+          pinTimes: splitTimes(forms.groupAnnouncer.pinTimes),
+        },
       },
-    }, 'Guruh xabarchi sozlamalari saqlandi');
+      'Guruh xabarchi sozlamalari saqlandi'
+    );
   };
 
   const sendGroupAnnouncement = async (pin) => {
@@ -329,38 +365,53 @@ export default function AdminSettingsPage({ mobile = false }) {
 
   const saveGroupIds = (e) => {
     e.preventDefault();
-    savePatch('groupIds', {
-      groupIds: {
-        adminId: parseIdList(forms.groupIds.adminId),
-        backupGroupId: toNumber(forms.groupIds.backupGroupId, 0),
-        feedbackGroupId: toNumber(forms.groupIds.feedbackGroupId, 0),
-        orderLogGroupId: toNumber(forms.groupIds.orderLogGroupId, 0),
-        infoGroupId: toNumber(forms.groupIds.infoGroupId, 0),
-        mainGroupId: toNumber(forms.groupIds.mainGroupId, 0),
+    savePatch(
+      'groupIds',
+      {
+        groupIds: {
+          adminId: parseIdList(forms.groupIds.adminId),
+          backupGroupId: toNumber(forms.groupIds.backupGroupId, 0),
+          feedbackGroupId: toNumber(forms.groupIds.feedbackGroupId, 0),
+          orderLogGroupId: toNumber(forms.groupIds.orderLogGroupId, 0),
+          infoGroupId: toNumber(forms.groupIds.infoGroupId, 0),
+          mainGroupId: toNumber(forms.groupIds.mainGroupId, 0),
+        },
       },
-    }, 'Guruh ID sozlamalari saqlandi');
+      'Guruh ID sozlamalari saqlandi'
+    );
   };
 
   const saveAutomation = () => {
-    savePatch('automation', {
-      automation: {
-        orderOwnerStatusPromptEnabled: forms.automation.orderOwnerStatusPromptEnabled === true,
-        cargoOwnerNeedReminder: {
-          enabled: forms.automation.cargoOwnerNeedReminderEnabled === true,
-          leadMinutes: Math.max(1, Math.min(1440, toNumber(forms.automation.cargoOwnerNeedReminderLeadMinutes, 60))),
-          checkIntervalMinutes: Math.max(1, Math.min(1440, toNumber(forms.automation.cargoOwnerNeedReminderCheckIntervalMinutes, 5))),
-          dailyLimit: Math.max(1, Math.min(100, toNumber(forms.automation.cargoOwnerNeedReminderDailyLimit, 6))),
+    savePatch(
+      'automation',
+      {
+        automation: {
+          orderOwnerStatusPromptEnabled: forms.automation.orderOwnerStatusPromptEnabled === true,
+          cargoOwnerNeedReminder: {
+            enabled: forms.automation.cargoOwnerNeedReminderEnabled === true,
+            leadMinutes: Math.max(1, Math.min(1440, toNumber(forms.automation.cargoOwnerNeedReminderLeadMinutes, 60))),
+            checkIntervalMinutes: Math.max(
+              1,
+              Math.min(1440, toNumber(forms.automation.cargoOwnerNeedReminderCheckIntervalMinutes, 5))
+            ),
+            dailyLimit: Math.max(1, Math.min(100, toNumber(forms.automation.cargoOwnerNeedReminderDailyLimit, 6))),
+          },
         },
       },
-    }, 'Avtomatsiya sozlamalari saqlandi');
+      'Avtomatsiya sozlamalari saqlandi'
+    );
   };
 
   const saveProfile = () => {
-    savePatch('profile', {
-      profile: {
-        balanceVisible: forms.profile.balanceVisible === true,
+    savePatch(
+      'profile',
+      {
+        profile: {
+          balanceVisible: forms.profile.balanceVisible === true,
+        },
       },
-    }, 'Profil sozlamalari saqlandi');
+      'Profil sozlamalari saqlandi'
+    );
   };
 
   if (!authChecked) return <div style={{ padding: 24 }}>Yuklanmoqda...</div>;
@@ -393,7 +444,7 @@ export default function AdminSettingsPage({ mobile = false }) {
           disabled={unavailable}
           onChange={() => toggleNavigationSection(role.key, section.key)}
         />
-        {unavailable ? (mobile ? `${role.label}: yopiq` : 'Faqat ichki logist') : (mobile ? role.label : "Ko'rinadi")}
+        {unavailable ? (mobile ? `${role.label}: yopiq` : 'Faqat ichki logist') : mobile ? role.label : "Ko'rinadi"}
       </label>
     );
   };
@@ -432,10 +483,18 @@ export default function AdminSettingsPage({ mobile = false }) {
       {loading || !settings ? (
         <div style={cardStyle}>Yuklanmoqda...</div>
       ) : (
-        <div style={{ ...gridStyle, gridTemplateColumns: mobile ? '1fr' : gridStyle.gridTemplateColumns }}>
+        <div
+          style={{
+            ...gridStyle,
+            gridTemplateColumns: mobile ? '1fr' : gridStyle.gridTemplateColumns,
+          }}
+        >
           <section style={cardStyle}>
             <h3 style={sectionTitleStyle}>Bepul limitlar</h3>
-            <p style={hintStyle}>Tarif sotib olmagan foydalanuvchilar uchun. Xabarchi limiti 0 bo'lsa, user avtomatik tariflarga yo'naltiriladi.</p>
+            <p style={hintStyle}>
+              Tarif sotib olmagan foydalanuvchilar uchun. Xabarchi limiti 0 bo‘lsa, user avtomatik tariflarga
+              yo‘naltiriladi.
+            </p>
             <form onSubmit={saveFreeLimits} style={formGridStyle}>
               <label style={labelStyle}>
                 Xabarchi yaratish
@@ -448,7 +507,7 @@ export default function AdminSettingsPage({ mobile = false }) {
                 />
               </label>
               <label style={labelStyle}>
-                Yuk ko'rish
+                Yuk ko‘rish
                 <input
                   type="number"
                   min="0"
@@ -458,7 +517,7 @@ export default function AdminSettingsPage({ mobile = false }) {
                 />
               </label>
               <label style={labelStyle}>
-                Mashina ko'rish
+                Mashina ko‘rish
                 <input
                   type="number"
                   min="0"
@@ -474,12 +533,53 @@ export default function AdminSettingsPage({ mobile = false }) {
           </section>
 
           <section style={cardStyle}>
+            <h3 style={sectionTitleStyle}>Xabarchi xabarlari</h3>
+            <p style={hintStyle}>
+              Bu limitlar sayt, Telegram bot va Android uchun umumiy. Bir mos yuk bir marta hisoblanadi, foydalanuvchiga
+              esa mavjud kanallar orqali yetkaziladi.
+            </p>
+            <form onSubmit={saveHarbingerDelivery} style={formGridStyle}>
+              <label style={labelStyle}>
+                Bir soatdagi xabarlar soni
+                <input
+                  type="number"
+                  min="1"
+                  max="1000"
+                  value={forms.harbingerDelivery.hourlyNotificationLimit}
+                  onChange={(e) => updateForm('harbingerDelivery', { hourlyNotificationLimit: e.target.value })}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={labelStyle}>
+                Tasdiqlashgacha xabarlar soni
+                <input
+                  type="number"
+                  min="1"
+                  max="100000"
+                  value={forms.harbingerDelivery.confirmationBatchSize}
+                  onChange={(e) => updateForm('harbingerDelivery', { confirmationBatchSize: e.target.value })}
+                  style={inputStyle}
+                />
+              </label>
+              <p style={hintStyle}>
+                Shu son yetganda xabarchi pauzaga o‘tadi. Foydalanuvchi davom ettirgach, yana shu miqdorda xabar oladi.
+              </p>
+              <button type="submit" style={primaryBtnStyle} disabled={savingSection === 'harbingerDelivery'}>
+                {savingSection === 'harbingerDelivery' ? 'Saqlanmoqda...' : 'Xabar limitlarini saqlash'}
+              </button>
+            </form>
+          </section>
+
+          <section style={cardStyle}>
             <h3 style={sectionTitleStyle}>Funksiya ruxsatlari</h3>
-            <p style={hintStyle}>Qaysi guruh qaysi funksiyadan foydalana olishini belgilang. Tarif bo'lsa, tarif ruxsati ham ishlaydi.</p>
+            <p style={hintStyle}>
+              Qaysi guruh qaysi funksiyadan foydalana olishini belgilang. Tarif bo‘lsa, tarif ruxsati ham ishlaydi.
+            </p>
             <div style={permissionRuleStyle}>
               <strong>Ustuvorlik qoidasi:</strong> funksiya userga tarif orqali yoki shu global ruxsat orqali ochiladi.
-              Agar bu yerda <strong>Hammasi</strong> tanlansa, funksiya barcha userlarga ochiq bo&apos;ladi va tarifdagi cheklov o&apos;sha funksiya uchun bloklamaydi.
-              Tarif orqali cheklamoqchi bo&apos;lsangiz, bu yerda <strong>Hammasi</strong>ni yoqmang.
+              Agar bu yerda <strong>Hammasi</strong> tanlansa, funksiya barcha userlarga ochiq bo&apos;ladi va tarifdagi
+              cheklov o&apos;sha funksiya uchun bloklamaydi. Tarif orqali cheklamoqchi bo&apos;lsangiz, bu yerda{' '}
+              <strong>Hammasi</strong>ni yoqmang.
             </div>
             <div style={{ display: 'grid', gap: 10 }}>
               {permissions.map((permission) => {
@@ -529,14 +629,14 @@ export default function AdminSettingsPage({ mobile = false }) {
 
           <section style={cardStyle}>
             <h3 style={sectionTitleStyle}>Profil</h3>
-            <p style={hintStyle}>Foydalanuvchi profilida ko'rinadigan qo'shimcha kartalarni boshqaring.</p>
+            <p style={hintStyle}>Foydalanuvchi profilida ko‘rinadigan qo‘shimcha kartalarni boshqaring.</p>
             <label style={switchLabelStyle}>
               <input
                 type="checkbox"
                 checked={forms.profile.balanceVisible}
                 onChange={(e) => updateForm('profile', { balanceVisible: e.target.checked })}
               />
-              Balans card ko'rsatilsin
+              Balans card ko‘rsatilsin
             </label>
             <button
               type="button"
@@ -549,21 +649,19 @@ export default function AdminSettingsPage({ mobile = false }) {
           </section>
 
           <section style={{ ...cardStyle, gridColumn: mobile ? 'auto' : '1 / -1' }}>
-            <h3 style={sectionTitleStyle}>Bo'lim ko'rinishi</h3>
+            <h3 style={sectionTitleStyle}>Bo‘lim ko‘rinishi</h3>
             <p style={hintStyle}>
-              Qaysi rol qaysi bo'limni menyuda ko'rishini belgilang. Bu sozlama ko'rinishni boshqaradi;
-              amaliy ruxsatlar va tarif limitlari alohida tekshiriladi.
+              Qaysi rol qaysi bo‘limni menyuda ko‘rishini belgilang. Bu sozlama ko‘rinishni boshqaradi; amaliy ruxsatlar
+              va tarif limitlari alohida tekshiriladi.
             </p>
 
             <div style={navigationBlockStyle}>
               <div style={navigationBlockHeaderStyle}>
                 <div>
-                  <strong>Foydalanuvchi bo'limlari</strong>
+                  <strong>Foydalanuvchi bo‘limlari</strong>
                   <div style={hintStyle}>Desktop menyu va Mobile pastki navigatsiya uchun.</div>
                 </div>
-                <span style={countPillStyle}>
-                  {userNavigationSections.length} bo'lim
-                </span>
+                <span style={countPillStyle}>{userNavigationSections.length} bo‘lim</span>
               </div>
 
               {!mobile && (
@@ -596,12 +694,10 @@ export default function AdminSettingsPage({ mobile = false }) {
             <div style={{ ...navigationBlockStyle, marginTop: 14 }}>
               <div style={navigationBlockHeaderStyle}>
                 <div>
-                  <strong>Admin bo'limlari</strong>
-                  <div style={hintStyle}>Admin rolida web va mobile admin havolalarida ko'rinadigan bo'limlar.</div>
+                  <strong>Admin bo‘limlari</strong>
+                  <div style={hintStyle}>Admin rolida web va mobile admin havolalarida ko‘rinadigan bo‘limlar.</div>
                 </div>
-                <span style={countPillStyle}>
-                  {adminNavigationSections.length} bo'lim
-                </span>
+                <span style={countPillStyle}>{adminNavigationSections.length} bo‘lim</span>
               </div>
 
               <div style={navigationRowsStyle}>
@@ -632,7 +728,7 @@ export default function AdminSettingsPage({ mobile = false }) {
 
           <section style={cardStyle}>
             <h3 style={sectionTitleStyle}>Guruh xabarchi</h3>
-            <p style={hintStyle}>Main group uchun avtomatik e'lon yuborish va pin qilish vaqtlarini sozlang.</p>
+            <p style={hintStyle}>Main group uchun avtomatik e’lon yuborish va pin qilish vaqtlarini sozlang.</p>
             <form onSubmit={saveGroupAnnouncer} style={formGridStyle}>
               <label style={switchLabelStyle}>
                 <input
@@ -688,7 +784,7 @@ export default function AdminSettingsPage({ mobile = false }) {
 
           <section style={cardStyle}>
             <h3 style={sectionTitleStyle}>Onboarding</h3>
-            <p style={hintStyle}>Botga yangi kirgan userga ko'rsatiladigan video, matn va Mini App tugmasi.</p>
+            <p style={hintStyle}>Botga yangi kirgan userga ko‘rsatiladigan video, matn va Mini App tugmasi.</p>
             <form onSubmit={saveOnboarding} style={formGridStyle}>
               <AdminMediaUpload
                 type="VIDEO"
@@ -788,19 +884,22 @@ export default function AdminSettingsPage({ mobile = false }) {
 
           <section style={cardStyle}>
             <h3 style={sectionTitleStyle}>Avtomatsiya</h3>
-            <p style={hintStyle}>Yuk egasidan yuk holatini so'rash va yukchi ehtiyojlari bo'yicha oldindan eslatmalar.</p>
+            <p style={hintStyle}>
+              Yuk egasidan yuk holatini so‘rash va yukchi ehtiyojlari bo‘yicha oldindan eslatmalar.
+            </p>
             <label style={switchLabelStyle}>
               <input
                 type="checkbox"
                 checked={forms.automation.orderOwnerStatusPromptEnabled}
                 onChange={(e) => updateForm('automation', { orderOwnerStatusPromptEnabled: e.target.checked })}
               />
-              Order holatini har soatda so'rash
+              Order holatini har soatda so‘rash
             </label>
             <div style={{ ...navigationBlockStyle, marginTop: 12 }}>
               <strong>Yukchi ehtiyoji eslatmalari</strong>
               <p style={hintStyle}>
-                Yukchi o'zi belgilagan vaqtlaridan oldin Telegram orqali ogohlantiriladi. User profilida alohida yoqilgan bo'lishi kerak.
+                Yukchi o‘zi belgilagan vaqtlaridan oldin Telegram orqali ogohlantiriladi. User profilida alohida
+                yoqilgan bo‘lishi kerak.
               </p>
               <div style={formGridStyle}>
                 <label style={switchLabelStyle}>
@@ -818,7 +917,11 @@ export default function AdminSettingsPage({ mobile = false }) {
                     min="1"
                     max="1440"
                     value={forms.automation.cargoOwnerNeedReminderLeadMinutes}
-                    onChange={(e) => updateForm('automation', { cargoOwnerNeedReminderLeadMinutes: e.target.value })}
+                    onChange={(e) =>
+                      updateForm('automation', {
+                        cargoOwnerNeedReminderLeadMinutes: e.target.value,
+                      })
+                    }
                     style={inputStyle}
                   />
                 </label>
@@ -829,7 +932,11 @@ export default function AdminSettingsPage({ mobile = false }) {
                     min="1"
                     max="1440"
                     value={forms.automation.cargoOwnerNeedReminderCheckIntervalMinutes}
-                    onChange={(e) => updateForm('automation', { cargoOwnerNeedReminderCheckIntervalMinutes: e.target.value })}
+                    onChange={(e) =>
+                      updateForm('automation', {
+                        cargoOwnerNeedReminderCheckIntervalMinutes: e.target.value,
+                      })
+                    }
                     style={inputStyle}
                   />
                 </label>
@@ -1086,11 +1193,13 @@ const navigationSectionInfoStyle = {
 
 const navigationToggleWrapStyle = (mobile) => ({
   display: 'contents',
-  ...(mobile ? {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 7,
-  } : {}),
+  ...(mobile
+    ? {
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 7,
+      }
+    : {}),
 });
 
 const navigationChipStyle = (active, unavailable = false) => ({

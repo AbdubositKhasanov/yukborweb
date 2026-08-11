@@ -8,6 +8,7 @@ import {
   deleteHarbinger,
   getMyHarbingers,
   getUserMe,
+  resumeHarbinger,
 } from '../../services/api';
 import { useStaticData } from '../../context/StaticDataContext';
 import TopBar from '../components/TopBar';
@@ -69,6 +70,8 @@ export default function MobileMyHarbingers() {
   const [showClubModal, setShowClubModal] = useState(false);
   const [deleteSheet, setDeleteSheet] = useState({ open: false, id: null });
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [resumingId, setResumingId] = useState(null);
+  const [actionError, setActionError] = useState('');
 
   const vehicleById = useMemo(() => {
     return new Map((staticData?.vehicleTypes || []).map((item) => [String(item.id), item.name]));
@@ -163,6 +166,28 @@ export default function MobileMyHarbingers() {
     }
   };
 
+  const handleResume = async (harbingerId) => {
+    if (!harbingerId || resumingId) return;
+    setResumingId(harbingerId);
+    setActionError('');
+    try {
+      const response = await resumeHarbinger(harbingerId);
+      if (response.code === 200 && response.result) {
+        setHarbingers((items) =>
+          items.map((item) => (item.id === harbingerId ? response.result : item))
+        );
+      } else {
+        setActionError(response.message || 'Xabarchini davom ettirib bo‘lmadi');
+      }
+    } catch (error) {
+      setActionError(
+        error.response?.data?.message || error.message || 'Xabarchini davom ettirib bo‘lmadi'
+      );
+    } finally {
+      setResumingId(null);
+    }
+  };
+
   return (
     <>
       <TopBar title="Xabarchilarim" rightIcon="+" onRightAction={() => setCreateSheet(true)} />
@@ -173,19 +198,28 @@ export default function MobileMyHarbingers() {
             style={{
               margin: '12px 16px 4px',
               padding: 12,
-              background: featureLimits.createHarbinger.remaining === 0 && !featureLimits.createHarbinger.unlimited
-                ? '#fff5f5'
-                : '#f1f7ff',
+              background:
+                featureLimits.createHarbinger.remaining === 0 &&
+                !featureLimits.createHarbinger.unlimited
+                  ? '#fff5f5'
+                  : '#f1f7ff',
               border: '1px solid #d9e6f8',
               borderRadius: 8,
               color: 'var(--m-text)',
               fontSize: 14,
             }}
           >
-            Limit: {featureLimits.createHarbinger.unlimited
+            Limit:{' '}
+            {featureLimits.createHarbinger.unlimited
               ? `${featureLimits.createHarbinger.used || 0}/cheksiz`
               : `${featureLimits.createHarbinger.used || 0}/${featureLimits.createHarbinger.limit || 0}`}
           </div>
+        )}
+
+        {actionError && (
+          <p className="m-form-error" role="alert" style={{ margin: '12px 16px 4px' }}>
+            {actionError}
+          </p>
         )}
 
         {loading ? (
@@ -196,43 +230,93 @@ export default function MobileMyHarbingers() {
               <div className="m-empty">
                 <div className="m-empty-icon">📣</div>
                 <h3 className="m-empty-title">Xabarchi yo&apos;q</h3>
-                <p className="m-empty-text">Mos yuk tushganda xabar olish uchun xabarchi yarating.</p>
+                <p className="m-empty-text">
+                  Mos yuk tushganda xabar olish uchun xabarchi yarating.
+                </p>
                 <button className="m-btn m-btn-primary" onClick={() => setCreateSheet(true)}>
                   + Xabarchi yaratish
                 </button>
               </div>
             ) : (
               <div className="m-card m-card-list">
-                {harbingers.map((harbinger) => (
-                  <div key={harbinger.id} className="m-list-item" style={{ alignItems: 'flex-start' }}>
-                    <div className={`m-status-dot ${harbinger.status === 'new' ? 'new' : 'offline'}`} style={{ marginTop: 7 }} />
-                    <div className="m-list-item-content">
-                      <p className="m-list-item-title">
-                        {harbinger.fullLoc1 || harbinger.loc1 || "Barcha yo'nalishlar"}
-                      </p>
-                      <p className="m-list-item-subtitle">
-                        {vehicleById.get(String(harbinger.vehicleTypeId)) || 'Barcha transportlar'}
-                      </p>
-                      <div className="m-list-item-meta" style={{ flexWrap: 'wrap' }}>
-                        <span>{formatWeight(harbinger)}</span>
-                        <span>{orderTypeLabel(harbinger.orderTypePreference)}</span>
-                      </div>
-                      {harbinger.createdTime && (
-                        <div className="m-list-item-meta">
-                          <span>{formatDate(harbinger.createdTime)}</span>
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="m-btn m-btn-ghost"
-                      onClick={() => setDeleteSheet({ open: true, id: harbinger.id })}
-                      style={{ minHeight: 40, padding: '0 10px', color: 'var(--m-danger)' }}
+                {harbingers.map((harbinger) => {
+                  const isPaused = harbinger.status === 'paused_confirmation_required';
+                  const isActive = harbinger.status === 'new' || harbinger.status === 'active';
+                  const batchSize = harbinger.confirmationBatchSize || 100;
+                  return (
+                    <div
+                      key={harbinger.id}
+                      className="m-list-item"
+                      style={{ alignItems: 'flex-start' }}
                     >
-                      🗑
-                    </button>
-                  </div>
-                ))}
+                      <div
+                        className={`m-status-dot ${isActive ? 'new' : 'offline'}`}
+                        style={{ marginTop: 7 }}
+                      />
+                      <div className="m-list-item-content">
+                        <p className="m-list-item-title">
+                          {harbinger.fullLoc1 || harbinger.loc1 || "Barcha yo'nalishlar"}
+                        </p>
+                        <p className="m-list-item-subtitle">
+                          {vehicleById.get(String(harbinger.vehicleTypeId)) ||
+                            'Barcha transportlar'}
+                        </p>
+                        <div className="m-list-item-meta" style={{ flexWrap: 'wrap' }}>
+                          <span>{formatWeight(harbinger)}</span>
+                          <span>{orderTypeLabel(harbinger.orderTypePreference)}</span>
+                        </div>
+                        {harbinger.createdTime && (
+                          <div className="m-list-item-meta">
+                            <span>{formatDate(harbinger.createdTime)}</span>
+                          </div>
+                        )}
+                        {isActive && (
+                          <div className="m-list-item-meta">
+                            <span>
+                              Shu soatda {harbinger.hourlyNotificationCount || 0}/
+                              {harbinger.hourlyNotificationLimit || 10}
+                            </span>
+                          </div>
+                        )}
+                        {isPaused && (
+                          <div
+                            style={{
+                              marginTop: 10,
+                              padding: 12,
+                              borderRadius: 10,
+                              background: '#fffbeb',
+                              color: '#78350f',
+                            }}
+                          >
+                            <strong style={{ fontSize: 14 }}>Tasdiq kutilmoqda</strong>
+                            <p style={{ margin: '5px 0 10px', fontSize: 13, lineHeight: 1.4 }}>
+                              {batchSize} ta xabar yuborildi. Davom ettirsangiz yana {batchSize}{' '}
+                              tagacha xabar olasiz.
+                            </p>
+                            <button
+                              type="button"
+                              className="m-btn m-btn-primary m-btn-full"
+                              disabled={resumingId === harbinger.id}
+                              onClick={() => handleResume(harbinger.id)}
+                            >
+                              {resumingId === harbinger.id
+                                ? 'Davom ettirilmoqda...'
+                                : `Yana ${batchSize} ta xabar olish`}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="m-btn m-btn-ghost"
+                        onClick={() => setDeleteSheet({ open: true, id: harbinger.id })}
+                        style={{ minHeight: 40, padding: '0 10px', color: 'var(--m-danger)' }}
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </PullToRefresh>
@@ -271,7 +355,9 @@ export default function MobileMyHarbingers() {
 
         <div className="m-form-row">
           <div className="m-form-group">
-            <label className="m-form-label" htmlFor="mobile-harbinger-min-weight">Minimal vazn (t)</label>
+            <label className="m-form-label" htmlFor="mobile-harbinger-min-weight">
+              Minimal vazn (t)
+            </label>
             <input
               id="mobile-harbinger-min-weight"
               type="number"
@@ -282,7 +368,9 @@ export default function MobileMyHarbingers() {
             />
           </div>
           <div className="m-form-group">
-            <label className="m-form-label" htmlFor="mobile-harbinger-max-weight">Maksimal vazn (t)</label>
+            <label className="m-form-label" htmlFor="mobile-harbinger-max-weight">
+              Maksimal vazn (t)
+            </label>
             <input
               id="mobile-harbinger-max-weight"
               type="number"
@@ -295,7 +383,9 @@ export default function MobileMyHarbingers() {
         </div>
 
         <div className="m-form-group">
-          <label className="m-form-label" htmlFor="mobile-harbinger-vehicle-type">Transport turi</label>
+          <label className="m-form-label" htmlFor="mobile-harbinger-vehicle-type">
+            Transport turi
+          </label>
           <select
             id="mobile-harbinger-vehicle-type"
             className="m-form-select"
@@ -312,12 +402,16 @@ export default function MobileMyHarbingers() {
         </div>
 
         <div className="m-form-group">
-          <label className="m-form-label" htmlFor="mobile-harbinger-order-type">Buyurtma turi</label>
+          <label className="m-form-label" htmlFor="mobile-harbinger-order-type">
+            Buyurtma turi
+          </label>
           <select
             id="mobile-harbinger-order-type"
             className="m-form-select"
             value={createData.orderTypePreference}
-            onChange={(e) => setCreateData((prev) => ({ ...prev, orderTypePreference: e.target.value }))}
+            onChange={(e) =>
+              setCreateData((prev) => ({ ...prev, orderTypePreference: e.target.value }))
+            }
           >
             <option value="any">Barcha buyurtmalar</option>
             <option value="cargo_owner_only">Faqat yuk egasi buyurtmalari</option>

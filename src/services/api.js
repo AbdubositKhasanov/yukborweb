@@ -1,7 +1,11 @@
 import axios from 'axios';
 import CryptoJS from 'crypto-js';
 import { showError } from '../utils/toast';
-import { inferPremiumFeature, isPremiumUpgradeError, openPremiumUpgrade } from '../utils/premiumUpgrade';
+import {
+  inferPremiumFeature,
+  isPremiumUpgradeError,
+  openPremiumUpgrade,
+} from '../utils/premiumUpgrade';
 import {
   trackSearch,
   trackOrderCreate,
@@ -199,20 +203,20 @@ apiClient.interceptors.response.use(
               source: 'api',
             });
           } else {
-            showError(message || 'Sizda bu amalni bajarish uchun ruxsat yo\'q');
+            showError(message || "Sizda bu amalni bajarish uchun ruxsat yo'q");
           }
           break;
 
         case 404:
-          showError('Ma\'lumot topilmadi');
+          showError("Ma'lumot topilmadi");
           break;
 
         case 429:
-          showError('Juda ko\'p so\'rov yuborildi. Iltimos, biroz kuting');
+          showError("Juda ko'p so'rov yuborildi. Iltimos, biroz kuting");
           break;
 
         case 500:
-          showError('Server xatosi. Iltimos, keyinroq urinib ko\'ring');
+          showError("Server xatosi. Iltimos, keyinroq urinib ko'ring");
           break;
 
         default:
@@ -645,6 +649,12 @@ export const deleteHarbinger = async (id) => {
   return response.data;
 };
 
+export const resumeHarbinger = async (id) => {
+  const response = await apiClient.post(`/harbinger/${id}/resume`);
+  apiCache.invalidate('harbingers');
+  return response.data;
+};
+
 // ============================================
 // SAVED FORMS (TEMPLATES)
 // ============================================
@@ -735,8 +745,8 @@ export const updateCounterpartyDriverStatus = async (driverId, status) => {
   const response = await apiClient.post('/update/counterparty/driver/status', null, {
     params: {
       driverId: driverId,
-      status: status
-    }
+      status: status,
+    },
   });
   apiCache.invalidate('invited-users');
   return response.data;
@@ -749,7 +759,7 @@ export const updateCounterpartyDriverStatus = async (driverId, status) => {
  */
 export const createCounterpartyTransport = async (driverId, transportData) => {
   const response = await apiClient.post('/create/counterparty/transport', transportData, {
-    params: { driverId }
+    params: { driverId },
   });
   apiCache.invalidate('invited-users');
   return response.data;
@@ -763,7 +773,7 @@ export const createCounterpartyTransport = async (driverId, transportData) => {
  */
 export const updateCounterpartyTransport = async (id, driverId, transportData) => {
   const response = await apiClient.put(`/update/counterparty/transport/${id}`, transportData, {
-    params: { driverId }
+    params: { driverId },
   });
   apiCache.invalidate('invited-users');
   return response.data;
@@ -777,7 +787,7 @@ export const updateCounterpartyTransport = async (id, driverId, transportData) =
  */
 export const updateCounterpartyTransportForm = async (id, driverId, transportData) => {
   const response = await apiClient.put(`/update/counterparty/transportForm/${id}`, transportData, {
-    params: { driverId }
+    params: { driverId },
   });
   apiCache.invalidate('invited-users');
   return response.data;
@@ -846,7 +856,7 @@ export const addUserbot = async (phone, apiId, apiHash) => {
   const response = await apiClient.post('/api/userbot/add', {
     phone,
     api_id: apiId,
-    api_hash: apiHash
+    api_hash: apiHash,
   });
   return response.data;
 };
@@ -885,9 +895,7 @@ export const removeUserbot = async (phone) => {
  * @param {string|null} phone - Optional phone to filter
  */
 export const getBannedGroups = async (phone = null) => {
-  const url = phone
-    ? `/api/userbot/banned-groups?phone=${phone}`
-    : '/api/userbot/banned-groups';
+  const url = phone ? `/api/userbot/banned-groups?phone=${phone}` : '/api/userbot/banned-groups';
   const response = await apiClient.get(url);
   return response.data;
 };
@@ -897,9 +905,7 @@ export const getBannedGroups = async (phone = null) => {
  * @param {string|null} phone - Optional phone to filter
  */
 export const clearBannedGroups = async (phone = null) => {
-  const url = phone
-    ? `/api/userbot/banned-groups?phone=${phone}`
-    : '/api/userbot/banned-groups';
+  const url = phone ? `/api/userbot/banned-groups?phone=${phone}` : '/api/userbot/banned-groups';
   const response = await apiClient.delete(url);
   return response.data;
 };
@@ -1033,9 +1039,7 @@ export const approveUserbotGroupJoinQueue = async (itemId, phone = null) => {
  * Reject one queued group without joining Telegram.
  */
 export const rejectUserbotGroupJoinQueue = async (itemId) => {
-  const response = await apiClient.post(
-    `/api/userbot/groups/join-queue/${itemId}/reject`
-  );
+  const response = await apiClient.post(`/api/userbot/groups/join-queue/${itemId}/reject`);
   return response.data;
 };
 
@@ -1100,7 +1104,8 @@ export const adminListDrivers = async (params = {}, signal) => {
   if (typeof params.internalDispatcher === 'boolean') {
     queryParams.internalDispatcher = String(params.internalDispatcher);
   }
-  if (params.subscriptionFilter && params.subscriptionFilter !== 'all') queryParams.subscriptionFilter = params.subscriptionFilter;
+  if (params.subscriptionFilter && params.subscriptionFilter !== 'all')
+    queryParams.subscriptionFilter = params.subscriptionFilter;
   if (params.tariffId) queryParams.tariffId = params.tariffId;
   if (params.page !== undefined) queryParams.page = params.page;
   if (params.size !== undefined) queryParams.size = params.size;
@@ -1118,7 +1123,8 @@ export const adminListUsers = async (params = {}, signal) => {
   if (typeof params.internalDispatcher === 'boolean') {
     queryParams.internalDispatcher = String(params.internalDispatcher);
   }
-  if (params.subscriptionFilter && params.subscriptionFilter !== 'all') queryParams.subscriptionFilter = params.subscriptionFilter;
+  if (params.subscriptionFilter && params.subscriptionFilter !== 'all')
+    queryParams.subscriptionFilter = params.subscriptionFilter;
   if (params.tariffId) queryParams.tariffId = params.tariffId;
   if (params.page !== undefined) queryParams.page = params.page;
   if (params.size !== undefined) queryParams.size = params.size;

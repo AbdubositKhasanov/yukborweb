@@ -1,10 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  adminDeleteHarbinger,
-  adminListHarbingers,
-  getUserMe,
-} from '../services/api';
+import { adminDeleteHarbinger, adminListHarbingers, getUserMe } from '../services/api';
 import { showError, showSuccess } from '../utils/toast';
 
 const PAGE_SIZE = 30;
@@ -38,12 +34,8 @@ function formatDate(timestamp) {
 }
 
 function formatWeight(harbinger) {
-  const min = harbinger.minWeight?.value
-    ? `${harbinger.minWeight.value} ${harbinger.minWeight.unit || 't'}`
-    : null;
-  const max = harbinger.maxWeight?.value
-    ? `${harbinger.maxWeight.value} ${harbinger.maxWeight.unit || 't'}`
-    : null;
+  const min = harbinger.minWeight?.value ? `${harbinger.minWeight.value} ${harbinger.minWeight.unit || 't'}` : null;
+  const max = harbinger.maxWeight?.value ? `${harbinger.maxWeight.value} ${harbinger.maxWeight.unit || 't'}` : null;
   if (min || max) return [min, max].filter(Boolean).join(' - ');
   if (harbinger.weightOfCargo?.value) {
     return `${harbinger.weightOfCargo.value} ${harbinger.weightOfCargo.unit || 't'}`;
@@ -67,6 +59,7 @@ export default function AdminHarbingersPage({ mobile = false }) {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [total, setTotal] = useState(0);
+  const [activeTotal, setActiveTotal] = useState(0);
   const [role, setRole] = useState('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -91,34 +84,38 @@ export default function AdminHarbingersPage({ mobile = false }) {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const loadPage = useCallback(async (nextPage, append = false) => {
-    if (append) setLoadingMore(true);
-    else setLoading(true);
+  const loadPage = useCallback(
+    async (nextPage, append = false) => {
+      if (append) setLoadingMore(true);
+      else setLoading(true);
 
-    try {
-      const response = await adminListHarbingers({
-        search: debouncedSearch.trim(),
-        role,
-        page: nextPage,
-        size: PAGE_SIZE,
-      });
-      if (response.code === 200) {
-        const result = response.result || {};
-        const nextItems = result.items || [];
-        setItems((prev) => (append ? [...prev, ...nextItems] : nextItems));
-        setPage(result.page || nextPage);
-        setHasMore(result.hasMore === true);
-        setTotal(result.total || nextItems.length);
-      } else {
-        showError(response.message || 'Xabarchilar yuklanmadi');
+      try {
+        const response = await adminListHarbingers({
+          search: debouncedSearch.trim(),
+          role,
+          page: nextPage,
+          size: PAGE_SIZE,
+        });
+        if (response.code === 200) {
+          const result = response.result || {};
+          const nextItems = result.items || [];
+          setItems((prev) => (append ? [...prev, ...nextItems] : nextItems));
+          setPage(result.page || nextPage);
+          setHasMore(result.hasMore === true);
+          setTotal(result.total || nextItems.length);
+          setActiveTotal(result.activeTotal ?? result.total ?? nextItems.length);
+        } else {
+          showError(response.message || 'Xabarchilar yuklanmadi');
+        }
+      } catch (error) {
+        showError(error.response?.data?.message || error.message || 'Xatolik');
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
-    } catch (error) {
-      showError(error.response?.data?.message || error.message || 'Xatolik');
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [debouncedSearch, role]);
+    },
+    [debouncedSearch, role]
+  );
 
   useEffect(() => {
     if (isAdmin) loadPage(0, false);
@@ -141,16 +138,15 @@ export default function AdminHarbingersPage({ mobile = false }) {
     }
   };
 
-  const filterButtons = useMemo(() => ROLE_FILTERS.map((item) => (
-    <button
-      key={item.value}
-      type="button"
-      onClick={() => setRole(item.value)}
-      style={chipStyle(role === item.value)}
-    >
-      {item.label}
-    </button>
-  )), [role]);
+  const filterButtons = useMemo(
+    () =>
+      ROLE_FILTERS.map((item) => (
+        <button key={item.value} type="button" onClick={() => setRole(item.value)} style={chipStyle(role === item.value)}>
+          {item.label}
+        </button>
+      )),
+    [role]
+  );
 
   if (!authChecked) return <div style={{ padding: 24 }}>Yuklanmoqda...</div>;
   if (!isAdmin) return <div style={{ padding: 24, color: '#c00' }}>Bu sahifa faqat adminlar uchun.</div>;
@@ -178,7 +174,7 @@ export default function AdminHarbingersPage({ mobile = false }) {
       </section>
 
       <div style={summaryStyle}>
-        Jami: <strong>{total}</strong>
+        Faol: <strong>{activeTotal}</strong> · Ro‘yxatda: <strong>{total}</strong>
       </div>
 
       {loading ? (
@@ -191,26 +187,32 @@ export default function AdminHarbingersPage({ mobile = false }) {
             const harbinger = item.harbinger || {};
             const owner = item.owner;
             const path = ownerPath(owner, mobile);
+            const isPaused = harbinger.status === 'paused_confirmation_required';
+            const isActive = harbinger.status === 'new' || harbinger.status === 'active';
             return (
-              <article key={harbinger.id} style={cardStyle}>
+              <article key={harbinger.id} style={isPaused ? { ...cardStyle, borderColor: '#f59e0b' } : cardStyle}>
                 <div style={itemHeaderStyle}>
                   <div style={{ minWidth: 0 }}>
-                    <strong style={{ fontSize: 16 }}>
-                      {harbinger.fullLoc1 || harbinger.loc1 || 'Barcha yo\'nalishlar'}
-                    </strong>
+                    <strong style={{ fontSize: 16 }}>{harbinger.fullLoc1 || harbinger.loc1 || "Barcha yo'nalishlar"}</strong>
                     <div style={hintStyle}>
                       {formatWeight(harbinger)} · {orderTypeLabel(harbinger.orderTypePreference)}
                     </div>
                   </div>
-                  <span style={badgeStyle}>{harbinger.status || 'new'}</span>
+                  <span
+                    style={{
+                      ...badgeStyle,
+                      background: isActive ? '#ecfdf5' : '#fffbeb',
+                      color: isActive ? '#047857' : '#92400e',
+                    }}
+                  >
+                    {isPaused ? 'Tasdiq kutilmoqda' : isActive ? 'Faol' : 'To‘xtatilgan'}
+                  </span>
                 </div>
 
                 <div style={detailsGridStyle}>
                   <div>
                     <span style={labelStyle}>Egasi</span>
-                    <div>
-                      {owner ? `${owner.name || '(ismsiz)'} · ${roleLabel(owner.type)}` : `Chat ID: ${harbinger.chatId || '—'}`}
-                    </div>
+                    <div>{owner ? `${owner.name || '(ismsiz)'} · ${roleLabel(owner.type)}` : `Chat ID: ${harbinger.chatId || '—'}`}</div>
                     {owner?.phone && <div style={hintStyle}>+{owner.phone}</div>}
                   </div>
                   <div>
@@ -221,7 +223,30 @@ export default function AdminHarbingersPage({ mobile = false }) {
                     <span style={labelStyle}>Buyurtma turi</span>
                     <div>{orderTypeLabel(harbinger.orderTypePreference)}</div>
                   </div>
+                  <div>
+                    <span style={labelStyle}>Xabarlar</span>
+                    <div>Jami: {harbinger.offersCount || 0}</div>
+                    <div style={hintStyle}>
+                      Bosqich: {harbinger.confirmationCycleCount || 0}/{harbinger.confirmationBatchSize || 100}
+                      {' · '}Soatlik: {harbinger.hourlyNotificationCount || 0}/{harbinger.hourlyNotificationLimit || 10}
+                    </div>
+                  </div>
                 </div>
+
+                {isPaused && (
+                  <div
+                    style={{
+                      margin: '12px 0 0',
+                      padding: 10,
+                      borderRadius: 8,
+                      background: '#fffbeb',
+                      color: '#78350f',
+                      fontSize: 13,
+                    }}
+                  >
+                    Bu xabarchi foydalanuvchining davom ettirish tasdig‘ini kutmoqda va faol xabarchilar soniga kirmaydi.
+                  </div>
+                )}
 
                 <div style={actionsStyle}>
                   {path && (
