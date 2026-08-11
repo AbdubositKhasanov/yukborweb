@@ -25,7 +25,7 @@ DEPLOY_MODE="${DEPLOY_MODE:-remote_git}"
 # remote_git mode settings
 APP_DIR="${APP_DIR:-/var/www/yukborweb}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
-NPM_INSTALL_CMD="${NPM_INSTALL_CMD:-npm install}"
+NPM_INSTALL_CMD="${NPM_INSTALL_CMD:-npm ci}"
 BUILD_CMD="${BUILD_CMD:-npm run build}"
 RELOAD_CMD="${RELOAD_CMD:-sudo systemctl reload nginx}"
 GITHUB_REPO_HTTPS="${GITHUB_REPO_HTTPS:-https://github.com/AbdubositKhasanov/yukborweb.git}"
@@ -64,7 +64,7 @@ remote_git mode:
   DEPLOY_BRANCH=main (default)
   GITHUB_REPO_HTTPS=https://github.com/owner/repo.git
   GITHUB_TOKEN=ghp_xxx  # optional; if set, pull uses token auth every time
-  NPM_INSTALL_CMD='npm install'
+  NPM_INSTALL_CMD='npm ci'
   BUILD_CMD='npm run build'
   RELOAD_CMD='sudo systemctl reload nginx'
   BOOTSTRAP_GITHUB_KEY=1 (default)
