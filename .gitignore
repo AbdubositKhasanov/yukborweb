@@ -18,6 +18,18 @@ build
 .env.test.local
 .env.production.local
 
+# Private deployment and server configuration
+/deploy.sh
+/nginx/
+
+# Private keys and certificate containers
+*.key
+*.pem
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
