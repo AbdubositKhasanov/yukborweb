@@ -14,7 +14,7 @@ const FILTERS = [
   { value: 'all', label: 'Barchasi' },
   { value: 'live', label: 'Jonli' },
   { value: 'stale', label: 'Eskirgan' },
-  { value: 'off', label: 'Sharing o‘chiq' },
+  { value: 'off', label: 'Sessiya o‘chiq' },
 ];
 
 function relativeTime(timestamp) {
@@ -59,7 +59,7 @@ export default function AdminDriverLocationsPage({ mobile = false }) {
   const [selectedId, setSelectedId] = useState('');
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [refreshingId, setRefreshingId] = useState('');
+  const [refreshingRequest, setRefreshingRequest] = useState('');
   const [notification, setNotification] = useState({ title: '', body: '' });
   const [sendingNotification, setSendingNotification] = useState(false);
   const listAbortRef = useRef(null);
@@ -184,22 +184,27 @@ export default function AdminDriverLocationsPage({ mobile = false }) {
   const latest = selectedDriver?.latest;
   const mapUrl = useMemo(() => mapEmbedUrl(latest), [latest]);
 
-  const requestRefresh = async (driverId) => {
-    if (!driverId || refreshingId) return;
-    setRefreshingId(driverId);
+  const requestRefresh = async (driverId, showNotification) => {
+    if (!driverId || refreshingRequest) return;
+    const requestKey = `${driverId}:${showNotification ? 'visible' : 'silent'}`;
+    setRefreshingRequest(requestKey);
     try {
-      const response = await adminRequestDriverLocationRefresh(driverId);
+      const response = await adminRequestDriverLocationRefresh(driverId, showNotification);
       const result = response.result || {};
       if (response.code !== 200 || result.delivered < 1) {
         throw new Error(result.message || response.message || 'Refresh eventi yuborilmadi');
       }
-      showSuccess(`${result.delivered} ta qurilmaga refresh eventi yuborildi`);
+      showSuccess(
+        `${result.delivered} ta qurilmaga ${
+          showNotification ? 'notificationli' : 'bildirishnomasiz'
+        } lokatsiya so‘rovi yuborildi`
+      );
     } catch (requestError) {
       showError(
         requestError.response?.data?.message || requestError.message || 'Refresh eventi yuborilmadi'
       );
     } finally {
-      setRefreshingId('');
+      setRefreshingRequest('');
     }
   };
 
@@ -445,20 +450,40 @@ export default function AdminDriverLocationsPage({ mobile = false }) {
                 </div>
               )}
 
-              <button
-                className="driver-location-refresh"
-                type="button"
-                disabled={
-                  !selectedDriver.sharingEnabled ||
-                  refreshingId === selectedDriver.userId ||
-                  !firebaseConfigured
-                }
-                onClick={() => requestRefresh(selectedDriver.userId)}
-              >
-                {refreshingId === selectedDriver.userId
-                  ? 'Event yuborilmoqda…'
-                  : 'Joriy lokatsiyani so‘rash'}
-              </button>
+              <div className="driver-location-refresh-actions" aria-label="Lokatsiya so‘rovi turi">
+                <button
+                  className="driver-location-refresh is-secondary"
+                  type="button"
+                  disabled={
+                    !selectedDriver.sharingEnabled ||
+                    Boolean(refreshingRequest) ||
+                    !firebaseConfigured
+                  }
+                  onClick={() => requestRefresh(selectedDriver.userId, false)}
+                >
+                  {refreshingRequest === `${selectedDriver.userId}:silent`
+                    ? 'So‘rov yuborilmoqda…'
+                    : 'Faqat lokatsiyani so‘rash'}
+                </button>
+                <button
+                  className="driver-location-refresh"
+                  type="button"
+                  disabled={
+                    !selectedDriver.sharingEnabled ||
+                    Boolean(refreshingRequest) ||
+                    !firebaseConfigured
+                  }
+                  onClick={() => requestRefresh(selectedDriver.userId, true)}
+                >
+                  {refreshingRequest === `${selectedDriver.userId}:visible`
+                    ? 'Notification yuborilmoqda…'
+                    : 'Notification bilan so‘rash'}
+                </button>
+              </div>
+              <p className="driver-location-refresh-help">
+                “Faqat lokatsiya” faol Android xizmatidan jim yangilanish so‘raydi. Xizmat faol
+                bo‘lmasa, haydovchiga xavfsiz fallback notification ko‘rsatiladi.
+              </p>
 
               <section className="driver-location-history">
                 <h3>So‘nggi harakatlar</h3>

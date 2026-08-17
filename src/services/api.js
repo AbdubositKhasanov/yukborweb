@@ -1289,8 +1289,12 @@ export const adminGetDriverLocationHistory = async (driverId, params = {}, signa
   return response.data;
 };
 
-export const adminRequestDriverLocationRefresh = async (driverId) => {
-  const response = await apiClient.post(`/admin/driver-locations/${driverId}/request-refresh`);
+export const adminRequestDriverLocationRefresh = async (driverId, showNotification = true) => {
+  const response = await apiClient.post(
+    `/admin/driver-locations/${driverId}/request-refresh`,
+    null,
+    { params: { showNotification } }
+  );
   return response.data;
 };
 

@@ -371,7 +371,26 @@
 }
 .driver-location-refresh {
   width: 100%;
+}
+.driver-location-refresh-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
   margin-top: 8px;
+}
+.driver-location-refresh.is-secondary {
+  border: 1px solid var(--dl-primary);
+  background: transparent;
+  color: var(--dl-primary);
+}
+.driver-location-refresh.is-secondary:hover:not(:disabled) {
+  background: var(--dl-surface-soft);
+}
+.driver-location-refresh-help {
+  margin: 8px 2px 0;
+  color: var(--dl-text-subtle);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .driver-location-history,
@@ -427,6 +446,9 @@
 }
 
 @media (max-width: 680px) {
+  .driver-location-refresh-actions {
+    grid-template-columns: 1fr;
+  }
   .driver-locations-page {
     padding: 14px 10px 96px;
   }

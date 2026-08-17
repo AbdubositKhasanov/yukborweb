@@ -23,8 +23,8 @@ const POLICY_SECTIONS = [
 const SUMMARY_ITEMS = [
   {
     number: '01',
-    title: 'Location is optional',
-    text: 'Precise location is collected only when an eligible driver turns on visible live sharing.',
+    title: 'Driver location is required',
+    text: 'The Android driver role requires location permission and uses a visible foreground-service session.',
   },
   {
     number: '02',
@@ -125,7 +125,7 @@ export default function PrivacyPolicyPage() {
               </div>
               <div>
                 <span>Last updated</span>
-                <strong>10 August 2026</strong>
+                <strong>13 August 2026</strong>
               </div>
               <div>
                 <span>Applies to</span>
@@ -268,10 +268,10 @@ export default function PrivacyPolicyPage() {
 
                 <h3>Precise driver location</h3>
                 <p>
-                  When an eligible driver turns on <strong>Live location</strong> and grants Android
-                  permission, we may collect latitude and longitude, accuracy, altitude, speed,
-                  bearing, timestamps, battery and charging status, and a sharing-session
-                  identifier.
+                  When a user signs in with an eligible driver role, the Android app requires
+                  location permission and automatically starts a visible live-location session. We
+                  may collect latitude and longitude, accuracy, altitude, speed, bearing,
+                  timestamps, battery and charging status, and a sharing-session identifier.
                 </p>
 
                 <h3>Device, network, and application data</h3>
@@ -327,7 +327,9 @@ export default function PrivacyPolicyPage() {
                   <li>
                     Provide offers, assignments, CRM, reminders, alerts, support, and saved forms.
                   </li>
-                  <li>Deliver push messages and optional live-location coordination.</li>
+                  <li>
+                    Deliver push messages and live-location coordination during driver sessions.
+                  </li>
                   <li>Administer subscriptions, balances, entitlements, and misuse controls.</li>
                   <li>Secure, troubleshoot, measure, and improve the service.</li>
                   <li>Comply with law, enforce agreements, and resolve disputes.</li>
@@ -419,7 +421,9 @@ export default function PrivacyPolicyPage() {
                     <span aria-hidden="true">L</span>
                     <div>
                       <h3>Approximate or precise location</h3>
-                      <p>Requested only when a driver chooses live sharing.</p>
+                      <p>
+                        Required for the Android driver role; denial blocks the driver interface.
+                      </p>
                     </div>
                   </article>
                   <article>
@@ -431,8 +435,10 @@ export default function PrivacyPolicyPage() {
                   </article>
                 </div>
                 <p>
-                  You can deny or disable these permissions. The app does not request Android
-                  background location and does not perform hidden location tracking.
+                  Notification permission remains optional. A driver can deny or revoke location
+                  permission, but cannot use the Android driver interface until it is restored from
+                  App Settings. Other roles are not subject to this requirement. The app does not
+                  request Android background location or perform hidden location tracking.
                 </p>
               </PolicySection>
 
@@ -442,22 +448,26 @@ export default function PrivacyPolicyPage() {
                 title="Live-location controls and retention"
               >
                 <p>
-                  Live location is off until an eligible driver turns it on. Android asks for
-                  location and notification permissions, and a persistent system notification stays
-                  visible while the location foreground service is active. Updates may continue when
-                  the app is not on screen only during that visible service session.
+                  After driver login, Android asks for location permission and the app keeps the
+                  driver interface blocked until permission is granted. The location session then
+                  starts automatically, with no sharing switch on the driver page. Updates may
+                  continue when the app is not on screen only during the Android foreground-service
+                  session. Notification visibility depends on Android permission and system
+                  settings.
                 </p>
                 <p>
                   Authorized Cargover administrators or dispatchers may use location to assess
                   driver freshness and coordinate logistics. It is not shown to the general public.
-                  A remote refresh request starts no hidden tracking; if the visible service is not
-                  running, the app displays a notification.
+                  An admin can request only a location refresh or a refresh with a notification. A
+                  silent request works only when the foreground service is already active; otherwise
+                  the app displays a fallback notification rather than starting hidden tracking.
                 </p>
                 <div className="privacy-retention-stat">
                   <strong>30 days</strong>
                   <p>
-                    Historical location events are configured to expire after 30 days. Turning
-                    sharing off stops new uploads and invalidates the sharing session.
+                    Historical location events are configured to expire after 30 days. Revoking
+                    permission stops uploads; logging out stops the service and invalidates the
+                    sharing session.
                   </p>
                 </div>
                 <p>
@@ -500,13 +510,14 @@ export default function PrivacyPolicyPage() {
                   <li>Confirm processing and provide access to your personal data.</li>
                   <li>Correct inaccurate or incomplete data.</li>
                   <li>Delete data or your account.</li>
-                  <li>Withdraw consent, including by turning off live location.</li>
+                  <li>Withdraw consent by revoking Android location permission or logging out.</li>
                   <li>Object to or restrict certain processing.</li>
                   <li>Explain the source, purpose, or recipients of your data.</li>
                 </ul>
                 <p>
                   You can update supported profile fields, remove supported listings and records,
-                  disable notifications, and turn live location off in the driver status screen.
+                  and disable notifications. A driver may revoke location in Android App Settings,
+                  but cannot continue using the driver interface until permission is restored.
                 </p>
                 <p>
                   Contact <SupportLink>@yukborsupport</SupportLink> to exercise a right. We may
