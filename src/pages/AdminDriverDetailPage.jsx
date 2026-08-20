@@ -1313,6 +1313,7 @@ function OwnerOrderModal({ userId, owner, staticData, onClose, onSuccess }) {
               onChange={(e) => setCargoName(e.target.value)}
               style={inputStyle}
               placeholder="masalan: sement, mebel, uskunalar"
+              maxLength={120}
               required
             />
           </label>

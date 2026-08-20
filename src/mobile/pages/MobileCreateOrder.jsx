@@ -188,6 +188,8 @@ export default function MobileCreateOrder() {
 
     if (stepNum === 1) {
       if (!formData.cargoName.trim()) newErrors.cargoName = 'Yuk nomini kiriting';
+      else if ((formData.cargoName.match(/\d/g) || []).length >= 9)
+        newErrors.cargoName = 'Yuk nomiga telefon raqam yozmang — telefon alohida maydonda kiritiladi';
       if (!formData.weight || parseFloat(formData.weight) <= 0) newErrors.weight = 'To\'g\'ri og\'irlikni kiriting';
       if (!formData.vehicleTypeId) newErrors.vehicleTypeId = 'Transport turini tanlang';
     }
@@ -517,6 +519,7 @@ export default function MobileCreateOrder() {
                 placeholder="Masalan: Meva, Mebel, Qurilish materiallari"
                 value={formData.cargoName}
                 onChange={(e) => updateField('cargoName', e.target.value)}
+                maxLength={120}
               />
               {errors.cargoName && <p className="m-form-error">{errors.cargoName}</p>}
             </div>

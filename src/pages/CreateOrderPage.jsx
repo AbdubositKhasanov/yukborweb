@@ -166,6 +166,8 @@ export default function CreateOrderPage() {
     // Required fields
     if (!cargoName.trim()) {
       newErrors.cargoName = 'Yuk nomini kiriting';
+    } else if ((cargoName.match(/\d/g) || []).length >= 9) {
+      newErrors.cargoName = 'Yuk nomiga telefon raqam yozmang — telefon alohida maydonda kiritiladi';
     }
 
     if (!hasRequiredLocation(fromCountry, fromRegion, fromCity)) {
@@ -456,6 +458,7 @@ export default function CreateOrderPage() {
               value={cargoName}
               onChange={(e) => setCargoName(e.target.value)}
               placeholder="Masalan: Meva, Mebel, Qurilish materiallari"
+              maxLength={120}
               required
             />
             {errors.cargoName && (
