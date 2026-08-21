@@ -173,7 +173,10 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
       };
       const trimmed = debouncedSearch.trim();
       if (trimmed) {
-        if (/[0-9+]/.test(trimmed)) params.phone = trimmed;
+        // 24 belgili hex — Mongo _id; raqamli — telefon yoki Telegram ID
+        // (backend ikkalasini ham tekshiradi); qolgani — ism
+        if (/^[0-9a-fA-F]{24}$/.test(trimmed)) params.id = trimmed;
+        else if (/[0-9+]/.test(trimmed)) params.phone = trimmed;
         else params.name = trimmed;
       }
       const resp = await adminListUsers(params, controller.signal);
@@ -387,7 +390,7 @@ export default function AdminDriversPage({ defaultRole = 'driver', mobile = fals
       <div style={controlsStyle}>
         <input
           type="text"
-          placeholder="Ism yoki telefon bo'yicha qidirish..."
+          placeholder="Ism, telefon yoki ID bo'yicha qidirish..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={inputStyle}

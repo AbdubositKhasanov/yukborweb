@@ -1099,6 +1099,7 @@ export const adminListDrivers = async (params = {}, signal) => {
   if (params.filter && params.filter !== 'all') queryParams.filter = params.filter;
   if (params.phone) queryParams.phone = params.phone;
   if (params.name) queryParams.name = params.name;
+  if (params.id) queryParams.id = params.id;
   if (params.onlyMine) queryParams.onlyMine = 'true';
   if (params.role) queryParams.role = params.role;
   if (typeof params.internalDispatcher === 'boolean') {
@@ -1118,6 +1119,7 @@ export const adminListUsers = async (params = {}, signal) => {
   if (params.filter && params.filter !== 'all') queryParams.filter = params.filter;
   if (params.phone) queryParams.phone = params.phone;
   if (params.name) queryParams.name = params.name;
+  if (params.id) queryParams.id = params.id;
   if (params.onlyMine) queryParams.onlyMine = 'true';
   queryParams.role = params.role || 'any';
   if (typeof params.internalDispatcher === 'boolean') {
