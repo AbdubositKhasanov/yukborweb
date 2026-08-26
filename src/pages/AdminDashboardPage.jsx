@@ -83,6 +83,11 @@ const ADMIN_LINKS = [
   },
 ];
 
+// Yangi alohida admin panel manzili (faqat adminlarga ko'rinadigan tugma uchun)
+const ADMIN_PANEL_URL =
+  import.meta.env.VITE_ADMIN_PANEL_URL ||
+  (import.meta.env.DEV ? 'http://localhost:3001' : 'https://admin.cargover.uz');
+
 export default function AdminDashboardPage({ mobile = false }) {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
@@ -122,6 +127,9 @@ export default function AdminDashboardPage({ mobile = false }) {
             Admin bo&apos;limlar bitta joyda. Top menyuda faqat bitta Admin tab ko&apos;rinadi.
           </p>
         </div>
+        <a href={ADMIN_PANEL_URL} target="_blank" rel="noopener noreferrer" style={newPanelBtnStyle}>
+          🚀 Yangi admin panel
+        </a>
       </header>
 
       <section style={ruleCardStyle}>
@@ -214,6 +222,20 @@ const cardTextStyle = {
   color: '#64748b',
   fontSize: 14,
   lineHeight: 1.45,
+};
+
+const newPanelBtnStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '9px 14px',
+  background: '#2563eb',
+  color: '#fff',
+  borderRadius: 8,
+  fontSize: 14,
+  fontWeight: 700,
+  textDecoration: 'none',
+  whiteSpace: 'nowrap',
 };
 
 const emptyStyle = {

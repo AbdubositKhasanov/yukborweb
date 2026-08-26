@@ -1305,6 +1305,14 @@ export const adminNotifyDriver = async (driverId, payload) => {
   return response.data;
 };
 
+export const adminBulkRefreshDriverLocations = async ({ vehicleType, staleHours } = {}) => {
+  const params = {};
+  if (vehicleType) params.vehicleType = vehicleType;
+  if (staleHours != null && staleHours !== '') params.staleHours = staleHours;
+  const response = await apiClient.post('/admin/driver-locations/bulk-refresh', null, { params });
+  return response.data;
+};
+
 export const adminGetOrderOffers = async (orderId) => {
   const response = await apiClient.get(`/admin/orders/${orderId}/offers`);
   return response.data;

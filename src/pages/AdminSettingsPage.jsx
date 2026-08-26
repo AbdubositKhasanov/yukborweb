@@ -23,6 +23,15 @@ const emptyForms = {
     onboardingMiniAppUrl: '',
   },
   groupAnnouncer: { enabled: true, intervalMinutes: 30, pinTimes: '10:00, 16:00' },
+  driverLocation: {
+    pollEnabled: true,
+    pollTimes: '09:00, 18:00',
+    pollMessage: '',
+    staleHours: 6,
+    reengageEnabled: true,
+    reengageAfterDays: 30,
+    reengageMessage: '',
+  },
   automation: {
     orderOwnerStatusPromptEnabled: false,
     cargoOwnerNeedReminderEnabled: true,
@@ -136,6 +145,15 @@ export default function AdminSettingsPage({ mobile = false }) {
         enabled: data.groupAnnouncer?.enabled !== false,
         intervalMinutes: data.groupAnnouncer?.intervalMinutes ?? 30,
         pinTimes: (data.groupAnnouncer?.pinTimes || []).join(', '),
+      },
+      driverLocation: {
+        pollEnabled: data.driverLocation?.pollEnabled !== false,
+        pollTimes: (data.driverLocation?.pollTimes || []).join(', '),
+        pollMessage: data.driverLocation?.pollMessage ?? '',
+        staleHours: data.driverLocation?.staleHours ?? 6,
+        reengageEnabled: data.driverLocation?.reengageEnabled !== false,
+        reengageAfterDays: data.driverLocation?.reengageAfterDays ?? 30,
+        reengageMessage: data.driverLocation?.reengageMessage ?? '',
       },
       automation: {
         orderOwnerStatusPromptEnabled: data.automation?.orderOwnerStatusPromptEnabled === true,
@@ -325,6 +343,25 @@ export default function AdminSettingsPage({ mobile = false }) {
         },
       },
       'Guruh xabarchi sozlamalari saqlandi'
+    );
+  };
+
+  const saveDriverLocation = (e) => {
+    e.preventDefault();
+    savePatch(
+      'driverLocation',
+      {
+        driverLocation: {
+          pollEnabled: forms.driverLocation.pollEnabled === true,
+          pollTimes: splitTimes(forms.driverLocation.pollTimes),
+          pollMessage: forms.driverLocation.pollMessage.trim(),
+          staleHours: Math.max(1, Math.min(720, toNumber(forms.driverLocation.staleHours, 6))),
+          reengageEnabled: forms.driverLocation.reengageEnabled === true,
+          reengageAfterDays: Math.max(1, Math.min(365, toNumber(forms.driverLocation.reengageAfterDays, 30))),
+          reengageMessage: forms.driverLocation.reengageMessage.trim(),
+        },
+      },
+      'Lokatsiya sozlamalari saqlandi'
     );
   };
 
@@ -779,6 +816,84 @@ export default function AdminSettingsPage({ mobile = false }) {
                   {savingSection === 'groupAnnouncerPinNow' ? 'Yuborilmoqda...' : 'Yuborib pin qilish'}
                 </button>
               </div>
+            </form>
+          </section>
+
+          <section style={cardStyle}>
+            <h3 style={sectionTitleStyle}>Haydovchi lokatsiyasi</h3>
+            <p style={hintStyle}>
+              Kuniga necha marta va soat nechida lokatsiya so‘ralishi (Toshkent vaqti), piggyback xabar,
+              hamda ilovani uzoq vaqt ochmagan haydovchilarni qaytarish eslatmasi.
+            </p>
+            <form onSubmit={saveDriverLocation} style={formGridStyle}>
+              <label style={switchLabelStyle}>
+                <input
+                  type="checkbox"
+                  checked={forms.driverLocation.pollEnabled}
+                  onChange={(e) => updateForm('driverLocation', { pollEnabled: e.target.checked })}
+                />
+                Lokatsiya so‘rovi yoqilgan
+              </label>
+              <label style={labelStyle}>
+                So‘rov vaqtlari (Toshkent)
+                <input
+                  value={forms.driverLocation.pollTimes}
+                  onChange={(e) => updateForm('driverLocation', { pollTimes: e.target.value })}
+                  style={inputStyle}
+                  placeholder="09:00, 18:00"
+                />
+              </label>
+              <label style={labelStyle}>
+                Piggyback xabar (so‘rov bilan chiqadi)
+                <textarea
+                  value={forms.driverLocation.pollMessage}
+                  onChange={(e) => updateForm('driverLocation', { pollMessage: e.target.value })}
+                  style={textareaStyle}
+                  placeholder="Bo‘shmisiz? Yaqin-atrofda yuk bor — ko‘rish uchun bosing!"
+                />
+              </label>
+              <label style={labelStyle}>
+                Eskilik chegarasi — bulk refresh (soat)
+                <input
+                  type="number"
+                  min="1"
+                  max="720"
+                  value={forms.driverLocation.staleHours}
+                  onChange={(e) => updateForm('driverLocation', { staleHours: e.target.value })}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={switchLabelStyle}>
+                <input
+                  type="checkbox"
+                  checked={forms.driverLocation.reengageEnabled}
+                  onChange={(e) => updateForm('driverLocation', { reengageEnabled: e.target.checked })}
+                />
+                Qaytarish eslatmasi yoqilgan
+              </label>
+              <label style={labelStyle}>
+                Necha kun ochmasa qaytarish
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={forms.driverLocation.reengageAfterDays}
+                  onChange={(e) => updateForm('driverLocation', { reengageAfterDays: e.target.value })}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={labelStyle}>
+                Qaytarish xabari
+                <textarea
+                  value={forms.driverLocation.reengageMessage}
+                  onChange={(e) => updateForm('driverLocation', { reengageMessage: e.target.value })}
+                  style={textareaStyle}
+                  placeholder="Sizni sog‘indik! Yangi yuklar chiqdi — ko‘rib chiqing."
+                />
+              </label>
+              <button type="submit" style={primaryBtnStyle} disabled={savingSection === 'driverLocation'}>
+                {savingSection === 'driverLocation' ? 'Saqlanmoqda...' : 'Lokatsiya sozlamalarini saqlash'}
+              </button>
             </form>
           </section>
 

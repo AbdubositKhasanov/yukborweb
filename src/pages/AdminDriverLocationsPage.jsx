@@ -5,6 +5,7 @@ import {
   adminListDriverLocations,
   adminNotifyDriver,
   adminRequestDriverLocationRefresh,
+  adminBulkRefreshDriverLocations,
 } from '../services/api';
 import { showError, showSuccess } from '../utils/toast';
 import './AdminDriverLocationsPage.css';
@@ -56,6 +57,9 @@ export default function AdminDriverLocationsPage({ mobile = false }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [bulkVehicleType, setBulkVehicleType] = useState('');
+  const [bulkStaleHours, setBulkStaleHours] = useState('');
+  const [bulkRefreshing, setBulkRefreshing] = useState(false);
   const [selectedId, setSelectedId] = useState('');
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -239,6 +243,30 @@ export default function AdminDriverLocationsPage({ mobile = false }) {
     }
   };
 
+  const handleBulkRefresh = async () => {
+    setBulkRefreshing(true);
+    try {
+      const response = await adminBulkRefreshDriverLocations({
+        vehicleType: bulkVehicleType.trim() || undefined,
+        staleHours: bulkStaleHours === '' ? undefined : Number(bulkStaleHours),
+      });
+      const result = response.result || {};
+      if (response.code !== 200) {
+        throw new Error(result.message || response.message || 'Yangilash yuborilmadi');
+      }
+      showSuccess(
+        `${result.attempted || 0} ta qurilmaga so‘rov yuborildi (${result.delivered || 0} yetkazildi)`
+      );
+      loadList(0, false, true);
+    } catch (requestError) {
+      showError(
+        requestError.response?.data?.message || requestError.message || 'Yangilash yuborilmadi'
+      );
+    } finally {
+      setBulkRefreshing(false);
+    }
+  };
+
   return (
     <main className={`driver-locations-page ${mobile ? 'is-mobile' : ''}`}>
       <header className="driver-locations-hero">
@@ -308,6 +336,35 @@ export default function AdminDriverLocationsPage({ mobile = false }) {
         </label>
         <button type="button" onClick={() => loadList(0, false)} disabled={loading}>
           Yangilash
+        </button>
+      </section>
+
+      <section className="driver-locations-controls">
+        <label>
+          <span>Mashina turi (ixtiyoriy)</span>
+          <input
+            value={bulkVehicleType}
+            onChange={(event) => setBulkVehicleType(event.target.value)}
+            placeholder="Masalan: Fura, Isuzu"
+          />
+        </label>
+        <label>
+          <span>Faqat shundan eski (soat)</span>
+          <input
+            type="number"
+            min="0"
+            value={bulkStaleHours}
+            onChange={(event) => setBulkStaleHours(event.target.value)}
+            placeholder="6"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={handleBulkRefresh}
+          disabled={bulkRefreshing || !firebaseConfigured}
+          title={!firebaseConfigured ? 'Firebase sozlanmagan' : undefined}
+        >
+          {bulkRefreshing ? 'Yuborilmoqda…' : 'Ommaviy yangilash'}
         </button>
       </section>
 
