@@ -86,7 +86,7 @@ const ADMIN_LINKS = [
 // Yangi alohida admin panel manzili (faqat adminlarga ko'rinadigan tugma uchun)
 const ADMIN_PANEL_URL =
   import.meta.env.VITE_ADMIN_PANEL_URL ||
-  (import.meta.env.DEV ? 'http://localhost:3001' : 'https://admin.cargover.uz');
+  (import.meta.env.DEV ? 'http://localhost:3001' : 'https://cargover.uz/panel/');
 
 export default function AdminDashboardPage({ mobile = false }) {
   const navigate = useNavigate();
